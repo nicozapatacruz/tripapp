@@ -32,7 +32,7 @@ export default defineConfig({
       workbox: {
         // De la fuente solo se precargan latin y latin-ext (español, €, flechas).
         // Los otros subconjuntos (cirílico, etc.) se generan pero no se usan.
-        globPatterns: ["**/*.{js,css,html,png}", "**/onest-latin*.woff2"],
+        globPatterns: ["**/*.{js,css,html,png,svg}", "**/onest-latin*.woff2"],
       },
     }),
   ],

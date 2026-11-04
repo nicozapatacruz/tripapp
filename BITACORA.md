@@ -14,6 +14,12 @@ Reglas:
 
 ## 2026-11-04
 
+- Logo de Journest: una "j" cursiva trazada como ruta punteada. El punto
+  rojo es el origen; el palo baja por el eje central del ícono; tras la
+  curva inferior la salida pasa por detrás del palo, y sus guiones se
+  adelgazan y desvanecen hasta un avión de papel (el destino). Partió de una
+  imagen de Gemini y se terminó a mano en SVG. Fuente: `design/logo_svg.py`
+  → `design/journest-logo.svg`; íconos con `design/make_icons.py`.
 - La app pasa a llamarse **Journest** (journey + nest: el "nido" donde se
   guarda y ordena todo el viaje). Se descartaron decenas de nombres por
   estar tomados en el rubro (Trippin, Tripster, Periplo, Voyara, Routiq…)
