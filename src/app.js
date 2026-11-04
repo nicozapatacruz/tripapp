@@ -1,0 +1,956 @@
+import "@fontsource-variable/onest";
+import "./styles.css";
+
+(function(){
+"use strict";
+var $=function(s,r){return (r||document).querySelector(s)};
+var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
+
+/* ================= Iconos ================= */
+var ICON={
+ chev:'<path d="M9 6l6 6-6 6"/>',back:'<path d="M15 6l-6 6 6 6"/>',arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',plus:'<path d="M12 5v14M5 12h14"/>',
+ cal:'<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+ copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>',
+ pin:'<path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+ route:'<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>',
+ sliders:'<path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/>',
+ bed:'<path d="M3 18V7M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="1.6"/>',
+ flag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+ clip:'<path d="M20 11l-8.5 8.5a5 5 0 0 1-7-7L13 4a3.5 3.5 0 0 1 5 5l-8.6 8.6a2 2 0 0 1-2.8-2.8L14 8"/>',
+ file:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>',
+ hotel:'<path d="M3 18V7M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="1.6"/>',
+ check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+ bus:'<rect x="4" y="3" width="16" height="14" rx="3"/><path d="M4 11h16M7 21v-4M17 21v-4"/><circle cx="8" cy="14" r=".8"/><circle cx="16" cy="14" r=".8"/>',
+ tren:'<rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 11h14M9 21l2-4M15 21l-2-4"/><circle cx="9" cy="14" r=".8"/><circle cx="15" cy="14" r=".8"/>',
+ vuelo:'<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.2.4c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.4-.2c.4-.3.6-.7.5-1.2z"/>',
+ entrada:'<path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><path d="M13 5v2M13 11v2M13 17v2"/>',
+ coche:'<path d="M5 16v-5l2-5h10l2 5v5M3 16h18M7 16v3M17 16v3"/><circle cx="8" cy="13" r=".8"/><circle cx="16" cy="13" r=".8"/>',
+ seguro:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+ comida:'<path d="M7 3v8M4 3v5a3 3 0 0 0 6 0V3M7 11v10M17 3c-2 2-3 5-3 8h3v10"/>',
+ pencil:'<path d="M4 20l1-4L16.5 4.5a2 2 0 0 1 3 3L8 19z"/><path d="M14 7l3 3"/>'
+};
+function svg(n,s){s=s||20;return '<svg class="i" width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ICON[n]+'</svg>'}
+
+/* ================= Datos del viaje ================= */
+var CITIES={
+madrid:{name:"Madrid",c1:"#B8322C",c2:"#E0583F",temp:"2–11 °C",
+ intro:"Capital de España. A finales de diciembre la ciudad está iluminada y llena de mercadillos, belenes y planes de Navidad que duran hasta el Día de Reyes.",
+ see:[["Plaza Mayor y Puerta del Sol","El centro histórico se recorre a pie. En la Plaza Mayor hay mercadillo navideño."],
+  ["Gran Vía y calle Preciados","Luces de Navidad, escaparates y, en Preciados, el espectáculo de Cortylandia."],
+  ["Museo del Prado","Pintura clásica española. Mejor con entrada reservada por franja horaria."],
+  ["Museo Reina Sofía","Arte del siglo XX, con el Guernica de Picasso."],
+  ["Parque del Retiro","Paseo tranquilo y Palacio de Cristal."],
+  ["Palacio Real y Templo de Debod","El Templo de Debod es buen sitio para ver el atardecer."]],
+ tips:["Lleva capas: por la mañana y por la noche hace frío.","La cena española es tarde. Muchas cocinas abren hacia las 20:30 o 21:00.","En estas fechas conviene reservar restaurantes populares y museos con antelación.","Las luces y los mercadillos suelen mantenerse hasta el 6 de enero."],
+ dishes:["Cocido madrileño","Bocadillo de calamares","Chocolate con churros","Tortilla de patatas","Callos a la madrileña","Cochinillo","Turrones y polvorones"],
+ eat:[["Chocolatería San Ginés","Chocolate con churros, un clásico de la ciudad."],
+  ["Mercado de San Miguel","Puestos de tapas y vermut. Es turístico, pero cómodo para picar."],
+  ["Cava Baja (La Latina)","Calle de tabernas para ir de tapas de bar en bar."],
+  ["El Brillante","Bocadillo de calamares cerca de Atocha."],
+  ["Casa Lucio","Huevos rotos, cocina madrileña tradicional. Reserva."]]},
+pamplona:{name:"Pamplona",c1:"#2F6B3F",c2:"#58A05A",temp:"1–9 °C",
+ intro:"Capital de Navarra, pequeña y cómoda para caminar. En invierno hace frío y puede haber lluvia o niebla, pero los bares del casco antiguo están llenos de pintxos.",
+ see:[["Plaza del Castillo","Centro de la ciudad, con su quiosco. Aquí empieza casi cualquier ruta."],
+  ["Calle Estafeta","Recorrido del encierro y calle de bares de pintxos."],
+  ["Cuesta de Santo Domingo","Una de las calles más típicas del casco antiguo."],
+  ["Catedral de Pamplona","Fachada neoclásica y claustro gótico."],
+  ["Murallas y Ciudadela","Paseo por las murallas y el parque de la Ciudadela."],
+  ["Parque de la Taconera","Jardín junto a las murallas, bueno para caminar."],
+  ["Mercado de Santo Domingo","Mercado de abastos donde compran los vecinos."]],
+ tips:["Los pintxos tienen dos momentos fuertes: el aperitivo de mediodía y la tarde-noche.","Calles de bares: Estafeta, San Nicolás, Comedias y Mercaderes.","Nochevieja: reserva la cena y confirma el horario de los sitios que quieras visitar el 1 de enero.","Lleva abrigo e impermeable."],
+ dishes:["Huevos con chistorra","Magras con tomate","Foie a la plancha","Piquillos rellenos de bacalao","Pintxos de bechamel","Cordero al chilindrón","Pacharán","Vino de Navarra (garnacha)"],
+ eat:[["Bar Gaucho","Parada clásica de la ruta de pintxos."],
+  ["Baserriberri","Cocina navarra creativa en formato pintxo."],
+  ["El Mercáo","Pintxos y platos creativos."],
+  ["Infernu Taberna","Taberna de pintxos en la calle San Agustín."],
+  ["Café Iruña","Café histórico en la Plaza del Castillo."]]},
+sevilla:{name:"Sevilla",c1:"#B35A0B",c2:"#E08A1B",temp:"6–16 °C",
+ intro:"En invierno Sevilla es suave y soleada, buena época para caminar. Anochece pronto, así que deja los interiores para la tarde.",
+ see:[["Catedral y Giralda","La catedral gótica más grande del mundo."],
+  ["Real Alcázar","Palacio con jardines. Reserva la entrada online."],
+  ["Plaza de España y Parque de María Luisa","Paseo clásico, mejor de día."],
+  ["Barrio de Santa Cruz","Callejuelas del antiguo barrio judío."],
+  ["Triana y Mercado de Triana","Barrio de cerámica y flamenco, con ambiente local."],
+  ["Setas de Sevilla","Estructura de madera sobre el Mercado de la Encarnación, con mirador."],
+  ["Espectáculo de flamenco","Los tablaos suelen llevar cena. Conviene reservar."]],
+ tips:["Es difícil cenar antes de las 21:30.","Las tapas se piden para compartir: varios platos en lugar de uno por persona.","1 de enero: muchos sitios abren tarde o cierran. Comprueba horarios.","Muchos sitios para turistas en el centro son mediocres. Busca tabernas con clientela local."],
+ dishes:["Salmorejo","Pringá","Espinacas con garbanzos","Pescaíto frito","Croquetas","Solomillo al whisky"],
+ eat:[["El Rinconcillo","Taberna abierta desde 1670."],
+  ["Bodega Santa Cruz Las Columnas","Tapas en Santa Cruz. Prueba la tortilla."],
+  ["Bodega Dos de Mayo","Plaza tranquila, buen pescado y berenjenas fritas."],
+  ["Eslava","Tapas creativas en San Lorenzo."],
+  ["Mercado de Triana","Comida informal y ambiente de barrio."],
+  ["Los Coloniales","Tapeo económico con cierta calidad."]]},
+cordoba:{name:"Córdoba",c1:"#7D6A14",c2:"#B39A2A",temp:"4–15 °C",
+ intro:"Parada de un día, así que hay que elegir. Se puede ver lo esencial a pie en pocas horas: Mezquita, Judería y Alcázar.",
+ see:[["Mezquita-Catedral","Con el Patio de los Naranjos. Empieza por aquí y reserva la entrada."],
+  ["Barrio de la Judería","Calles estrechas y encaladas, para pasear sin prisa."],
+  ["Alcázar de los Reyes Cristianos","Jardines con estanques y torres."],
+  ["Puente Romano y Torre de la Calahorra","Buenas vistas de la Mezquita desde el río."],
+  ["Sinagoga","Una de las pocas sinagogas medievales que se conservan en España."],
+  ["Palacio de Viana","Casa palacio con patios."]],
+ tips:["Con maletas, comprueba si hay consigna en la estación antes de entrar en la Judería.","Calcula la salida a Granada con margen. Es un día con tres ciudades.","Empieza temprano: la Mezquita y la Judería ocupan la mañana.","Hay churros con chocolate para desayunar en el centro."],
+ dishes:["Salmorejo cordobés","Rabo de toro","Flamenquín","Berenjenas con miel","Churros con chocolate"],
+ eat:[["Churros Bar Marta","Desayuno de churros con chocolate."],
+  ["Taberna Salinas","Taberna clásica de la ciudad."],
+  ["Bodegas Campos","Bodega tradicional, mejor con reserva."],
+  ["El Churrasco","Carne a la brasa y cocina cordobesa."],
+  ["Casa Pepe de la Judería","Cocina cordobesa junto a la Judería."]]},
+granada:{name:"Granada",c1:"#9E1F4B",c2:"#D14A73",temp:"1–12 °C",
+ intro:"Granada está a unos 700 metros de altitud, por eso las noches de enero son frías y Sierra Nevada suele verse con nieve. Es la ciudad de la Alhambra y de la tapa que viene con la bebida.",
+ see:[["Alhambra y Generalife","Los Palacios Nazaríes tienen aforo limitado por franja horaria. Reserva con mucha antelación."],
+  ["Albaicín y Mirador de San Nicolás","Barrio morisco con vistas a la Alhambra."],
+  ["Sacromonte","Casas cueva y flamenco."],
+  ["Carrera del Darro y Paseo de los Tristes","Paseo junto al río, bajo la Alhambra."],
+  ["Catedral y Capilla Real","En pleno centro, cerca de la Plaza Nueva."],
+  ["Realejo y Campo del Príncipe","Barrio de tapas y plazas con ambiente."]],
+ tips:["Alhambra: en 2026 la entrada general costaba 22,27 € y los Palacios Nazaríes admiten 300 personas cada 30 minutos. Confirma el precio de 2027.","Con cada bebida suele venir una tapa gratis. Los precios de la bebida son algo más altos que en Sevilla o Málaga.","Las tapas cerca de la Alhambra son más turísticas. Mejor en Plaza Nueva, el centro y el Albaicín.","Abrígate bien por la noche y sube al mirador con tiempo antes del atardecer."],
+ dishes:["Tapas con la bebida","Remojón granadino","Habas con jamón","Berenjenas con miel","Tortilla del Sacromonte","Piononos de Santa Fe"],
+ eat:[["Los Diamantes","Fritura de pescado y barra llena."],
+  ["Bodegas Castañeda","Bodega con embutidos y vinos, en el centro."],
+  ["La Tana","Taberna de vinos y tapas."],
+  ["La Fontana","Carrera del Darro 19. Tapas con vistas a la Alhambra."],
+  ["Rabo de Nube","Paseo de los Tristes 1. Tapas y raciones junto al río."]]},
+malaga:{name:"Málaga",c1:"#1560A8",c2:"#3A97DB",temp:"9–17 °C",
+ intro:"Mar, sol y una ciudad compacta. En enero se puede caminar con comodidad, aunque el agua está fría. El 5 de enero es la gran Cabalgata de Reyes.",
+ see:[["Alcazaba y Castillo de Gibralfaro","Fortaleza árabe con vistas al puerto."],
+  ["Catedral de Málaga","Llamada La Manquita porque le falta una torre."],
+  ["Museo Picasso","Picasso nació en Málaga."],
+  ["Calle Larios y Plaza de la Constitución","Corazón comercial del centro histórico."],
+  ["Muelle Uno y Paseo del Parque","Paseo junto al puerto."],
+  ["Mercado de Atarazanas","Mercado central, con barras para picar."],
+  ["Pedregalejo y El Palo","Paseo marítimo con chiringuitos de espetos."]],
+ tips:["Cabalgata de Reyes: en 2026 los Reyes llegaban al Ayuntamiento a las 17:30 y la cabalgata salía a las 18:00 por el centro. Confirma el horario de 2027.","Zona del recorrido: Avenida de Cervantes, Paseo del Parque y Alameda Principal. El tráfico se corta unas horas antes, mejor ir en transporte público.","Del 3 al 5 de enero hay cabalgatas de barrio.","El 6 de enero es festivo: muchos comercios cierran o reducen horario."],
+ dishes:["Espeto de sardinas","Pescaíto frito","Ajoblanco","Boquerones","Porra antequerana","Roscón de Reyes con chocolate caliente"],
+ eat:[["El Pimpi","Bodega histórica en el centro."],
+  ["Casa Lola","Tapas y vinos en la calle Granada."],
+  ["El Caleño","Espetos en Pedregalejo."],
+  ["Los Cuñaos","Espetos y pescado."],
+  ["Mercado de Atarazanas","Para picar de pie entre puestos."]]},
+tenerife:{name:"Tenerife",c1:"#0E7C7B",c2:"#2FB3A8",temp:"15–21 °C",
+ intro:"Clima suave en invierno. El sur es más seco y soleado, el norte más fresco y nublado, y en el Teide hace frío y puede haber nieve.",
+ see:[["Parque Nacional del Teide","Con teleférico. Reserva con antelación y lleva abrigo."],
+  ["Santa Cruz de Tenerife","Auditorio y Mercado de Nuestra Señora de África."],
+  ["San Cristóbal de La Laguna","Casco histórico, patrimonio de la UNESCO."],
+  ["Puerto de la Cruz","Lago Martiánez y Loro Parque."],
+  ["Parque Rural de Anaga","Bosque de laurisilva y miradores."],
+  ["Masca y Los Gigantes","Acantilados y carreteras de montaña."],
+  ["Avistamiento de ballenas y delfines","Salidas desde el sur de la isla."],
+  ["Playa de Las Teresitas","Arena importada y paseo desde Santa Cruz."]],
+ tips:["Un coche de alquiler facilita mucho recorrer la isla.","Las papas arrugadas suelen estar mejor en el norte: La Laguna, La Matanza y Puerto de la Cruz. En el norte cuestan de 4 a 6 € la ración y en el sur hasta 9 €.","Los guachinches son casas de comida típica propias de Tenerife, con menú corto y vino de la casa.","Lleva capas: la temperatura cambia mucho entre la costa y el Teide."],
+ dishes:["Papas arrugadas con mojo rojo y verde","Carne de fiesta","Queso asado con mojo","Ropa vieja","Escaldón de gofio","Potaje de berros","Pescado fresco (vieja, sama, cherne)","Barraquito"],
+ eat:[["Restaurante Basilio","Papas arrugadas con dos mojos de la casa."],
+  ["Casa Pautonia","Cocina canaria y papas."],
+  ["Restaurante Alanda","Papas arrugadas y cocina de la isla."],
+  ["El Patio (Santa Cruz)","Cocina canaria tradicional."],
+  ["Cruz del Carmen","Puchero canario."],
+  ["Mercado de Nuestra Señora de África","Producto local y bares dentro del mercado."]]},
+medellin:{name:"Medellín",c1:"#334155",c2:"#64748B",temp:"",origin:true}
+};
+
+var TRIP=[
+ {d:"2026-12-27",stops:["medellin","madrid"],start:true,base:"medellin",legs:[{f:"medellin",t:"madrid",m:"vuelo",w:""}]},
+ {d:"2026-12-28",stops:["madrid"],sleep:"madrid",ev:["Hoy es el Día de los Santos Inocentes: en España se hacen bromas, como el April Fools en otros países."]},
+ {d:"2026-12-29",stops:["madrid"],sleep:"madrid"},
+ {d:"2026-12-30",stops:["madrid"],sleep:"madrid"},
+ {d:"2026-12-31",stops:["madrid","pamplona"],sleep:"pamplona",legs:[{f:"madrid",t:"pamplona",m:"traslado",w:""}],ev:["Nochevieja. Se toman doce uvas con las campanadas de medianoche. Reserva la cena y comprueba qué abre el 1 de enero."]},
+ {d:"2027-01-01",stops:["pamplona","sevilla"],sleep:"sevilla",legs:[{f:"pamplona",t:"sevilla",m:"traslado",w:""}],ev:["Año Nuevo es festivo. Muchos comercios y atracciones cierran o abren más tarde."]},
+ {d:"2027-01-02",stops:["sevilla"],sleep:"sevilla"},
+ {d:"2027-01-03",stops:["sevilla","cordoba","granada"],sleep:"granada",base:"cordoba",legs:[{f:"sevilla",t:"cordoba",m:"traslado",w:"Salida temprano"},{f:"cordoba",t:"granada",m:"traslado",w:"Salida por la noche"}],ev:["Día con tres ciudades. Ten los billetes a mano y lleva una mochila ligera."]},
+ {d:"2027-01-04",stops:["granada","malaga"],sleep:"malaga",base:"granada",legs:[{f:"granada",t:"malaga",m:"traslado",w:"Salida por la noche"}],ev:["Día de la Alhambra, si hay entradas. Entran por franja horaria y se agotan con semanas de antelación."]},
+ {d:"2027-01-05",stops:["malaga"],sleep:"malaga",ev:["Víspera de Reyes. Por la tarde es la Cabalgata de Reyes en el centro de Málaga."]},
+ {d:"2027-01-06",stops:["malaga","tenerife"],sleep:"tenerife",legs:[{f:"malaga",t:"tenerife",m:"vuelo",w:"Salida por la tarde"}],ev:["Día de Reyes, festivo. Muchos comercios cierran. Por la mañana, roscón de Reyes y chocolate caliente."]},
+ {d:"2027-01-07",stops:["tenerife"],sleep:"tenerife"},
+ {d:"2027-01-08",stops:["tenerife"],sleep:"tenerife"},
+ {d:"2027-01-09",stops:["tenerife"],sleep:"tenerife"},
+ {d:"2027-01-10",stops:["tenerife","pamplona"],sleep:"pamplona",legs:[{f:"tenerife",t:"pamplona",m:"vuelo",w:""}]},
+ {d:"2027-01-11",stops:["pamplona"],sleep:"pamplona"},
+ {d:"2027-01-12",stops:["pamplona"],sleep:"pamplona"},
+ {d:"2027-01-13",stops:["pamplona"],sleep:"pamplona"},
+ {d:"2027-01-14",stops:["pamplona"],sleep:"pamplona"},
+ {d:"2027-01-15",stops:["pamplona","madrid"],sleep:"madrid",base:"pamplona",legs:[{f:"pamplona",t:"madrid",m:"traslado",w:""}]},
+ {d:"2027-01-16",stops:["madrid"],sleep:"madrid"},
+ {d:"2027-01-17",stops:["madrid","medellin"],sleep:null,last:true,base:"madrid",legs:[{f:"madrid",t:"medellin",m:"vuelo",w:""}],ev:["Último día del viaje. Por la noche o a la hora que salga el vuelo, regreso a Medellín."]}
+];
+
+var TYPES={
+ hotel:{l:"Hotel",t:"#5B4FC7"},tren:{l:"Tren",t:"#C2410C"},vuelo:{l:"Vuelo",t:"#0E7490"},
+ bus:{l:"Bus",t:"#2563EB"},coche:{l:"Coche",t:"#4D7C0F"},entrada:{l:"Entrada",t:"#B4236B"},
+ seguro:{l:"Seguro",t:"#475569"},comida:{l:"Comida",t:"#B45309"},otro:{l:"Otro",t:"#64748B"}
+};
+var TYPE_ICON={hotel:"hotel",tren:"tren",vuelo:"vuelo",bus:"bus",coche:"coche",entrada:"entrada",seguro:"seguro",comida:"comida",otro:"file"};
+var STATUS=["Sin marcar","Quiero ir","Reservado","Ya fui"];
+function statSel(k){var s=kv[k]||0;return '<select class="stat statsel s'+s+'" data-k="'+k+'" aria-label="Estado">'+STATUS.map(function(t,i){return '<option value="'+i+'"'+(i===s?" selected":"")+'>'+t+'</option>'}).join("")+'</select>'}
+var TRIPT={vuelo:1,tren:1,bus:1,coche:1};
+
+/* ---- Ubicaciones: enlaces de Google Maps, sugerencias y ciudad ---- */
+function gmap(q){return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q)}
+function safeDec(s){try{return decodeURIComponent(s)}catch(e){return s}}
+function norm(s){return String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase()}
+function isMapsUrl(v){return /^https?:\/\/(([a-z0-9-]+\.)*google\.[a-z.]+\/maps|maps\.google\.[a-z.]+|maps\.app\.goo\.gl|goo\.gl\/maps|maps\.apple\.com|g\.co\/kgs)/i.test(String(v).trim())}
+function nameFromUrl(u){
+ var m=u.match(/\/maps\/place\/([^\/@?#]+)/)||u.match(/[?&](?:q|query)=([^&#]+)/);
+ if(!m)return "";
+ var s=safeDec(m[1].replace(/\+/g," ")).trim();
+ return /^-?\d+(\.\d+)?,\s*-?\d+/.test(s)?"":s;
+}
+function coordsFromUrl(u){
+ var s=safeDec(u),m=s.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)||s.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/)||s.match(/[?&](?:q|query|ll)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+ return m?[Number(m[1]),Number(m[2])]:null;
+}
+var CCOORD={madrid:[40.4168,-3.7038,40],pamplona:[42.8125,-1.6458,25],sevilla:[37.3891,-5.9845,35],cordoba:[37.8882,-4.7794,25],granada:[37.1773,-3.5986,30],malaga:[36.7213,-4.4214,35],tenerife:[28.29,-16.55,70],medellin:[6.2442,-75.5812,60]};
+function km(a,b,c,d){var r=Math.PI/180,x=(c-a)*r,y=(d-b)*r,h=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a*r)*Math.cos(c*r)*Math.sin(y/2)*Math.sin(y/2);return 12742*Math.asin(Math.sqrt(h))}
+function cityByCoords(p){var best=null,bd=1e9;Object.keys(CCOORD).forEach(function(k){var c=CCOORD[k],dd=km(p[0],p[1],c[0],c[1]);if(dd<c[2]&&dd<bd){bd=dd;best=k}});return best}
+var KEYS=[["medellin",/medellin|jose maria cordova|olaya herrera|rionegro/],["madrid",/madrid|atocha|chamartin|barajas/],["pamplona",/pamplona|iruna/],["sevilla",/sevilla|santa justa/],["cordoba",/cordoba/],["granada",/granada/],["malaga",/malaga|maria zambrano/],["tenerife",/tenerife|la laguna|reina sofia|los rodeos|costa adeje|los cristianos|puerto de la cruz|teide/]];
+function detectCity(t,u){
+ if(u){var p=coordsFromUrl(u);if(p){var c=cityByCoords(p);if(c)return c}}
+ var n=norm((t||"")+" "+(u?nameFromUrl(u):""));
+ for(var i=0;i<KEYS.length;i++)if(KEYS[i][1].test(n))return KEYS[i][0];
+ return null;
+}
+var PLACES=["Madrid Puerta de Atocha","Madrid Chamartín-Clara Campoamor","Aeropuerto Adolfo Suárez Madrid-Barajas","Estación de Pamplona-Iruña","Estación de autobuses de Pamplona","Aeropuerto de Pamplona","Sevilla Santa Justa","Estación de autobuses Plaza de Armas, Sevilla","Aeropuerto de Sevilla San Pablo","Córdoba Central (estación de tren)","Estación de autobuses de Córdoba","Estación de tren de Granada","Estación de autobuses de Granada","Málaga María Zambrano","Estación de autobuses de Málaga","Aeropuerto de Málaga-Costa del Sol","Aeropuerto Tenerife Sur","Aeropuerto Tenerife Norte-Ciudad de La Laguna","Aeropuerto José María Córdova (MDE), Rionegro","Aeropuerto Olaya Herrera (EOH), Medellín"];
+function sugMap(){
+ var m={};PLACES.forEach(function(p){m[p]=gmap(p)});
+ docs.forEach(function(d){[[d.loc1,d.loc1u],[d.loc2,d.loc2u]].forEach(function(x){if(x[0]&&(!(x[0] in m)||x[1]))m[x[0]]=x[1]||m[x[0]]||""})});
+ return m;
+}
+function locRow(l,t,u){
+ if(!t&&!u)return "";
+ return '<div class="loc"><span><small>'+l+'</small>'+esc(t||"Ubicación en Google Maps")+'</span>'+(u?'<a class="map" href="'+esc(u)+'" target="_blank" rel="noopener" aria-label="Abrir en Google Maps">'+svg("pin",16)+'Mapa</a>':"")+'</div>';
+}
+function locsHTML(d){
+ var t=TRIPT[d.type],a=[locRow(t?"Salida":"Ubicación",d.loc1,d.loc1u)];
+ if(t)a.push(locRow("Llegada",d.loc2,d.loc2u));
+ a=a.filter(Boolean);
+ return a.length?'<div class="locs">'+a.join("")+'</div>':"";
+}
+var LOCPH={hotel:"Dirección o nombre del hotel",entrada:"Dirección del lugar",comida:"Dirección del restaurante",seguro:"Dirección (opcional)",otro:"Dirección o lugar"};
+var LOCPH1={vuelo:"Ej. Aeropuerto de Medellín (MDE)",tren:"Ej. Madrid Puerta de Atocha",bus:"Ej. Estación de autobuses",coche:"Ej. Agencia de alquiler"};
+var LOCPH2={vuelo:"Ej. Aeropuerto Madrid-Barajas",tren:"Ej. Sevilla Santa Justa",bus:"Ej. Estación de autobuses",coche:"Ej. Dirección de destino"};
+var locS={1:{t:"",u:"",src:""},2:{t:"",u:"",src:""}},legSel="",legManual=false,toSel="";
+function locStat(n){
+ var s=locS[n];
+ if(s.u)return '<span class="ok">'+svg("check",15)+'Vinculado a Google Maps</span><button type="button" class="mini" data-act="unlink" data-n="'+n+'">Quitar enlace</button>';
+ if(s.t)return '<span>Sin enlace al mapa.</span><a class="mini" href="'+gmap(s.t)+'" target="_blank" rel="noopener">'+svg("pin",14)+'Buscar en Maps</a>';
+ return '<span>Elige una sugerencia o pega un enlace de Google Maps.</span>';
+}
+function locField(n,label,ph){
+ return '<div class="field"><label for="f-loc'+n+'">'+label+'</label><input id="f-loc'+n+'" type="text" list="dl-loc" data-loc="'+n+'" placeholder="'+esc(ph)+'" value="'+esc(locS[n].t)+'" autocomplete="off" autocorrect="off"><div class="locstat" id="ls-'+n+'">'+locStat(n)+'</div></div>';
+}
+function locFields(type){
+ var dl='<datalist id="dl-loc">'+Object.keys(sugMap()).map(function(p){return '<option value="'+esc(p)+'"></option>'}).join("")+'</datalist>';
+ if(TRIPT[type])return locField(1,"Salida (opcional)",LOCPH1[type])+locField(2,"Llegada (opcional)",LOCPH2[type])+dl;
+ return locField(1,"Ubicación (opcional)",LOCPH[type]||"Dirección o lugar")+dl;
+}
+function norm(x){return String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")}
+function viaOf(dayId,i){var v=kv["via:"+dayId+":"+i];return Array.isArray(v)?v:[]}
+function legSegs(day,i){
+ var l=day.legs[i],pts=[{n:nm(l.f),id:l.f}].concat(viaOf(day.d,i).map(function(x){return {n:x,id:null}})).concat([{n:nm(l.t),id:l.t}]),o=[];
+ for(var j=0;j<pts.length-1;j++)o.push({f:pts[j],t:pts[j+1],j:j,i:i});
+ return o;
+}
+function segText(s){return s.f.n+" → "+s.t.n}
+function segType(l,j){return l.m==="vuelo"&&j===0?"vuelo":"tren"}
+function legField(dayId,type,sel){
+ var day=dayById(dayId);
+ if(!day||!day.legs||!TRIPT[type])return "";
+ var o='<option value="">Sin asignar</option>';
+ day.legs.forEach(function(l,i){legSegs(day,i).forEach(function(s){var v=i+"-"+s.j;o+='<option value="'+v+'"'+(String(sel)===v?" selected":"")+'>'+esc(segText(s))+'</option>'})});
+ return '<div class="field"><label for="f-leg">Trayecto</label><select id="f-leg">'+o+'</select></div>';
+}
+function ptMatch(p,cid,txt){if(p.id)return !!cid&&cid===p.id;return !!txt&&txt.indexOf(norm(p.n))>=0}
+function autoLeg(){
+ if(legManual)return;
+ var dayEl=$("#f-day");if(!dayEl||!TRIPT[selType])return;
+ var day=dayById(dayEl.value);if(!day||!day.legs)return;
+ var c1=detectCity(locS[1].t,locS[1].u),c2=detectCity(locS[2].t,locS[2].u),t1=norm(locS[1].t),t2=norm(locS[2].t),best=null,bs=0,tie=false;
+ day.legs.forEach(function(l,i){legSegs(day,i).forEach(function(sg){
+  var sc=(ptMatch(sg.f,c1,t1)?1:0)+(ptMatch(sg.t,c2,t2)?1:0);
+  if(sc>bs){bs=sc;best=i+"-"+sg.j;tie=false}else if(sc===bs&&sc>0)tie=true})});
+ if(best&&!tie){legSel=best;var sel=$("#f-leg");if(sel)sel.value=legSel}
+}
+/* Noches de hotel y pendientes */
+function staysOf(){var out=[];DAYS.forEach(function(d){if(!d.sleep)return;var l=out[out.length-1];if(l&&l.city===d.sleep&&l.nights[l.nights.length-1].i===d.i-1)l.nights.push(d);else out.push({city:d.sleep,nights:[d]})});return out}
+function stayOfDay(id){var st=staysOf();for(var k=0;k<st.length;k++)for(var n=0;n<st[k].nights.length;n++)if(st[k].nights[n].d===id)return st[k];return null}
+function nightsCovered(){
+ var m={};
+ docs.forEach(function(d){if(d.type!=="hotel")return;var a=dayById(d.dayId);if(!a)return;var b=(d.nightTo&&dayById(d.nightTo))||a;for(var k=a.i;k<=b.i;k++)m[DAYS[k].d]=1});
+ return m;
+}
+function pendHotels(){
+ var cov=nightsCovered(),out=[];
+ staysOf().forEach(function(s){var run=null;s.nights.concat([null]).forEach(function(d){
+  if(d&&!cov[d.d]){if(!run)run={city:s.city,from:d,to:d,n:0};run.to=d;run.n++}
+  else if(run){out.push(run);run=null}})});
+ return out;
+}
+function pendTickets(){
+ var out=[];
+ DAYS.forEach(function(day){
+  if(!day.legs)return;
+  var own=docsOf(day.d).filter(function(d){return TRIPT[d.type]}),free=own.filter(function(d){return d.leg==null}).length;
+  day.legs.forEach(function(l,i){
+   var segs=legSegs(day,i);
+   segs.forEach(function(sg){
+    var has=own.some(function(d){return d.leg===i&&Math.min(d.seg||0,segs.length-1)===sg.j});
+    if(has)return;
+    if(free>0){free--;return}
+    out.push({day:day,leg:i,seg:sg,type:segType(l,sg.j)});
+   });
+  });
+ });
+ return out;
+}
+function hotelEnd(dayId){
+ var st=stayOfDay(dayId);if(!st)return null;
+ var cov=nightsCovered(),last=null;
+ for(var k=0;k<st.nights.length;k++){var n=st.nights[k];if(n.d<dayId)continue;if(n.d!==dayId&&cov[n.d])break;last=n.d}
+ return last;
+}
+function toField(dayId,type,sel){
+ if(type!=="hotel")return "";
+ var st=stayOfDay(dayId);if(!st)return "";
+ var nights=st.nights.filter(function(n){return n.d>=dayId});if(!nights.length)return "";
+ var cur=sel||hotelEnd(dayId)||nights[nights.length-1].d;
+ if(!nights.some(function(n){return n.d===cur}))cur=nights[nights.length-1].d;
+ return '<div class="field"><label for="f-to">Última noche</label><select id="f-to">'+nights.map(function(n,k){return '<option value="'+n.d+'"'+(n.d===cur?" selected":"")+'>'+esc(cap(shortDay(n)))+' · '+(k+1)+(k?" noches":" noche")+'</option>'}).join("")+'</select></div>';
+}
+function nightsText(d){
+ var a=dayById(d.dayId),b=d.nightTo&&dayById(d.nightTo);
+ if(!a||!b||b.i<=a.i)return "";
+ var n=b.i-a.i+1;return "Noches "+rangeText(a,b)+" · "+n+" noches";
+}
+function legModes(day,idx){var s=[];docsOf(day.d).forEach(function(d){if(TRIPT[d.type]&&d.leg===idx&&s.indexOf(d.type)<0)s.push(d.type)});return s}
+function dayModes(day){
+ var s=[];
+ (day.legs||[]).forEach(function(l,i){legModes(day,i).forEach(function(t){if(s.indexOf(t)<0)s.push(t)})});
+ docsOf(day.d).forEach(function(d){if(TRIPT[d.type]&&d.leg==null&&s.indexOf(d.type)<0)s.push(d.type)});
+ return s;
+}
+function modeText(ms){return ms.map(function(t){return TYPES[t].l}).join(" · ")}
+function legTypes(day,i){var m=legModes(day,i).slice();if(!m.length&&day.legs.length===1){docsOf(day.d).forEach(function(d){if(TRIPT[d.type]&&d.leg==null&&m.indexOf(d.type)<0)m.push(d.type)})}return m}
+function legLabel(day,i){var m=legTypes(day,i);return m.length?modeText(m):(day.legs[i].m==="vuelo"?"Vuelo":"Traslado")}
+function legIcon(day,i){var m=legTypes(day,i);return m.length?TYPE_ICON[m[0]]:(day.legs[i].m==="vuelo"?"vuelo":"route")}
+function dayLabel(day){var o=[];day.legs.forEach(function(l,i){legLabel(day,i).split(" · ").forEach(function(x){if(o.indexOf(x)<0)o.push(x)})});return o.join(" · ")}
+var CURS=["EUR","COP","USD"];
+function parsePrice(s){
+ s=String(s||"").replace(/[^\d.,]/g,"");if(!s)return null;
+ var lc=s.lastIndexOf(","),ld=s.lastIndexOf("."),dec=-1;
+ if(lc>=0&&ld>=0)dec=Math.max(lc,ld);
+ else if(lc>=0){dec=(s.length-lc-1<=2&&s.indexOf(",")===lc)?lc:-1}
+ else if(ld>=0){dec=(s.length-ld-1<=2&&s.indexOf(".")===ld)?ld:-1}
+ var n=dec>=0?s.slice(0,dec).replace(/[.,]/g,"")+"."+s.slice(dec+1):s.replace(/[.,]/g,"");
+ var v=parseFloat(n);return isFinite(v)&&v>=0?Math.round(v*100)/100:undefined;
+}
+function fmtMoney(v,c){var z=c==="COP"?0:2;try{return new Intl.NumberFormat("es-ES",{style:"currency",currency:c,minimumFractionDigits:z,maximumFractionDigits:z}).format(v)}catch(e){return v+" "+c}}
+function sumDocs(list){var m={};list.forEach(function(d){if(d.price!=null){var c=d.cur||"EUR";m[c]=(m[c]||0)+d.price}});return m}
+function sumText(m){return CURS.filter(function(c){return m[c]!=null}).map(function(c){return fmtMoney(m[c],c)}).join(" + ")}
+function priceHTML(d){return d.price!=null?'<div class="price">'+esc(fmtMoney(d.price,d.cur||"EUR"))+'</div>':""}
+function daySum(list){var t=sumText(sumDocs(list));return t?'<div class="sum"><span>Total del día</span><b>'+esc(t)+'</b></div>':""}
+function priceField(d){
+ var cur=d?(d.cur||"EUR"):(kv.lastCur||"EUR");
+ return '<div class="field"><label for="f-price">Precio (opcional)</label><div class="pricerow"><input id="f-price" type="text" inputmode="decimal" placeholder="0,00" value="'+(d&&d.price!=null?String(d.price).replace(".",","):"")+'" autocomplete="off"><select id="f-cur" aria-label="Moneda">'+CURS.map(function(c){return '<option value="'+c+'"'+(c===cur?" selected":"")+'>'+c+'</option>'}).join("")+'</select></div></div>';
+}
+function summaryHTML(shown){
+ var pr=shown.filter(function(d){return d.price!=null});if(!pr.length)return "";
+ var h='<section class="sumbox"><div><span>'+(docFilter==="all"?"Gastado en el viaje":"Gastado en "+TYPES[docFilter].l.toLowerCase())+'</span><b>'+esc(sumText(sumDocs(pr)))+'</b></div>';
+ if(docFilter==="all"){
+  var by={};pr.forEach(function(d){(by[d.type]=by[d.type]||[]).push(d)});
+  h+='<ul class="sumrows">'+Object.keys(TYPES).filter(function(k){return by[k]}).map(function(k){return '<li style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],18)+'<span>'+TYPES[k].l+' <small>'+by[k].length+'</small></span><b>'+esc(sumText(sumDocs(by[k])))+'</b></li>'}).join("")+'</ul>';
+ }
+ var np=shown.length-pr.length;
+ if(np>0)h+='<p class="foot">'+np+(np===1?" documento sin precio.":" documentos sin precio.")+'</p>';
+ return h+'</section>';
+}
+function refreshLegField(){var w=$("#f-legwrap"),dy=$("#f-day");if(w&&dy)w.innerHTML=legField(dy.value,selType,legSel);var t=$("#f-towrap");if(t&&dy)t.innerHTML=toField(dy.value,selType,toSel);var lb=$("#f-daylb");if(lb)lb.textContent=selType==="hotel"?"Primera noche":"Día"}
+
+/* ================= Fechas ================= */
+var WD=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+var WD3=["DOM","LUN","MAR","MIÉ","JUE","VIE","SÁB"];
+var MO=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+var MO3=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+function pd(s){var a=s.split("-").map(Number);return new Date(a[0],a[1]-1,a[2])}
+var SIM_TODAY=null; /* TEMPORAL: borrar esta fecha (dejar null) para usar la fecha real */
+function todayStr(){if(SIM_TODAY)return SIM_TODAY;var t=new Date();return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0")}
+function utc(s){var a=s.split("-").map(Number);return Date.UTC(a[0],a[1]-1,a[2])}
+function diff(a,b){return Math.round((utc(b)-utc(a))/864e5)}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+function nm(id){return CITIES[id].name}
+function hasInfo(id){return !CITIES[id].origin}
+
+var DAYS=TRIP.map(function(x,i){var dt=pd(x.d);x.i=i;x.dt=dt;x.base=x.base||x.sleep||x.stops[x.stops.length-1];return x});
+function dayById(id){for(var i=0;i<DAYS.length;i++)if(DAYS[i].d===id)return DAYS[i];return null}
+function colors(day){return [CITIES[day.stops[0]].c1,CITIES[day.stops[day.stops.length-1]].c2]}
+function longDate(day){return WD[day.dt.getDay()]+", "+day.dt.getDate()+" de "+MO[day.dt.getMonth()]+" de "+day.dt.getFullYear()}
+function shortDay(day){return WD3[day.dt.getDay()].toLowerCase()+" "+day.dt.getDate()+" "+MO3[day.dt.getMonth()]}
+function routeHTML(day){return day.stops.map(function(s){return esc(nm(s))}).join(" "+svg("arrow",16)+" ")}
+function routeText(day){return day.stops.map(nm).join(" → ")}
+
+/* ================= Almacenamiento local ================= */
+var db=null, docs=[], kv={}, urls={};
+function openDB(){return new Promise(function(res){try{var r=indexedDB.open("nuestra-ruta",1);
+ r.onupgradeneeded=function(){var d=r.result;d.createObjectStore("docs",{keyPath:"id"});d.createObjectStore("kv",{keyPath:"k"})};
+ r.onsuccess=function(){res(r.result)};r.onerror=function(){res(null)};r.onblocked=function(){res(null)}}catch(e){res(null)}})}
+function tx(store,mode,fn){return new Promise(function(res,rej){var t=db.transaction(store,mode);var s=t.objectStore(store);var r=fn(s);t.oncomplete=function(){res(r&&r.result)};t.onerror=function(){rej(t.error)};t.onabort=function(){rej(t.error)}})}
+async function loadAll(){
+ db=await openDB();
+ if(!db)return;
+ try{docs=(await tx("docs","readonly",function(s){return s.getAll()}))||[];
+  var rows=(await tx("kv","readonly",function(s){return s.getAll()}))||[];rows.forEach(function(r){kv[r.k]=r.v})}catch(e){docs=[]}
+}
+async function saveDoc(d){
+ var i=docs.findIndex(function(x){return x.id===d.id});if(i<0)docs.push(d);else docs[i]=d;
+ if(db){try{await tx("docs","readwrite",function(s){return s.put(d)})}catch(e){toast("No se pudo guardar en el dispositivo")}}
+}
+async function removeDoc(id){
+ docs=docs.filter(function(x){return x.id!==id});
+ if(urls[id]){try{URL.revokeObjectURL(urls[id])}catch(e){}delete urls[id]}
+ if(db){try{await tx("docs","readwrite",function(s){return s.delete(id)})}catch(e){}}
+}
+async function setKV(k,v){kv[k]=v;if(db){try{await tx("kv","readwrite",function(s){return s.put({k:k,v:v})})}catch(e){}}}
+async function delKV(k){delete kv[k];if(db){try{await tx("kv","readwrite",function(s){return s.delete(k)})}catch(e){}}}
+function objUrl(d){if(!d.blob)return "";if(!urls[d.id])urls[d.id]=URL.createObjectURL(d.blob);return urls[d.id]}
+function uid(){return "d"+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function fmtSize(n){if(!n)return "";if(n<1024)return n+" B";if(n<1048576)return Math.round(n/1024)+" KB";return (n/1048576).toFixed(1)+" MB"}
+function docsOf(dayId){return docs.filter(function(d){return d.dayId===dayId}).sort(function(a,b){return a.created-b.created})}
+function docsShown(day){
+ var extra=docs.filter(function(d){if(d.type!=="hotel"||d.dayId===day.d||!d.nightTo)return false;var a=dayById(d.dayId),b=dayById(d.nightTo);return a&&b&&a.i<day.i&&day.i<=b.i}).sort(function(a,b){return a.created-b.created});
+ return extra.concat(docsOf(day.d));
+}
+
+/* ================= Utilidades de interfaz ================= */
+var toastT;
+function toast(msg){var t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(function(){t.hidden=true},2300)}
+async function copyText(txt){
+ try{await navigator.clipboard.writeText(txt);toast("Código copiado")}
+ catch(e){var ta=document.createElement("textarea");ta.value=txt;ta.style.cssText="position:fixed;opacity:0;top:0";document.body.appendChild(ta);ta.select();var ok=false;try{ok=document.execCommand("copy")}catch(_){}ta.remove();toast(ok?"Código copiado":"Mantén pulsado el código para copiarlo")}
+}
+function mapUrl(name,city){return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(name+", "+nm(city))}
+
+/* ================= Vistas ================= */
+var tab="general", docFilter="all", docsTab="docs", scrollPos={}, homeScrolled=false;
+function applyTheme(){document.documentElement.setAttribute("data-theme",kv.theme||"light")}
+var V={home:$("#v-home"),day:$("#v-day"),docs:$("#v-docs"),cal:$("#v-cal")};
+
+function stagesOf(){
+ var out=[];DAYS.forEach(function(d){var l=out[out.length-1];if(l&&l.city===d.base){l.to=d}else out.push({city:d.base,from:d,to:d})});
+ return out;
+}
+function rangeText(a,b){
+ if(a===b)return a.dt.getDate()+" "+MO3[a.dt.getMonth()];
+ if(a.dt.getMonth()===b.dt.getMonth())return a.dt.getDate()+"–"+b.dt.getDate()+" "+MO3[b.dt.getMonth()];
+ return a.dt.getDate()+" "+MO3[a.dt.getMonth()]+"–"+b.dt.getDate()+" "+MO3[b.dt.getMonth()];
+}
+
+var PAT={madrid:"grid",pamplona:"stripe",sevilla:"star",cordoba:"star",granada:"star",malaga:"wave",tenerife:"contour",medellin:"dots"};
+function mainIdx(d){if(d.stops.length<2)return 0;if(d.start)return d.stops.length-1;var k=d.stops.indexOf(d.base);return k<0?d.stops.length-1:k}
+function stopsHTML(d){return d.stops.map(function(s,i){return '<span class="sp"><span class="pinn'+(i===mainIdx(d)?'':' mid')+'" style="--c:'+CITIES[s].c1+'">'+(i+1)+'</span>'+esc(nm(s))+'</span>'}).join(svg("chev",16))}
+function titleHTML(d){return d.stops.map(function(s,i){return '<span class="rt">'+esc(nm(s))+(i<d.stops.length-1?svg("arrow",22):"")+'</span>'}).join(" ")}
+function nightsOf(s){var n=0;DAYS.forEach(function(d){if(d.d>=s.from.d&&d.d<=s.to.d&&d.sleep===s.city)n++});return n}
+function renderHome(){
+ var t=todayStr(),first=DAYS[0],last=DAYS[DAYS.length-1],cur=dayById(t),cd="";
+ if(diff(t,first.d)>0){var n=diff(t,first.d);cd='<div class="cd"><span>'+(n===1?"Falta":"Faltan")+'</span><b>'+n+'</b><span>'+(n===1?"día":"días")+'</span></div>'}
+ else if(cur){cd='<a class="cd" href="#dia-'+cur.d+'" aria-label="Ir al día de hoy">'+(cur.i===0?'<span>¡Hoy empieza!</span>':'<span>Día</span><b>'+(cur.i+1)+'</b><span>de '+DAYS.length+'</span>')+'</a>'}
+ else if(diff(t,last.d)<0){cd='<div class="cd"><span>Viaje terminado</span></div>'}
+ var cities={};DAYS.forEach(function(d){d.stops.forEach(function(s){cities[s]=1})});
+ var st=stagesOf(),cov=nightsCovered(),pTk={};pendTickets().forEach(function(p){pTk[p.day.d]=1});
+ var chips=st.map(function(s,i){return '<button type="button" class="sc" style="--c:'+CITIES[s.city].c1+'" data-act="go" data-id="st-'+i+'"><i></i>'+esc(nm(s.city))+' <small>'+rangeText(s.from,s.to)+'</small></button>'}).join("");
+ var body=st.map(function(s,i){
+  var nn=nightsOf(s),c=CITIES[s.city];
+  var sub=c.origin?"Punto de partida · "+rangeText(s.from,s.to):rangeText(s.from,s.to);
+  var days=DAYS.filter(function(d){return d.d>=s.from.d&&d.d<=s.to.d}).map(function(d){
+   var n=docsShown(d).length,meta=[],pdT=pTk[d.d]?'<i class="pdot" title="Falta billete"></i>':"";
+   if(d.d===t)meta.push('<span class="pill hot">Hoy</span>');
+   if(d.start)meta.push('<span class="pill">Inicio del viaje'+pdT+'</span>');
+   else if(d.legs)meta.push('<span class="pill">'+svg(legIcon(d,0),14)+esc(dayLabel(d))+pdT+'</span>');
+   if(d.sleep)meta.push('<span>'+svg("bed",15)+esc(nm(d.sleep))+(cov[d.d]?"":'<i class="pdot" title="Falta hotel"></i>')+'</span>');
+   else if(d.last)meta.push('<span>Último día</span>');
+   if(n)meta.push('<span>'+svg("clip",15)+n+(n===1?" documento":" documentos")+'</span>');
+   return '<a class="day'+(d.d===t?" today":"")+'" id="d-'+d.d+'" href="#dia-'+d.d+'" style="--c:'+c.c1+'"><div class="rail"><small>'+WD3[d.dt.getDay()]+'</small><b>'+d.dt.getDate()+'</b></div><div class="dcard"><div class="stops">'+stopsHTML(d)+'</div><div class="meta">'+meta.join("")+'</div></div></a>';
+  }).join("");
+  return '<section class="stage" id="st-'+i+'"><div class="banner" style="--c:'+c.c1+'"><h2>'+esc(c.name)+'</h2><p>'+sub+'</p></div><div class="days">'+days+'</div></section>';
+ }).join("");
+ V.home.innerHTML='<header class="in top"><div class="trow"><div><h1>Nuestra Ruta</h1><p class="sub">'+first.dt.getDate()+' '+MO3[first.dt.getMonth()]+' – '+last.dt.getDate()+' '+MO3[last.dt.getMonth()]+' · '+DAYS.length+' días</p></div>'+cd+'</div><div class="scs">'+chips+'</div></header><div class="in list">'+body+'</div>';
+}
+
+function listOf(id,kind){
+ var v=kv["pl:"+id+":"+kind];
+ if(Array.isArray(v))return v;
+ return CITIES[id][kind].map(function(p,i){return {id:String(i),n:p[0],d:p[1],u:""}});
+}
+function itemKey(kind,cid,p){return (kind==="see"?"s:":"r:")+cid+":"+p.id}
+function itemRow(cid,kind,p,idx){
+ var href=p.u&&/^https?:\/\//i.test(p.u)?p.u:mapUrl(p.n,cid);
+ return '<li class="pl pin"><span class="pinn" style="--c:'+CITIES[cid].c1+'">'+(idx+1)+'</span><div><b>'+esc(p.n)+'</b>'+(p.d?'<p>'+esc(p.d)+'</p>':"")+'<div class="pact">'+statSel(itemKey(kind,cid,p))+'<button type="button" class="agb2" data-act="ev-add" data-title="'+esc(p.n)+'" data-day="'+esc(curDayId||"")+'" aria-label="Agendar '+esc(p.n)+'">'+svg("cal",17)+'</button><a class="map" href="'+esc(href)+'" target="_blank" rel="noopener" aria-label="Abrir '+esc(p.n)+' en el mapa">'+svg("pin",15)+'Mapa</a></div></div></li>';
+}
+function listHead(title,cid,kind){
+ return '<div class="lh"><h3 class="lab">'+title+'</h3><button type="button" class="pen" data-act="list" data-city="'+cid+'" data-kind="'+kind+'" aria-label="Editar lista: '+title+'">'+svg("pencil",18)+'</button></div>';
+}
+function itemList(cid,kind){
+ var l=listOf(cid,kind);
+ return l.length?'<ul class="rows">'+l.map(function(p,i){return itemRow(cid,kind,p,i)}).join("")+'</ul>':'<p class="foot">Lista vacía. Toca el lápiz para añadir.</p>';
+}
+var colap={};
+function cityWrap(id,dayId,multi,head,body){
+ var c=CITIES[id],k=dayId+":"+id,f=multi&&colap[k];
+ return '<section class="city'+(f?" fold":"")+'" style="--c1:'+c.c1+';--c2:'+c.c2+'">'+head+'<div class="cbody">'+body+'</div></section>';
+}
+function cityHead(id,dayId,multi,temp){
+ var c=CITIES[id],k=dayId+":"+id,t=temp?'<span class="temp">'+c.temp+' típico</span>':"";
+ if(!multi)return temp?'<div class="chead one">'+t+'</div>':"";
+ return '<button type="button" class="chead cfold" data-act="cfold" data-k="'+k+'" aria-expanded="'+(!colap[k])+'"><i></i><span class="cn">'+esc(c.name)+'</span>'+t+'<span class="cv">'+svg("chev",18)+'</span></button>';
+}
+function cityGeneral(id,dayId,multi){
+ var c=CITIES[id];
+ return cityWrap(id,dayId,multi,cityHead(id,dayId,multi,true),'<p class="lead">'+esc(c.intro)+'</p>'+
+ '<div>'+listHead("Qué ver",id,"see")+itemList(id,"see")+'</div>'+
+ '<div><h3 class="lab">Consejos</h3><ul class="tips">'+c.tips.map(function(x){return '<li>'+esc(x)+'</li>'}).join("")+'</ul></div>');
+}
+function cityEat(id,dayId,multi){
+ var c=CITIES[id];
+ return cityWrap(id,dayId,multi,cityHead(id,dayId,multi,false),
+ '<div><h3 class="lab">Para pedir</h3><div class="chips">'+c.dishes.map(function(x){return '<span class="chip">'+esc(x)+'</span>'}).join("")+'</div></div>'+
+ '<div>'+listHead("Dónde",id,"eat")+itemList(id,"eat")+'</div>');
+}
+function legsHTML(day){
+ if(!day.legs)return "";
+ var h='<section><h3 class="lab">Ruta del día</h3><ol class="tl">';
+ day.stops.forEach(function(s,i){
+  h+='<li class="st"><span class="pinn" style="--c:'+CITIES[s].c1+'">'+(i+1)+'</span><div><b>'+esc(nm(s))+'</b>'+(day.legs[i]&&day.legs[i].w?'<small>'+esc(day.legs[i].w)+'</small>':"")+'</div></li>';
+  if(day.legs[i]){var vv=viaOf(day.d,i);h+='<li class="lg"><span class="lgl"></span><span class="tag">'+svg(legIcon(day,i),16)+esc(legLabel(day,i))+'</span>'+(vv.length?'<span class="via">vía '+esc(vv.join(", "))+'</span>':"")+'<button type="button" class="mini" data-act="via" data-day="'+day.d+'" data-leg="'+i+'">'+(vv.length?"Editar paradas":"Añadir parada")+'</button></li>'}
+ });
+ return h+'</ol></section>';
+}
+function ticketHTML(d){
+ var T=TYPES[d.type]||TYPES.otro;
+ var sub=[T.l],dy0=dayById(d.dayId);
+ if(TRIPT[d.type]&&d.leg!=null&&dy0&&dy0.legs&&dy0.legs[d.leg]){var sg0=legSegs(dy0,d.leg);sub.push(segText(sg0[Math.min(d.seg||0,sg0.length-1)]))}
+ if(d.type==="hotel"){var nt0=nightsText(d);if(nt0)sub.push(nt0)}
+ if(d.t1)sub.push(d.t1+(d.t2?"–"+d.t2:""));
+ if(d.fileName)sub.push(d.fileName+(d.size?" · "+fmtSize(d.size):""));
+ return '<article class="ticket" style="--t:'+T.t+'"><div class="tstub">'+svg(TYPE_ICON[d.type]||"file",24)+'<span>'+T.l+'</span></div><div class="tbody"><button type="button" class="tmain" data-act="edit" data-id="'+d.id+'"><h4>'+esc(d.title||T.l)+'</h4><p>'+esc(sub.join(" · "))+(d.note?'<br>'+esc(d.note):"")+'</p></button>'+
+ (d.code?'<div class="tcode"><code>'+esc(d.code)+'</code><button type="button" class="cp" data-act="copy" data-code="'+esc(d.code)+'" aria-label="Copiar código">'+svg("copy",18)+'</button></div>':"")+priceHTML(d)+locsHTML(d)+'</div></article>';
+}
+function docsPanel(day){
+ var list=docsShown(day),sug=[];
+ pendHotels().forEach(function(r){if(r.from.i<=day.i&&day.i<=r.to.i)sug.push({t:"hotel",l:"Hotel en "+nm(r.city)+" · "+rangeText(r.from,r.to),title:"Hotel en "+nm(r.city),day:r.from.d,to:r.to.d})});
+ pendTickets().forEach(function(p){if(p.day!==day)return;var t=(p.type==="vuelo"?"Vuelo ":"Billete ")+segText(p.seg);sug.push({t:p.type,l:t,title:t,day:day.d,leg:p.leg+"-"+p.seg.j})});
+ var h='<div class="addrow"><button type="button" class="btn primary" data-act="add" data-day="'+day.d+'">'+svg("plus",20)+'Añadir documento</button>';
+ if(sug.length)h+='<div class="sugg"><h3 class="lab" style="margin:0">Falta por añadir</h3><div class="chips">'+sug.map(function(x){return '<button type="button" class="chip" data-act="add" data-day="'+x.day+'" data-type="'+x.t+'" data-title="'+esc(x.title)+'"'+(x.leg!=null?' data-leg="'+x.leg+'"':"")+(x.to?' data-to="'+x.to+'"':"")+'>'+svg(TYPE_ICON[x.t],16)+esc(x.l)+'</button>'}).join("")+'</div></div>';
+ h+='</div>';
+ h+=daySum(docsOf(day.d));
+ h+=list.length?'<div class="tickets">'+list.map(ticketHTML).join("")+'</div>':'<div class="empty"><b>Sin documentos para este día</b><span>Sube PDFs o fotos de reservas, billetes y entradas, o guarda solo el código.</span></div>';
+ return h;
+}
+function renderDay(day){
+ curDayId=day.d;
+ var c=colors(day),n=docsShown(day).length,i=day.i,prev=DAYS[i-1],next=DAYS[i+1],isToday=day.d===todayStr();
+ var tabList=day.start?[["docs","Documentos"]]:[["general","General"],["comer","Comer"],["docs","Documentos"]];
+ if(day.start)tab="docs";
+ var general=(day.ev||[]).map(function(e){return '<div class="note">'+svg("flag",20)+'<p>'+esc(e)+'</p></div>'}).join("")+legsHTML(day)+(function(l){return l.map(function(x){return cityGeneral(x,day.d,l.length>1)}).join("")})(day.stops.filter(hasInfo))+'<p class="foot">Sugerencias de partida. Confirma horarios, precios y reservas antes de ir.</p>';
+ var eat=(function(l){return l.map(function(x){return cityEat(x,day.d,l.length>1)}).join("")})(day.stops.filter(hasInfo))+'<p class="foot">Toca el estado de cada sitio para marcarlo: quiero ir, reservado o ya fui. Confirma horarios y reserva en fechas señaladas.</p>';
+ var panels={general:general,comer:eat,docs:docsPanel(day)};
+ V.day.style.setProperty("--c1",c[0]);V.day.style.setProperty("--c2",c[1]);
+ var rbar=day.stops.map(function(s){return '<i style="background:'+CITIES[s].c1+'"></i>'}).join("");
+ V.day.innerHTML='<header class="dh"><div class="in"><div class="dtop"><a class="back" href="#inicio" aria-label="Volver a la ruta">'+svg("back",20)+'</a><span class="dnum">'+(isToday?"Hoy · ":"")+'Día '+(i+1)+' de '+DAYS.length+'</span></div><p class="dwd">'+esc(longDate(day))+'</p><h1>'+titleHTML(day)+'</h1><div class="rbar">'+rbar+'</div>'+(day.sleep?'<p class="sleep">'+svg("bed",17)+'Dormimos en '+esc(nm(day.sleep))+'</p>':'<p class="sleep">'+(day.start?"Inicio del viaje":"Fin del viaje")+'</p>')+'</div></header>'+
+ '<nav class="tabs" role="tablist" aria-label="Secciones del día"><div class="in"><div class="trk">'+tabList.map(function(t){return '<button type="button" role="tab" class="tab" data-act="tab" data-tab="'+t[0]+'" aria-selected="'+(tab===t[0])+'">'+t[1]+(t[0]==="docs"&&n?' <em>'+n+'</em>':"")+'</button>'}).join("")+'</div></div></nav>'+
+ '<main class="in panel" role="tabpanel">'+panels[tab]+'</main>'+
+ '<div class="in dnav">'+(prev?'<a href="#dia-'+prev.d+'"><small>← Anterior</small><b>'+esc(shortDay(prev))+' · '+esc(nm(prev.stops[prev.stops.length-1]))+'</b></a>':'<span style="flex:1"></span>')+(next?'<a class="next" href="#dia-'+next.d+'"><small>Siguiente →</small><b>'+esc(shortDay(next))+' · '+esc(nm(next.stops[0]))+'</b></a>':'<span style="flex:1"></span>')+'</div>';
+}
+function segHTML(){
+ var np=pendHotels().length+pendTickets().length;
+ return '<div class="seg"><div class="trk" role="tablist">'+[["docs","Documentos"],["pend","Pendientes"]].map(function(t){return '<button type="button" role="tab" class="tab" data-act="dtab" data-v="'+t[0]+'" aria-selected="'+(docsTab===t[0])+'">'+t[1]+(t[0]==="pend"&&np?' <em>'+np+'</em>':"")+'</button>'}).join("")+'</div></div>';
+}
+function hotelRow(r){
+ var T=TYPES.hotel;
+ return '<div class="prow" style="--t:'+T.t+'"><button type="button" class="pmain" data-act="add" data-day="'+r.from.d+'" data-type="hotel" data-title="'+esc("Hotel en "+nm(r.city))+'" data-to="'+r.to.d+'"><span class="pico">'+svg(TYPE_ICON.hotel,22)+'</span><div><b>'+esc(nm(r.city))+'</b><small>'+esc(rangeText(r.from,r.to)+" · "+r.n+(r.n===1?" noche":" noches")+" · falta hotel")+'</small></div><span class="pgo">'+svg("plus",15)+'Añadir</span></button></div>';
+}
+function ticketRow(p){
+ var T=TYPES[p.type],l=p.day.legs[p.leg],vv=viaOf(p.day.d,p.leg),tt=(p.type==="vuelo"?"Vuelo ":"Billete ")+segText(p.seg);
+ return '<div class="prow" style="--t:'+T.t+'"><button type="button" class="pmain" data-act="add" data-day="'+p.day.d+'" data-type="'+p.type+'" data-title="'+esc(tt)+'" data-leg="'+p.leg+'-'+p.seg.j+'"><span class="pico">'+svg(TYPE_ICON[p.type],22)+'</span><div><b>'+esc(segText(p.seg))+'</b><small>'+esc(cap(shortDay(p.day))+(l.w?" · "+l.w:"")+" · falta "+(p.type==="vuelo"?"vuelo":"billete"))+'</small></div><span class="pgo">'+svg("plus",15)+'Añadir</span></button><div class="pextra"><button type="button" class="mini" data-act="via" data-day="'+p.day.d+'" data-leg="'+p.leg+'">'+svg("plus",14)+(vv.length?"Editar paradas":"Añadir parada")+'</button></div></div>';
+}
+function renderPend(){
+ var ph=pendHotels(),pt=pendTickets(),nt=0,pn=0,nl=0;
+ staysOf().forEach(function(x){nt+=x.nights.length});ph.forEach(function(r){pn+=r.n});
+ DAYS.forEach(function(d){(d.legs||[]).forEach(function(l,i){nl+=legSegs(d,i).length})});
+ function stat(l,done,tot){return '<div class="pst"><span>'+l+'</span><b>'+done+'<small> de '+tot+'</small></b><div class="pbar"><i style="width:'+(tot?Math.round(done/tot*100):0)+'%"></i></div></div>'}
+ var body="";
+ if(ph.length)body+='<section class="psec"><h3 class="lab">Hoteles<small>'+ph.length+'</small></h3><div class="plist">'+ph.map(hotelRow).join("")+'</div></section>';
+ if(pt.length)body+='<section class="psec"><h3 class="lab">Traslados<small>'+pt.length+'</small></h3><div class="plist">'+pt.map(ticketRow).join("")+'</div></section>';
+ if(!body)body='<div class="empty" style="margin-top:18px"><b>Todo listo</b><span>Hay un hotel para cada noche y un billete para cada traslado.</span></div>';
+ V.docs.innerHTML='<div class="in"><div class="page-h"><h1>Documentos</h1><p>Reservas, billetes y códigos, ordenados por día.</p></div>'+segHTML()+'<div class="pstats">'+stat("Noches con hotel",nt-pn,nt)+stat("Traslados con billete",nl-pt.length,nl)+'</div>'+body+'<div style="height:24px"></div></div>';
+}
+function renderDocsView(){
+ if(docsTab==="pend"){renderPend();return}
+ var counts={};docs.forEach(function(d){counts[d.type]=(counts[d.type]||0)+1});
+ var chips='<button type="button" class="chip" data-act="filter" data-f="all" aria-pressed="'+(docFilter==="all")+'">Todos '+docs.length+'</button>'+Object.keys(TYPES).filter(function(k){return counts[k]}).map(function(k){return '<button type="button" class="chip" data-act="filter" data-f="'+k+'" aria-pressed="'+(docFilter===k)+'">'+TYPES[k].l+' '+counts[k]+'</button>'}).join("");
+ var shown=docs.filter(function(d){return docFilter==="all"||d.type===docFilter});
+ var groups={};shown.forEach(function(d){(groups[d.dayId]=groups[d.dayId]||[]).push(d)});
+ var order=DAYS.map(function(d){return d.d}).concat(["trip"]).filter(function(k){return groups[k]});
+ var body=order.map(function(k){var day=dayById(k);var items=groups[k].sort(function(a,b){return a.created-b.created});
+  return '<section><div class="group-h">'+(day?'<a href="#dia-'+k+'">'+esc(cap(shortDay(day)))+' · '+esc(routeText(day))+'</a>':'<a href="#documentos">Todo el viaje</a>')+'<span>'+items.length+'</span></div><div class="tickets">'+items.map(ticketHTML).join("")+'</div></section>'}).join("");
+ V.docs.innerHTML='<div class="in"><div class="page-h"><h1>Documentos</h1><p>Reservas, billetes y códigos, ordenados por día.</p></div>'+segHTML()+summaryHTML(shown)+'<div class="filters">'+chips+'</div><div style="display:flex;flex-direction:column;gap:22px">'+(body||'<div class="empty"><b>Todavía no hay documentos</b><span>Añade el primero y asígnalo a un día del viaje.</span></div>')+'</div><div style="padding-block:20px"><button type="button" class="btn primary" style="width:100%;--c1:var(--accent)" data-act="add" data-day="'+(dayById(todayStr())?todayStr():DAYS[0].d)+'">'+svg("plus",20)+'Añadir documento</button></div></div>';
+}
+
+/* ================= Hoja: añadir / editar documento ================= */
+var sheet=$("#sheet"),sheetBody=$("#sheet-body"),selType="hotel",editing=null,delArm=null;
+function openSheet(html){sheetBody.innerHTML=html;sheet.hidden=false;document.documentElement.style.overflow="hidden";var f=sheetBody.querySelector("input,select,button");if(f&&f.type!=="file")try{f.focus({preventScroll:true})}catch(e){}}
+function closeSheet(){evEditing=null;sheet.hidden=true;sheetBody.innerHTML="";document.documentElement.style.overflow="";editing=null}
+function dayOptions(sel){return DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===sel?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'<option value="trip"'+(sel==="trip"?" selected":"")+'>Todo el viaje (sin día)</option>'}
+function timeLabel(t){return t==="hotel"?"Check-in y check-out (opcional)":TRIPT[t]?"Salida y llegada (opcional)":"Hora de inicio y fin (opcional)"}
+function openDocSheet(o){
+ var d=o.id?docs.filter(function(x){return x.id===o.id})[0]:null;editing=d||null;
+ selType=d?d.type:(o.type||"hotel");
+ locS={1:{t:d?(d.loc1||""):"",u:d?(d.loc1u||""):"",src:d&&d.loc1u?"link":""},2:{t:d?(d.loc2||""):"",u:d?(d.loc2u||""):"",src:d&&d.loc2u?"link":""}};
+ legSel=d&&d.leg!=null?(d.leg+"-"+(d.seg||0)):(o.leg!=null&&o.leg!==""?(String(o.leg).indexOf("-")<0?o.leg+"-0":String(o.leg)):"");legManual=!!(d||legSel!=="");
+ var dayId=d?d.dayId:o.day;toSel=d?(d.nightTo||(d.type==="hotel"?d.dayId:"")):(o.to||"");
+ var types=Object.keys(TYPES).map(function(k){return '<button type="button" class="ty" role="radio" data-act="type" data-type="'+k+'" aria-checked="'+(k===selType)+'" style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],22)+TYPES[k].l+'</button>'}).join("");
+ var prev="";
+ if(d&&d.blob){var u=objUrl(d);prev=(d.mime||"").indexOf("image/")===0?'<img class="prev" src="'+u+'" alt="Vista previa de '+esc(d.fileName)+'">':'<a class="btn" href="'+u+'" target="_blank" rel="noopener">'+svg("file",18)+'Abrir '+esc(d.fileName||"archivo")+'</a>'}
+ openSheet('<div class="sh-head"><h2 id="sh-title">'+(d?"Documento":"Nuevo documento")+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
+ '<div class="field"><span class="fl">Archivo (PDF o foto)</span><label class="drop" for="f-file">'+svg("clip",22)+'<span id="f-name">'+(d&&d.fileName?esc(d.fileName):"Elegir archivo")+'<small>'+(d&&d.fileName?"Toca para reemplazarlo":"Opcional si solo guardas un código")+'</small></span></label><input id="f-file" type="file" accept="application/pdf,image/*" hidden></div>'+prev+
+ '<div class="field"><span class="fl">Tipo</span><div class="types" role="radiogroup" aria-label="Tipo de documento">'+types+'</div></div>'+
+ '<div class="field"><label for="f-title">Título</label><input id="f-title" type="text" placeholder="Ej. Hotel Alfonso XIII" value="'+esc(d?d.title:(o.title||""))+'" autocomplete="off"></div>'+
+ '<div class="field"><label for="f-code">Código de reserva</label><input id="f-code" class="code" type="text" placeholder="Localizador o número" value="'+esc(d?d.code:"")+'" autocomplete="off" autocapitalize="characters"></div>'+
+ priceField(d)+
+ '<div id="f-loc">'+locFields(selType)+'</div>'+
+ '<div class="field"><label for="f-day" id="f-daylb">'+(selType==="hotel"?"Primera noche":"Día")+'</label><select id="f-day">'+dayOptions(dayId)+'</select></div>'+
+ '<div id="f-towrap" style="display:contents">'+toField(dayId,selType,toSel)+'</div>'+
+ '<div id="f-legwrap" style="display:contents">'+legField(dayId,selType,legSel)+'</div>'+
+ '<div class="field"><span class="fl" id="f-tlab">'+timeLabel(selType)+'</span><div class="timerow"><input id="f-t1" type="time" value="'+esc(d&&d.t1||"")+'" aria-label="Hora de inicio"><span>–</span><input id="f-t2" type="time" value="'+esc(d&&d.t2||"")+'" aria-label="Hora de fin"></div></div>'+
+ '<div class="field"><label for="f-note">Nota</label><textarea id="f-note" placeholder="Hora, dirección, andén...">'+esc(d?d.note:"")+'</textarea></div>'+
+ '<p class="err" id="f-err" role="alert"></p>'+
+ '<div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="save">Guardar</button>'+(d?'<button type="button" class="btn danger" data-act="delete">Eliminar</button>':"")+'</div>');
+ delArm=null;
+}
+async function saveFromSheet(){
+ var title=$("#f-title").value.trim(),code=$("#f-code").value.trim(),note=$("#f-note").value.trim(),day=$("#f-day").value,file=$("#f-file").files[0];
+ if(!file&&!title&&!code&&!(editing&&editing.blob)){$("#f-err").textContent="Añade un archivo, un título o un código de reserva.";return}
+ var pr=parsePrice($("#f-price").value);
+ if(pr===undefined){$("#f-err").textContent="El precio no es válido. Usa solo números, por ejemplo 125,50.";return}
+ var cur=$("#f-cur").value;
+ var d=editing?Object.assign({},editing):{id:uid(),created:Date.now()};
+ var t1=$("#f-t1").value||"",t2=$("#f-t2").value||"";
+ if(t1&&t2&&selType!=="hotel"&&!TRIPT[selType]&&t2<=t1){$("#f-err").textContent="La hora de fin debe ser posterior a la de inicio.";return}
+ d.type=selType;d.dayId=day;d.code=code;d.note=note;d.price=pr;d.cur=cur;d.t1=t1;d.t2=t2;
+ if(pr!=null)setKV("lastCur",cur);
+ var tr=!!TRIPT[selType],dy=dayById(day),ls=$("#f-leg");
+ d.loc1=locS[1].t.trim();d.loc1u=locS[1].u;d.loc2=tr?locS[2].t.trim():"";d.loc2u=tr?locS[2].u:"";
+ d.leg=(tr&&dy&&dy.legs&&ls&&ls.value!=="")?Number(ls.value.split("-")[0]):null;
+ d.seg=d.leg!=null?Number(ls.value.split("-")[1]||0):0;
+ var te=$("#f-to");if(selType==="hotel"&&te&&te.value)d.nightTo=te.value;else delete d.nightTo;
+ d.title=title||(file?file.name.replace(/\.[^.]+$/,""):(editing&&editing.title)||TYPES[selType].l);
+ if(file){if(urls[d.id]){try{URL.revokeObjectURL(urls[d.id])}catch(e){}delete urls[d.id]}d.blob=file;d.fileName=file.name;d.mime=file.type||"application/octet-stream";d.size=file.size}
+ await saveDoc(d);closeSheet();refresh();toast("Documento guardado");
+}
+
+/* ================= Hoja: paradas de un traslado ================= */
+var viaCtx=null;
+function openViaSheet(dayId,i){
+ var day=dayById(dayId);if(!day||!day.legs||!day.legs[i])return;
+ viaCtx={d:dayId,i:i};
+ var l=day.legs[i],v=viaOf(dayId,i),segs=legSegs(day,i);
+ openSheet('<div class="sh-head"><h2 id="sh-title">Paradas del traslado</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
+ '<p class="foot" style="font-size:14px"><b>'+esc(nm(l.f)+" → "+nm(l.t))+'</b>. Si tienes reservas separadas (por ejemplo, un vuelo hasta Bilbao y un tren hasta Pamplona), añade la parada intermedia. Cada tramo tendrá su propio pendiente.</p>'+
+ (v.length?'<ul class="rows">'+v.map(function(x,k){return '<li class="pl"><div><b>'+esc(x)+'</b></div><button type="button" class="x" data-act="via-del" data-k="'+k+'">Quitar</button></li>'}).join("")+'</ul>':"")+
+ '<div class="field"><label for="v-name">Nueva parada</label><input id="v-name" type="text" placeholder="Ej. Bilbao" autocomplete="off"></div>'+
+ (segs.length>1?'<div class="field"><label for="v-after">Dónde va</label><select id="v-after">'+segs.map(function(sg){return '<option value="'+sg.j+'"'+(sg.j===segs.length-1?" selected":"")+'>Entre '+esc(sg.f.n+" y "+sg.t.n)+'</option>'}).join("")+'</select></div>':"")+
+ '<p class="err" id="v-err" role="alert"></p><div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="via-add">Añadir parada</button></div>');
+}
+async function shiftSegs(c,from,delta){
+ var list=docs.filter(function(d){return d.dayId===c.d&&d.leg===c.i&&TRIPT[d.type]&&(d.seg||0)>=from});
+ for(var k=0;k<list.length;k++){var d=Object.assign({},list[k]);d.seg=(d.seg||0)+delta;await saveDoc(d)}
+}
+async function addVia(){
+ var nme=$("#v-name").value.trim();
+ if(!nme){$("#v-err").textContent="Escribe el nombre de la parada.";return}
+ var c=viaCtx,v=viaOf(c.d,c.i).slice(),sa=$("#v-after"),j=sa?Number(sa.value):v.length;
+ v.splice(j,0,nme);
+ await shiftSegs(c,j+1,1);
+ await setKV("via:"+c.d+":"+c.i,v);
+ closeSheet();refresh();toast("Parada añadida");
+}
+async function delVia(k){
+ var c=viaCtx,v=viaOf(c.d,c.i).slice();if(k<0||k>=v.length)return;
+ v.splice(k,1);
+ await shiftSegs(c,k+1,-1);
+ if(v.length)await setKV("via:"+c.d+":"+c.i,v);else await delKV("via:"+c.d+":"+c.i);
+ refresh();openViaSheet(c.d,c.i);toast("Parada quitada");
+}
+
+/* ================= Hoja: editar listas de lugares y restaurantes ================= */
+var listCtx=null,itemEd=null,itemArm=null,resetArm=null;
+function listTitle(kind){return kind==="see"?"Qué ver":"Dónde comer"}
+function openListSheet(cid,kind){
+ listCtx={cid:cid,kind:kind};itemEd=null;
+ var l=listOf(cid,kind),custom=Array.isArray(kv["pl:"+cid+":"+kind]);
+ openSheet('<div class="sh-head"><h2 id="sh-title">'+listTitle(kind)+' · '+esc(nm(cid))+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
+ (l.length?'<ul class="rows">'+l.map(function(p){return '<li class="pl"><div><b>'+esc(p.n)+'</b>'+(p.d?'<p>'+esc(p.d)+'</p>':"")+'</div><button type="button" class="x" data-act="item-edit" data-id="'+esc(p.id)+'">Editar</button></li>'}).join("")+'</ul>':'<p class="foot">Lista vacía.</p>')+
+ '<div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="item-add">'+svg("plus",20)+'Añadir</button>'+(custom?'<button type="button" class="btn" data-act="list-reset">Restaurar lista original</button>':"")+'</div>');
+ resetArm=null;
+}
+function openItemForm(id){
+ var c=listCtx,p=id==null?null:listOf(c.cid,c.kind).filter(function(x){return x.id===id})[0]||null;
+ itemEd=p;itemArm=null;
+ openSheet('<div class="sh-head"><h2 id="sh-title">'+(p?"Editar":"Añadir")+' · '+esc(listTitle(c.kind))+'</h2><button type="button" class="x" data-act="item-back">Volver</button></div>'+
+ '<div class="field"><label for="i-n">Nombre</label><input id="i-n" type="text" placeholder="'+(c.kind==="see"?"Ej. Museo del Prado":"Ej. Casa Lucio")+'" value="'+esc(p?p.n:"")+'" autocomplete="off"></div>'+
+ '<div class="field"><label for="i-d">Descripción (opcional)</label><textarea id="i-d" placeholder="Qué es, qué pedir, horarios...">'+esc(p?p.d:"")+'</textarea></div>'+
+ '<div class="field"><label for="i-u">Enlace de Google Maps (opcional)</label><input id="i-u" type="text" placeholder="Si lo dejas vacío, el mapa busca por nombre" value="'+esc(p?p.u:"")+'" autocomplete="off"></div>'+
+ '<p class="err" id="i-err" role="alert"></p>'+
+ '<div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="item-save">Guardar</button>'+(p?'<button type="button" class="btn danger" data-act="item-del">Eliminar</button>':"")+'</div>');
+}
+async function saveItem(){
+ var c=listCtx,n=$("#i-n").value.trim(),d=$("#i-d").value.trim(),u=$("#i-u").value.trim();
+ if(!n){$("#i-err").textContent="Escribe un nombre.";return}
+ if(u&&!/^https?:\/\/\S+$/i.test(u)){$("#i-err").textContent="El enlace debe empezar por https://";return}
+ var l=listOf(c.cid,c.kind).map(function(x){return {id:x.id,n:x.n,d:x.d,u:x.u||""}});
+ if(itemEd){l.forEach(function(x){if(x.id===itemEd.id){x.n=n;x.d=d;x.u=u}})}
+ else l.push({id:"u"+Date.now().toString(36),n:n,d:d,u:u});
+ await setKV("pl:"+c.cid+":"+c.kind,l);refresh();openListSheet(c.cid,c.kind);toast("Guardado");
+}
+async function deleteItem(){
+ var c=listCtx,l=listOf(c.cid,c.kind).filter(function(x){return x.id!==itemEd.id});
+ await setKV("pl:"+c.cid+":"+c.kind,l);await delKV(itemKey(c.kind,c.cid,itemEd));refresh();openListSheet(c.cid,c.kind);toast("Eliminado");
+}
+
+/* ================= Ajustes y copia de seguridad ================= */
+function openSettings(){
+ openSheet('<div class="sh-head"><h2 id="sh-title">Ajustes</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
+ '<div class="kv"><div><h3 class="lab">Almacenamiento</h3><p id="s-store">Calculando...</p></div>'+(db?"":'<div class="note">'+svg("flag",20)+'<p>Este navegador no permite guardar datos. Lo que añadas se perderá al cerrar la página.</p></div>')+
+ '<div><h3 class="lab">Apariencia</h3><div class="chips">'+[["light","Claro"],["dark","Oscuro"],["auto","Automático"]].map(function(t){return '<button type="button" class="chip" data-act="theme" data-v="'+t[0]+'" aria-pressed="'+((kv.theme||"light")===t[0])+'">'+t[1]+'</button>'}).join("")+'</div></div>'+
+ '<div><h3 class="lab">Copia de seguridad</h3><p>Guarda un archivo con todos tus documentos y estados. Hazlo antes de salir de viaje y cada vez que añadas algo importante.</p></div>'+
+ '<div class="actions"><button type="button" class="btn" data-act="export">Exportar copia</button><label class="btn" for="s-import">Importar copia</label><input id="s-import" type="file" accept="application/json,.json" hidden></div>'+
+ '<div class="actions"><button type="button" class="btn" data-act="persist">Proteger datos del borrado</button></div>'+
+ '<p>Todo se guarda solo en este dispositivo. Instala la app en la pantalla de inicio del iPhone para que Safari no borre los datos por falta de uso.</p></div>');
+ if(navigator.storage&&navigator.storage.estimate){navigator.storage.estimate().then(function(e){var el=$("#s-store");if(el)el.textContent="Usado: "+fmtSize(e.usage||0)+(e.quota?" de "+fmtSize(e.quota)+" disponibles":"")+". "+docs.length+(docs.length===1?" documento.":" documentos.")}).catch(function(){var el=$("#s-store");if(el)el.textContent=docs.length+" documentos."})}
+ else{$("#s-store").textContent=docs.length+" documentos."}
+}
+function blobToDataURL(b){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result)};r.onerror=function(){rej(r.error)};r.readAsDataURL(b)})}
+function dataURLtoBlob(u){var p=u.split(","),mime=(p[0].match(/:(.*?);/)||[])[1]||"application/octet-stream",bin=atob(p[1]),a=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new Blob([a],{type:mime})}
+async function exportBackup(){
+ try{
+  var out={app:"nuestra-ruta",v:1,kv:kv,docs:[]};
+  for(var i=0;i<docs.length;i++){var d=Object.assign({},docs[i]);if(d.blob){d.data=await blobToDataURL(d.blob)}delete d.blob;out.docs.push(d)}
+  var b=new Blob([JSON.stringify(out)],{type:"application/json"}),a=document.createElement("a");
+  a.href=URL.createObjectURL(b);a.download="nuestra-ruta-copia-"+todayStr()+".json";document.body.appendChild(a);a.click();a.remove();
+  toast("Copia generada")
+ }catch(e){toast("No se pudo generar la copia")}
+}
+async function importBackup(file){
+ try{
+  var j=JSON.parse(await file.text());if(j.app!=="nuestra-ruta")throw new Error("x");
+  for(var i=0;i<j.docs.length;i++){var d=j.docs[i];if(d.data){d.blob=dataURLtoBlob(d.data);delete d.data}await saveDoc(d)}
+  var ks=Object.keys(j.kv||{});for(var k=0;k<ks.length;k++)await setKV(ks[k],j.kv[ks[k]]);
+  closeSheet();refresh();toast("Copia importada")
+ }catch(e){toast("El archivo no es una copia válida")}
+}
+
+/* ================= Navegación ================= */
+
+/* ================= Calendario ================= */
+var calTab="dias",calSel=null,curDayId=null,calScrolled=false,evEditing=null,evArm=null;
+function evList(){return Array.isArray(kv.events)?kv.events:[]}
+function tmin(t){if(!/^\d{1,2}:\d{2}$/.test(t||""))return null;var a=t.split(":");return +a[0]*60+ +a[1]}
+function colOf(t){return TYPES[t]?TYPES[t].t:"var(--accent)"}
+function agendaOf(day){
+ var items=[];
+ docs.forEach(function(d){
+  var T=TYPES[d.type]||TYPES.otro,sub=[T.l];
+  if(d.type==="hotel"){
+   var a=dayById(d.dayId);if(!a)return;
+   var last=(d.nightTo&&dayById(d.nightTo))||a,out=DAYS[last.i+1];
+   if(d.dayId===day.d)items.push({k:"doc",id:d.id,t1:d.t1||"",t2:"",title:(d.t1?"Check-in · ":"Hotel · ")+(d.title||T.l),sub:nm(a.sleep||a.base),type:"hotel"});
+   if(out&&out.d===day.d&&d.t2)items.push({k:"doc",id:d.id,t1:d.t2,t2:"",title:"Check-out · "+(d.title||T.l),sub:nm(last.sleep||last.base),type:"hotel"});
+   return;
+  }
+  if(d.dayId!==day.d)return;
+  if(TRIPT[d.type]&&d.leg!=null&&day.legs&&day.legs[d.leg]){var sg=legSegs(day,d.leg);sub.push(segText(sg[Math.min(d.seg||0,sg.length-1)]))}
+  items.push({k:"doc",id:d.id,t1:d.t1||"",t2:d.t2||"",title:d.title||T.l,sub:sub.join(" · "),type:d.type});
+ });
+ evList().forEach(function(e){if(e.day===day.d)items.push({k:"ev",id:e.id,t1:e.t1||"",t2:e.t2||"",title:e.title,sub:e.note||"",type:"evento"})});
+ var timed=items.filter(function(x){return tmin(x.t1)!=null}),un=items.filter(function(x){return tmin(x.t1)==null});
+ timed.sort(function(a,b){var d=tmin(a.t1)-tmin(b.t1);if(d)return d;var x=tmin(a.t2),y=tmin(b.t2);return (x==null?1e4:x)-(y==null?1e4:y)});
+ function rng(x){var s=tmin(x.t1),e=tmin(x.t2);return {s:s,e:(e!=null&&e>s)?e:s}}
+ for(var i=0;i<timed.length;i++)for(var j=i+1;j<timed.length;j++){
+  var a=rng(timed[i]),b=rng(timed[j]),hit=false;
+  if(a.e>a.s&&b.e>b.s)hit=a.s<b.e&&b.s<a.e;
+  else if(a.e>a.s)hit=a.s<b.s&&b.s<a.e;
+  else if(b.e>b.s)hit=b.s<a.s&&a.s<b.e;
+  if(hit){timed[i].clash=true;timed[j].clash=true}
+ }
+ return {timed:timed,un:un,all:items};
+}
+function agItem(it){
+ var has=tmin(it.t1)!=null,tm=has?'<b>'+esc(it.t1)+'</b>'+(it.t2?'<small>'+esc(it.t2)+'</small>':""):'<b class="nt">–</b>';
+ return '<button type="button" class="ag'+(it.clash?" clash":"")+'" style="--t:'+colOf(it.type)+'" data-act="'+(it.k==="doc"?"edit":"ev-edit")+'" data-id="'+esc(it.id)+'"><span class="agt">'+tm+'</span><span class="agi">'+svg(it.type==="evento"?"cal":(TYPE_ICON[it.type]||"file"),16)+'</span><span class="agb"><b>'+esc(it.title)+'</b>'+(it.sub?'<small>'+esc(it.sub)+'</small>':"")+(it.clash?'<em class="cl">Se cruza con otra actividad</em>':"")+'</span></button>';
+}
+function dayAgenda(day){
+ var a=agendaOf(day),h="";
+ if(a.timed.length)h+='<div class="aglist">'+a.timed.map(agItem).join("")+'</div>';
+ if(a.un.length)h+=(a.timed.length?'<h4 class="aglab">Sin hora</h4>':"")+'<div class="aglist">'+a.un.map(agItem).join("")+'</div>';
+ if(!a.all.length)h+='<p class="agempty">Nada planeado todavía.</p>';
+ return h+'<div><button type="button" class="mini" data-act="ev-add" data-day="'+day.d+'">'+svg("plus",14)+'Añadir evento</button></div>';
+}
+function dsOf(dt){return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0")}
+function monthGrid(){
+ var f=DAYS[0].dt,l=DAYS[DAYS.length-1].dt,s=new Date(f.getFullYear(),f.getMonth(),f.getDate()-((f.getDay()+6)%7)),e=new Date(l.getFullYear(),l.getMonth(),l.getDate()+((7-l.getDay())%7)),t=todayStr(),h="";
+ ["L","M","X","J","V","S","D"].forEach(function(x){h+='<div class="wd">'+x+'</div>'});
+ for(var dt=new Date(s),first=true;dt<=e;dt=new Date(dt.getFullYear(),dt.getMonth(),dt.getDate()+1)){
+  var id=dsOf(dt),day=dayById(id),mo=(first||dt.getDate()===1)?'<span class="mo">'+MO3[dt.getMonth()]+'</span>':"";first=false;
+  if(!day){h+='<div class="cc out"><span class="tp"><span class="n">'+dt.getDate()+'</span>'+mo+'</span></div>';continue}
+  var its=agendaOf(day).all,dots=its.slice(0,4).map(function(x){return '<i style="background:'+colOf(x.type)+'"></i>'}).join("")+(its.length>4?'<span style="font-size:9.5px;color:var(--muted)">+'+(its.length-4)+'</span>':"");
+  h+='<button type="button" class="cc'+(id===calSel?" sel":"")+(id===t?" td":"")+'" style="--c:'+CITIES[day.base].c1+'" data-act="csel" data-d="'+id+'" aria-label="'+esc(longDate(day))+', '+its.length+' elementos"><span class="tp"><span class="n">'+dt.getDate()+'</span>'+mo+'</span><span class="cy">'+esc(nm(day.base).slice(0,3).toUpperCase())+'</span><span class="ds">'+dots+'</span></button>';
+ }
+ return '<div class="mg">'+h+'</div>';
+}
+function renderCal(){
+ if(!calSel||!dayById(calSel)){var t=todayStr();calSel=dayById(t)?t:DAYS[0].d}
+ var body="";
+ if(calTab==="mes"){
+  var sd=dayById(calSel);
+  body=monthGrid()+'<section class="selp"><div class="selh"><div><small>'+esc(cap(longDate(sd)))+'</small><b>'+esc(routeText(sd))+'</b></div><a href="#dia-'+sd.d+'">Ver día</a></div>'+dayAgenda(sd)+'</section>';
+ }else{
+  body='<div class="days" style="margin-top:8px">'+DAYS.map(function(d){
+   var c=CITIES[d.base];
+   return '<div class="day" id="c-'+d.d+'" style="--c:'+c.c1+'"><div class="rail"><small>'+WD3[d.dt.getDay()]+'</small><b>'+d.dt.getDate()+'</b><i class="mo">'+MO3[d.dt.getMonth()]+'</i></div><div class="dcard"><a class="cstops stops" href="#dia-'+d.d+'">'+stopsHTML(d)+'</a>'+dayAgenda(d)+'</div></div>';
+  }).join("")+'</div>';
+ }
+ V.cal.innerHTML='<div class="in"><div class="page-h chd"><div><h1>Calendario</h1><p>Qué hay cada día, con horas.</p></div><button type="button" class="btn primary" data-act="ev-add" data-day="'+(calTab==="mes"?calSel:(dayById(todayStr())?todayStr():calSel))+'">'+svg("plus",18)+'Evento</button></div>'+
+  '<div class="seg"><div class="trk" role="tablist">'+[["dias","Días"],["mes","Mes"]].map(function(t){return '<button type="button" role="tab" class="tab" data-act="ctab" data-v="'+t[0]+'" aria-selected="'+(calTab===t[0])+'">'+t[1]+'</button>'}).join("")+'</div></div>'+body+'<div style="height:24px"></div></div>';
+}
+function openEventSheet(o){
+ var e=o.id?evList().filter(function(x){return x.id===o.id})[0]:null;evEditing=e||null;
+ var day=e?e.day:(dayById(o.day)?o.day:(calSel&&dayById(calSel)?calSel:DAYS[0].d));
+ openSheet('<div class="sh-head"><h2 id="sh-title">'+(e?"Evento":"Nuevo evento")+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
+ '<div class="field"><label for="e-title">Nombre</label><input id="e-title" type="text" placeholder="Ej. Visita a Plaza de España" value="'+esc(e?e.title:(o.title||""))+'" autocomplete="off"></div>'+
+ '<div class="field"><label for="e-day">Día</label><select id="e-day">'+DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===day?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'</select></div>'+
+ '<div class="field"><span class="fl">Hora de inicio y fin (opcional)</span><div class="timerow"><input id="e-t1" type="time" value="'+esc(e&&e.t1||"")+'" aria-label="Hora de inicio"><span>–</span><input id="e-t2" type="time" value="'+esc(e&&e.t2||"")+'" aria-label="Hora de fin"></div></div>'+
+ '<div class="field"><label for="e-note">Nota o lugar (opcional)</label><input id="e-note" type="text" placeholder="Ej. Entrada por la puerta principal" value="'+esc(e&&e.note||"")+'" autocomplete="off"></div>'+
+ '<p class="err" id="e-err" role="alert"></p><div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="ev-save">Guardar</button>'+(e?'<button type="button" class="btn danger" data-act="ev-del">Eliminar</button>':"")+'</div>');
+}
+async function saveEvent(){
+ var title=$("#e-title").value.trim(),t1=$("#e-t1").value||"",t2=$("#e-t2").value||"";
+ if(!title){$("#e-err").textContent="Escribe un nombre para el evento.";return}
+ if(t2&&!t1){$("#e-err").textContent="Pon también la hora de inicio.";return}
+ if(t1&&t2&&t2<=t1){$("#e-err").textContent="La hora de fin debe ser posterior a la de inicio.";return}
+ var list=evList().slice(),ev=evEditing?Object.assign({},evEditing):{id:uid()};
+ ev.title=title;ev.day=$("#e-day").value;ev.t1=t1;ev.t2=t2;ev.note=$("#e-note").value.trim();
+ var k=-1;list.forEach(function(x,i){if(x.id===ev.id)k=i});if(k>=0)list[k]=ev;else list.push(ev);
+ await setKV("events",list);calSel=ev.day;closeSheet();refresh();toast("Evento guardado");
+}
+async function deleteEvent(){
+ if(!evEditing)return;var id=evEditing.id;
+ await setKV("events",evList().filter(function(x){return x.id!==id}));closeSheet();refresh();toast("Evento eliminado");
+}
+
+var view="home";
+function setBand(color){document.body.style.setProperty("--band",color)}
+function route(){
+ var h=location.hash.replace(/^#/,""),day=null,v="home";
+ if(h.indexOf("dia-")===0){day=dayById(h.slice(4));if(day)v="day"}else if(h==="documentos")v="docs";else if(h==="calendario")v="cal";
+ scrollPos[view]=window.scrollY;
+ var changed=v!==view||(v==="day"&&V.day.dataset.id!==(day&&day.d));
+ view=v;
+ ["home","day","docs","cal"].forEach(function(k){V[k].hidden=k!==v});
+ $("#bnav").hidden=v==="day";
+ $("#nav-home").setAttribute("aria-current",v==="home"?"page":"false");$("#nav-docs").setAttribute("aria-current",v==="docs"?"page":"false");$("#nav-cal").setAttribute("aria-current",v==="cal"?"page":"false");
+ if(v==="home"){renderHome();setBand("var(--bg)")}
+ else if(v==="docs"){renderDocsView();setBand("var(--bg)")}
+ else if(v==="cal"){renderCal();setBand("var(--bg)")}
+ else{if(V.day.dataset.id!==day.d){tab="general"}V.day.dataset.id=day.d;renderDay(day);setBand("var(--bg)")}
+ if(changed){window.scrollTo(0,v==="day"?0:(scrollPos[v]||0))}
+ if(v==="cal"&&calTab==="dias"&&!calScrolled){calScrolled=true;var ce=document.getElementById("c-"+todayStr());if(ce)requestAnimationFrame(function(){ce.scrollIntoView({block:"start"});window.scrollBy(0,-12)})}
+ if(v==="home"&&!homeScrolled){homeScrolled=true;var te=document.getElementById("d-"+todayStr());if(te)requestAnimationFrame(function(){te.scrollIntoView({block:"center"})})}
+}
+function refresh(){var y=window.scrollY;var h=location.hash.replace(/^#/,"");
+ if(view==="day"){var d=dayById(h.slice(4));if(d)renderDay(d)}else if(view==="docs")renderDocsView();else if(view==="cal")renderCal();else renderHome();
+ window.scrollTo(0,y)}
+
+document.addEventListener("click",function(e){
+ var b=e.target.closest("[data-act]");
+ if(!b){if(e.target===sheet)closeSheet();return}
+ var a=b.dataset.act;
+ if(a==="tab"){tab=b.dataset.tab;refresh()}
+ else if(a==="add"){openDocSheet({day:b.dataset.day,type:b.dataset.type,title:b.dataset.title,leg:b.dataset.leg,to:b.dataset.to})}
+ else if(a==="ctab"){calTab=b.dataset.v;renderCal()}
+ else if(a==="csel"){calSel=b.dataset.d;renderCal()}
+ else if(a==="ev-add"){openEventSheet({day:b.dataset.day,title:b.dataset.title})}
+ else if(a==="ev-edit"){openEventSheet({id:b.dataset.id})}
+ else if(a==="ev-save"){saveEvent()}
+ else if(a==="ev-del"){if(evArm){clearTimeout(evArm);evArm=null;deleteEvent()}else{evArm=setTimeout(function(){evArm=null;b.textContent="Eliminar"},4000);b.textContent="Toca otra vez para eliminar"}}
+ else if(a==="dtab"){docsTab=b.dataset.v;renderDocsView()}
+ else if(a==="via"){openViaSheet(b.dataset.day,Number(b.dataset.leg))}
+ else if(a==="via-add"){addVia()}
+ else if(a==="via-del"){delVia(Number(b.dataset.k))}
+ else if(a==="edit"){openDocSheet({id:b.dataset.id})}
+ else if(a==="copy"){copyText(b.dataset.code)}
+ else if(a==="close"){closeSheet()}
+ else if(a==="type"){
+  selType=b.dataset.type;sheetBody.querySelectorAll(".ty").forEach(function(x){x.setAttribute("aria-checked",x===b?"true":"false")});
+  $("#f-loc").innerHTML=locFields(selType);refreshLegField();autoLeg();var tl=$("#f-tlab");if(tl)tl.textContent=timeLabel(selType)}
+ else if(a==="unlink"){var un=+b.dataset.n;locS[un].u="";locS[un].src="";var lse=$("#ls-"+un);if(lse)lse.innerHTML=locStat(un)}
+ else if(a==="theme"){setKV("theme",b.dataset.v);applyTheme();sheetBody.querySelectorAll("[data-act=theme]").forEach(function(x){x.setAttribute("aria-pressed",x===b?"true":"false")})}
+ else if(a==="cfold"){var ck=b.dataset.k;colap[ck]=!colap[ck];b.setAttribute("aria-expanded",String(!colap[ck]));b.parentNode.classList.toggle("fold",!!colap[ck])}
+ else if(a==="go"){var ge=document.getElementById(b.dataset.id);if(ge)ge.scrollIntoView({behavior:"smooth",block:"start"})}
+ else if(a==="list"){openListSheet(b.dataset.city,b.dataset.kind)}
+ else if(a==="item-edit"){openItemForm(b.dataset.id)}
+ else if(a==="item-add"){openItemForm(null)}
+ else if(a==="item-back"){openListSheet(listCtx.cid,listCtx.kind)}
+ else if(a==="item-save"){saveItem()}
+ else if(a==="item-del"){
+  if(itemArm){clearTimeout(itemArm);itemArm=null;deleteItem()}
+  else{itemArm=setTimeout(function(){itemArm=null;b.textContent="Eliminar"},4000);b.textContent="Toca otra vez para eliminar"}
+ }
+ else if(a==="list-reset"){
+  if(resetArm){clearTimeout(resetArm);resetArm=null;var rc=listCtx;delKV("pl:"+rc.cid+":"+rc.kind).then(function(){refresh();openListSheet(rc.cid,rc.kind);toast("Lista restaurada")})}
+  else{resetArm=setTimeout(function(){resetArm=null;b.textContent="Restaurar lista original"},4000);b.textContent="Toca otra vez para restaurar"}
+ }
+ else if(a==="save"){saveFromSheet()}
+ else if(a==="delete"){
+  if(delArm){removeDoc(editing.id).then(function(){closeSheet();refresh();toast("Documento eliminado")})}
+  else{delArm=setTimeout(function(){delArm=null;b.textContent="Eliminar"},4000);b.textContent="Toca otra vez para eliminar"}
+ }
+ else if(a==="resto"){var s=((kv[b.dataset.k]||0)+1)%4;setKV(b.dataset.k,s).then(refresh)}
+ else if(a==="filter"){docFilter=b.dataset.f;renderDocsView()}
+ else if(a==="settings"){openSettings()}
+ else if(a==="export"){exportBackup()}
+ else if(a==="persist"){if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().then(function(ok){toast(ok?"Datos protegidos":"El navegador no lo ha concedido")})}else toast("No disponible en este navegador")}
+});
+document.addEventListener("change",function(e){
+ if(e.target.classList&&e.target.classList.contains("statsel")){var sv=+e.target.value;e.target.className="stat statsel s"+sv;setKV(e.target.dataset.k,sv);return}
+ if(e.target.id==="f-file"){var f=e.target.files[0];if(f){$("#f-name").innerHTML=esc(f.name)+"<small>"+fmtSize(f.size)+"</small>";if(!$("#f-title").value)$("#f-title").value=f.name.replace(/\.[^.]+$/,"")}}
+ else if(e.target.id==="f-day"){legSel="";legManual=false;toSel="";refreshLegField();autoLeg()}
+ else if(e.target.id==="f-to"){toSel=e.target.value}
+ else if(e.target.id==="f-leg"){legSel=e.target.value;legManual=true}
+ else if(e.target.id==="s-import"){var f2=e.target.files[0];if(f2)importBackup(f2)}
+});
+document.addEventListener("input",function(e){
+ var el=e.target,n=el.dataset&&el.dataset.loc;if(!n)return;n=+n;
+ var s=locS[n],v=el.value,m=sugMap();
+ if(isMapsUrl(v)){
+  var nn=nameFromUrl(v.trim());s.u=v.trim();s.t=nn;s.src="link";el.value=nn;
+  el.placeholder=nn?"Nombre del lugar":"Escribe un nombre para este enlace";
+  if(!nn){try{el.focus()}catch(_){}}
+ }else{
+  s.t=v;
+  if(Object.prototype.hasOwnProperty.call(m,v)&&m[v]){s.u=m[v];s.src="sug"}
+  else if(s.src!=="link"){s.u="";s.src=""}
+ }
+ var lse=$("#ls-"+n);if(lse)lse.innerHTML=locStat(n);
+ autoLeg();
+});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!sheet.hidden)closeSheet()});
+window.addEventListener("hashchange",route);
+
+$("#nav-home").innerHTML=svg("route",24)+"Ruta";
+$("#nav-cal").innerHTML=svg("cal",24)+"Calendario";
+$("#nav-docs").innerHTML=svg("file",24)+"Documentos";
+$("#nav-set").innerHTML=svg("sliders",24)+"Ajustes";
+
+loadAll().then(function(){
+ applyTheme();
+ try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+ var t=todayStr();
+ route();
+});
+})();
