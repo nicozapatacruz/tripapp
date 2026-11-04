@@ -5,7 +5,6 @@ El viaje empieza el **27 de diciembre de 2026**.
 
 ## Fase 1 · Publicar la app (semana del 4 nov)
 
-- [ ] Activar GitHub Pages: Settings → Pages → Source: GitHub Actions.
 - [ ] Probar en el iPhone, con la app ya instalada: subir y abrir un PDF,
       copiar un código, enlaces de Maps, exportar/importar copia, abrir sin
       internet.

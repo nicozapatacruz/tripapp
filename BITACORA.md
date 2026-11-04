@@ -14,6 +14,9 @@ Reglas:
 
 ## 2026-11-04
 
+- Primer commit y primer deploy OK: la app está publicada en
+  https://nicozapatacruz.github.io/tripapp/ (Pages con Source: GitHub
+  Actions). Probada en la Mac con `npm run dev`.
 - Repo `nicozapatacruz/tripapp` creado y hecho **público**, para poder usar
   GitHub Pages gratis. Ciudades y fechas del viaje quedan visibles en el
   código; documentos, códigos y precios no (viven solo en el teléfono).
