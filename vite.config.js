@@ -15,8 +15,8 @@ export default defineConfig({
       injectRegister: "script-defer",
       includeAssets: ["icons/apple-touch-icon.png"],
       manifest: {
-        name: "Nuestra Ruta",
-        short_name: "Nuestra Ruta",
+        name: "Journest",
+        short_name: "Journest",
         description: "Itinerario del viaje: ruta, días, calendario y documentos.",
         lang: "es",
         display: "standalone",

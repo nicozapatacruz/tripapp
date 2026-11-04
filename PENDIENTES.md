@@ -14,9 +14,13 @@ El viaje empieza el **27 de diciembre de 2026**.
 
 ## Fase 2 · Copia protegida (hasta ~20 nov)
 
-- [ ] Exportar con contraseña opcional (cifrado en el teléfono).
-- [ ] Importar "solo documentos", sin pisar el itinerario.
-- [ ] Exportar "solo itinerario", sin archivos ni códigos.
+Implementada (ver bitácora). Falta probar en el iPhone, con la app instalada:
+- [ ] Exportar copia completa con contraseña → "Guardar en Archivos" en
+      iCloud Drive.
+- [ ] Importarla de vuelta: contraseña incorrecta avisa; la correcta abre.
+- [ ] "Solo documentos" no cambia eventos/listas/estados.
+- [ ] Exportar "Solo itinerario" e importarlo en otro teléfono.
+- [ ] Copia grande (varios PDFs): que no se cuelgue al cifrar.
 
 ## Fase 3 · Compartir con Supabase (20 nov – 15 dic, si da el tiempo)
 
@@ -46,5 +50,5 @@ El viaje empieza el **27 de diciembre de 2026**.
 - Consejos, platos y horas de traslado editables.
 - Mapa dentro de la app.
 - V2: crear lugares y sugerencias con IA.
-- Tests (vitest) cuando la lógica se separe en módulos; hoy todo vive en un
-  solo IIFE en `src/app.js`.
+- Más tests a medida que la lógica salga de `src/app.js` (hoy un solo IIFE)
+  a módulos como `src/backup.js`.

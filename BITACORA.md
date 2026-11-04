@@ -14,6 +14,32 @@ Reglas:
 
 ## 2026-11-04
 
+- La app pasa a llamarse **Journest** (journey + nest: el "nido" donde se
+  guarda y ordena todo el viaje). Se descartaron decenas de nombres por
+  estar tomados en el rubro (Trippin, Tripster, Periplo, Voyara, Routiq…)
+  o por limitar el mercado al español (Trayecta, Rutalia). En la web no
+  apareció nada llamado Journest; falta búsqueda formal de marca y
+  registrar dominio si se quiere publicar.
+- Como todavía no había datos reales guardados, se renombró también lo
+  interno: base IndexedDB `journest` (antes `nuestra-ruta`) e identificador
+  de copias `journest`. Las copias con `app:"nuestra-ruta"` se siguen
+  importando. El repo y la URL siguen siendo `tripapp`.
+- Fase 2 (copia protegida) implementada, falta probarla en el iPhone:
+  - Exportar "Copia completa" o "Solo itinerario" (sin documentos, códigos,
+    precios ni preferencias del dispositivo como tema/moneda).
+  - Contraseña opcional (mín. 8 caracteres): AES-GCM 256 con clave
+    PBKDF2-SHA256 de 600.000 iteraciones, cifrado en el teléfono.
+  - En iPhone se guarda con la hoja de compartir ("Guardar en Archivos");
+    queda "Descargar" como alternativa.
+  - Importar pide la contraseña si la copia está cifrada y deja elegir
+    "Todo", "Solo documentos" (no toca el itinerario) o "Solo itinerario".
+  - Las copias v1 (formato original) se siguen importando igual.
+  - Lógica en `src/backup.js`, con tests (`npm test`, vitest).
+- Orden decidido: Fase 2 (copia cifrada) antes que Supabase. Nicolas
+  empieza a cargar documentos reales ya, en la app instalada; la DB tal
+  como está planeada no guarda archivos, así que el respaldo de los PDFs es
+  la copia. Regla nueva en CLAUDE.md: ningún cambio puede perder datos
+  locales ni romper la importación de copias viejas.
 - Primer commit y primer deploy OK: la app está publicada en
   https://nicozapatacruz.github.io/tripapp/ (Pages con Source: GitHub
   Actions). Probada en la Mac con `npm run dev`.

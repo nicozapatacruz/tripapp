@@ -1,7 +1,8 @@
-# Nuestra Ruta
+# Journest
 
-Itinerario del viaje (27 dic 2026 – 17 ene 2027): ruta por etapas, detalle de cada día, calendario y documentos.
-App web instalable en el iPhone que funciona sin internet. Empezó como un artifact de Claude.ai de un solo archivo.
+Organizador de viajes: ruta por etapas, detalle de cada día, calendario y documentos.
+App web instalable en el iPhone que funciona sin internet. Hoy tiene cargado el viaje del 27 dic 2026 al 17 ene 2027.
+Empezó como un artifact de Claude.ai de un solo archivo, con el nombre "Nuestra Ruta".
 
 Todo lo que se guarda (documentos, códigos, estados) vive **solo en el teléfono**, en IndexedDB.
 En este repositorio (público) solo están el código y el itinerario.
@@ -15,6 +16,12 @@ npm run dev
 
 Abre la URL que imprime Vite (normalmente http://localhost:5173/tripapp/).
 
+Tests:
+
+```bash
+npm test
+```
+
 Build de producción:
 
 ```bash
@@ -27,6 +34,8 @@ npm run preview
 ```
 index.html               Página principal (markup base)
 src/app.js               Lógica, datos del itinerario y almacenamiento local
+src/backup.js            Copias de seguridad: formato, cifrado e importación
+src/__tests__/           Tests (vitest)
 src/styles.css           Estilos
 public/icons/            Íconos de la app
 vite.config.js           Vite + vite-plugin-pwa (manifest y service worker)

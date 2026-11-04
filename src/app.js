@@ -1,5 +1,9 @@
 import "@fontsource-variable/onest";
 import "./styles.css";
+import {
+  buildBackup, encryptBackup, decryptBackup, parseBackupText, importPlan, itineraryKV,
+  cryptoAvailable, WrongPasswordError,
+} from "./backup.js";
 
 (function(){
 "use strict";
@@ -388,7 +392,7 @@ function routeText(day){return day.stops.map(nm).join(" → ")}
 
 /* ================= Almacenamiento local ================= */
 var db=null, docs=[], kv={}, urls={};
-function openDB(){return new Promise(function(res){try{var r=indexedDB.open("nuestra-ruta",1);
+function openDB(){return new Promise(function(res){try{var r=indexedDB.open("journest",1);
  r.onupgradeneeded=function(){var d=r.result;d.createObjectStore("docs",{keyPath:"id"});d.createObjectStore("kv",{keyPath:"k"})};
  r.onsuccess=function(){res(r.result)};r.onerror=function(){res(null)};r.onblocked=function(){res(null)}}catch(e){res(null)}})}
 function tx(store,mode,fn){return new Promise(function(res,rej){var t=db.transaction(store,mode);var s=t.objectStore(store);var r=fn(s);t.oncomplete=function(){res(r&&r.result)};t.onerror=function(){rej(t.error)};t.onabort=function(){rej(t.error)}})}
@@ -470,7 +474,7 @@ function renderHome(){
   }).join("");
   return '<section class="stage" id="st-'+i+'"><div class="banner" style="--c:'+c.c1+'"><h2>'+esc(c.name)+'</h2><p>'+sub+'</p></div><div class="days">'+days+'</div></section>';
  }).join("");
- V.home.innerHTML='<header class="in top"><div class="trow"><div><h1>Nuestra Ruta</h1><p class="sub">'+first.dt.getDate()+' '+MO3[first.dt.getMonth()]+' – '+last.dt.getDate()+' '+MO3[last.dt.getMonth()]+' · '+DAYS.length+' días</p></div>'+cd+'</div><div class="scs">'+chips+'</div></header><div class="in list">'+body+'</div>';
+ V.home.innerHTML='<header class="in top"><div class="trow"><div><h1>Journest</h1><p class="sub">'+first.dt.getDate()+' '+MO3[first.dt.getMonth()]+' – '+last.dt.getDate()+' '+MO3[last.dt.getMonth()]+' · '+DAYS.length+' días</p></div>'+cd+'</div><div class="scs">'+chips+'</div></header><div class="in list">'+body+'</div>';
 }
 
 function listOf(id,kind){
@@ -718,7 +722,7 @@ function openSettings(){
  openSheet('<div class="sh-head"><h2 id="sh-title">Ajustes</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
  '<div class="kv"><div><h3 class="lab">Almacenamiento</h3><p id="s-store">Calculando...</p></div>'+(db?"":'<div class="note">'+svg("flag",20)+'<p>Este navegador no permite guardar datos. Lo que añadas se perderá al cerrar la página.</p></div>')+
  '<div><h3 class="lab">Apariencia</h3><div class="chips">'+[["light","Claro"],["dark","Oscuro"],["auto","Automático"]].map(function(t){return '<button type="button" class="chip" data-act="theme" data-v="'+t[0]+'" aria-pressed="'+((kv.theme||"light")===t[0])+'">'+t[1]+'</button>'}).join("")+'</div></div>'+
- '<div><h3 class="lab">Copia de seguridad</h3><p>Guarda un archivo con todos tus documentos y estados. Hazlo antes de salir de viaje y cada vez que añadas algo importante.</p></div>'+
+ '<div><h3 class="lab">Copia de seguridad</h3><p>Guarda un archivo con todos tus documentos y estados, protegido con contraseña si quieres. Hazlo antes de salir de viaje y cada vez que añadas algo importante.</p></div>'+
  '<div class="actions"><button type="button" class="btn" data-act="export">Exportar copia</button><label class="btn" for="s-import">Importar copia</label><input id="s-import" type="file" accept="application/json,.json" hidden></div>'+
  '<div class="actions"><button type="button" class="btn" data-act="persist">Proteger datos del borrado</button></div>'+
  '<p>Todo se guarda solo en este dispositivo. Instala la app en la pantalla de inicio del iPhone para que Safari no borre los datos por falta de uso.</p></div>');
@@ -727,22 +731,110 @@ function openSettings(){
 }
 function blobToDataURL(b){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result)};r.onerror=function(){rej(r.error)};r.readAsDataURL(b)})}
 function dataURLtoBlob(u){var p=u.split(","),mime=(p[0].match(/:(.*?);/)||[])[1]||"application/octet-stream",bin=atob(p[1]),a=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new Blob([a],{type:mime})}
-async function exportBackup(){
- try{
-  var out={app:"nuestra-ruta",v:1,kv:kv,docs:[]};
-  for(var i=0;i<docs.length;i++){var d=Object.assign({},docs[i]);if(d.blob){d.data=await blobToDataURL(d.blob)}delete d.blob;out.docs.push(d)}
-  var b=new Blob([JSON.stringify(out)],{type:"application/json"}),a=document.createElement("a");
-  a.href=URL.createObjectURL(b);a.download="nuestra-ruta-copia-"+todayStr()+".json";document.body.appendChild(a);a.click();a.remove();
-  toast("Copia generada")
- }catch(e){toast("No se pudo generar la copia")}
+/* ---- Exportar (formatos y cifrado en backup.js) ---- */
+var expKind="full",expFile=null,impWrapper=null,impBackup=null;
+var MIN_PASS=8;
+function expDesc(){return expKind==="full"
+ ?"Documentos con sus archivos, códigos y precios, más el itinerario (eventos, listas y estados)."
+ :"Solo el itinerario: eventos, listas y estados. Sin documentos, archivos, códigos ni precios. Sirve para compartirlo."}
+function openExportSheet(){
+ expFile=null;
+ openSheet('<div class="sh-head"><h2 id="sh-title">Exportar copia</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
+ '<div class="kv"><div class="chips">'+[["full","Copia completa"],["itinerary","Solo itinerario"]].map(function(t){return '<button type="button" class="chip" data-act="exp-kind" data-v="'+t[0]+'" aria-pressed="'+(expKind===t[0])+'">'+t[1]+'</button>'}).join("")+'</div>'+
+ '<p id="e-desc">'+expDesc()+'</p>'+
+ '<div class="field"><label for="e-pass">Contraseña (opcional)</label><input id="e-pass" type="password" autocomplete="new-password" placeholder="Mínimo '+MIN_PASS+' caracteres"></div>'+
+ '<div class="field"><label for="e-pass2">Repite la contraseña</label><input id="e-pass2" type="password" autocomplete="new-password"></div>'+
+ '<p>Con contraseña, la copia queda cifrada en este teléfono antes de salir de él. Si la olvidas, no se puede abrir: nadie puede recuperarla.</p>'+
+ '<div class="actions"><button type="button" class="btn primary" data-act="exp-make">Preparar copia</button></div>'+
+ '<div id="e-out"></div></div>');
 }
-async function importBackup(file){
+function expKindChanged(b){
+ expKind=b.dataset.v;expFile=null;
+ sheetBody.querySelectorAll("[data-act=exp-kind]").forEach(function(x){x.setAttribute("aria-pressed",x===b?"true":"false")});
+ var d=$("#e-desc");if(d)d.textContent=expDesc();var o=$("#e-out");if(o)o.innerHTML="";
+}
+async function serializeDocs(){
+ var out=[];
+ for(var i=0;i<docs.length;i++){var d=Object.assign({},docs[i]);if(d.blob){d.data=await blobToDataURL(d.blob)}delete d.blob;out.push(d)}
+ return out;
+}
+async function makeExport(btn){
+ var p1=$("#e-pass").value,p2=$("#e-pass2").value;
+ if(p1!==p2){toast("Las contraseñas no coinciden");return}
+ if(p1&&p1.length<MIN_PASS){toast("Usa al menos "+MIN_PASS+" caracteres");return}
+ if(p1&&!cryptoAvailable()){toast("Este navegador no permite cifrar");return}
+ var label=btn.textContent;btn.disabled=true;btn.textContent=p1?"Cifrando...":"Preparando...";
  try{
-  var j=JSON.parse(await file.text());if(j.app!=="nuestra-ruta")throw new Error("x");
-  for(var i=0;i<j.docs.length;i++){var d=j.docs[i];if(d.data){d.blob=dataURLtoBlob(d.data);delete d.data}await saveDoc(d)}
-  var ks=Object.keys(j.kv||{});for(var k=0;k<ks.length;k++)await setKV(ks[k],j.kv[ks[k]]);
-  closeSheet();refresh();toast("Copia importada")
- }catch(e){toast("El archivo no es una copia válida")}
+  var kind=expKind;
+  var backup=buildBackup(kind,kv,kind==="full"?await serializeDocs():[]);
+  var out=p1?await encryptBackup(backup,p1):backup;
+  var name="journest-"+(kind==="full"?"copia":"itinerario")+(p1?"-cifrada":"")+"-"+todayStr()+".json";
+  expFile=new File([JSON.stringify(out)],name,{type:"application/json"});
+  var canShare=!!(navigator.canShare&&navigator.share&&navigator.canShare({files:[expFile]}));
+  var o=$("#e-out");
+  if(o)o.innerHTML='<div class="note">'+svg("flag",20)+'<p><b>Copia lista</b> · '+fmtSize(expFile.size)+(p1?" · cifrada":" · sin cifrar")+(kind==="full"?" · "+backup.docs.length+(backup.docs.length===1?" documento":" documentos"):"")+'<br>'+(canShare?"Elige “Guardar en Archivos” para dejarla en iCloud Drive.":"Guárdala en un lugar privado.")+'</p></div>'+
+   '<div class="actions">'+(canShare?'<button type="button" class="btn primary" data-act="exp-share">Guardar o compartir</button>':"")+'<button type="button" class="btn" data-act="exp-dl">Descargar</button></div>';
+ }catch(e){toast("No se pudo generar la copia")}
+ btn.disabled=false;btn.textContent=label;
+}
+function downloadFile(f){
+ if(!f)return;
+ var u=URL.createObjectURL(f),a=document.createElement("a");
+ a.href=u;a.download=f.name;document.body.appendChild(a);a.click();a.remove();
+ setTimeout(function(){URL.revokeObjectURL(u)},60000);
+ toast("Copia descargada");
+}
+function shareExport(){
+ if(!expFile)return;
+ // Se llama directo desde el toque del botón (Safari exige un gesto del usuario para compartir)
+ navigator.share({files:[expFile],title:"Copia de Journest"}).catch(function(e){if(!e||e.name!=="AbortError")downloadFile(expFile)});
+}
+
+/* ---- Importar ---- */
+async function importBackup(file){
+ var parsed;
+ try{parsed=parseBackupText(await file.text())}catch(e){toast("El archivo no es una copia válida");return}
+ if(parsed.encrypted)openPassSheet(parsed.wrapper);else openImportChoice(parsed.backup);
+}
+function openPassSheet(wrapper){
+ impWrapper=wrapper;
+ openSheet('<div class="sh-head"><h2 id="sh-title">Copia cifrada</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
+ '<div class="kv"><p>Escribe la contraseña con la que se creó esta copia'+(wrapper.kind==="itinerary"?" (solo itinerario)":"")+'.</p>'+
+ '<div class="field"><label for="i-pass">Contraseña</label><input id="i-pass" type="password" autocomplete="current-password"></div>'+
+ '<div class="actions"><button type="button" class="btn primary" data-act="imp-pass">Abrir copia</button></div></div>');
+}
+async function unlockImport(btn){
+ if(!impWrapper)return;
+ if(!cryptoAvailable()){toast("Este navegador no permite descifrar");return}
+ var label=btn.textContent;btn.disabled=true;btn.textContent="Abriendo...";
+ try{var bk=await decryptBackup(impWrapper,$("#i-pass").value);impWrapper=null;openImportChoice(bk);return}
+ catch(e){toast(e instanceof WrongPasswordError?"Contraseña incorrecta":"El archivo no es una copia válida")}
+ btn.disabled=false;btn.textContent=label;
+}
+function openImportChoice(backup){
+ impBackup=backup;
+ var nd=backup.docs.length,hasItin=Object.keys(itineraryKV(backup.kv)).length>0;
+ if(!nd&&!hasItin){impBackup=null;toast("La copia está vacía");return}
+ var opts=[];
+ if(nd&&hasItin)opts.push(["all","Importar todo"]);
+ if(nd)opts.push(["docs",hasItin?"Solo documentos":"Importar documentos"]);
+ if(hasItin)opts.push(["itinerary",nd?"Solo itinerario":"Importar itinerario"]);
+ openSheet('<div class="sh-head"><h2 id="sh-title">Importar copia</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
+ '<div class="kv"><p>Esta copia tiene '+(nd?nd+(nd===1?" documento":" documentos"):"")+(nd&&hasItin?" y ":"")+(hasItin?"el itinerario (eventos, listas y estados)":"")+'.</p>'+
+ (nd?'<p><b>Documentos:</b> se agregan a los que ya tienes. Si uno ya existe, se reemplaza por el de la copia.</p>':"")+
+ (hasItin?'<p><b>Itinerario:</b> los eventos, listas y estados que estén en la copia reemplazan a los tuyos.</p>':"")+
+ '<div class="actions">'+opts.map(function(o,i){return '<button type="button" class="btn'+(i===0?" primary":"")+'" data-act="imp-apply" data-v="'+o[0]+'">'+o[1]+'</button>'}).join("")+'</div></div>');
+}
+async function applyImport(mode,btn){
+ if(!impBackup)return;
+ btn.disabled=true;
+ try{
+  var plan=importPlan(impBackup,mode);
+  for(var i=0;i<plan.docs.length;i++){var d=Object.assign({},plan.docs[i]);if(d.data){d.blob=dataURLtoBlob(d.data);delete d.data}await saveDoc(d)}
+  var ks=Object.keys(plan.kv);for(var k=0;k<ks.length;k++)await setKV(ks[k],plan.kv[ks[k]]);
+  impBackup=null;closeSheet();applyTheme();refresh();
+  toast(plan.docs.length?"Importados "+plan.docs.length+(plan.docs.length===1?" documento":" documentos"):"Itinerario importado");
+ }catch(e){btn.disabled=false;toast("No se pudo importar la copia")}
 }
 
 /* ================= Navegación ================= */
@@ -913,7 +1005,13 @@ document.addEventListener("click",function(e){
  else if(a==="resto"){var s=((kv[b.dataset.k]||0)+1)%4;setKV(b.dataset.k,s).then(refresh)}
  else if(a==="filter"){docFilter=b.dataset.f;renderDocsView()}
  else if(a==="settings"){openSettings()}
- else if(a==="export"){exportBackup()}
+ else if(a==="export"){openExportSheet()}
+ else if(a==="exp-kind"){expKindChanged(b)}
+ else if(a==="exp-make"){makeExport(b)}
+ else if(a==="exp-share"){shareExport()}
+ else if(a==="exp-dl"){downloadFile(expFile)}
+ else if(a==="imp-pass"){unlockImport(b)}
+ else if(a==="imp-apply"){applyImport(b.dataset.v,b)}
  else if(a==="persist"){if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().then(function(ok){toast(ok?"Datos protegidos":"El navegador no lo ha concedido")})}else toast("No disponible en este navegador")}
 });
 document.addEventListener("change",function(e){
