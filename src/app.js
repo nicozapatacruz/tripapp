@@ -904,9 +904,17 @@ function openSettings(){
  '<div><h3 class="lab">Copia de seguridad</h3><p>Guarda un archivo con todos tus documentos y estados, protegido con contraseña si quieres. Hazlo antes de salir de viaje y cada vez que añadas algo importante.</p></div>'+
  '<div class="actions"><button type="button" class="btn" data-act="export">Exportar copia</button><label class="btn" for="s-import">Importar copia</label><input id="s-import" type="file" accept="application/json,.json" hidden></div>'+
  '<div class="actions"><button type="button" class="btn" data-act="persist">Proteger datos del borrado</button></div>'+
- '<p>Todo se guarda solo en este dispositivo. Instala la app en la pantalla de inicio del iPhone para que Safari no borre los datos por falta de uso.</p></div>');
+ '<p>Todo se guarda solo en este dispositivo. Instala la app en la pantalla de inicio del iPhone para que Safari no borre los datos por falta de uso.</p>'+
+ '<p class="ver">'+esc(versionText())+'</p></div>');
  if(navigator.storage&&navigator.storage.estimate){navigator.storage.estimate().then(function(e){var el=$("#s-store");if(el)el.textContent="Usado: "+fmtSize(e.usage||0)+(e.quota?" de "+fmtSize(e.quota)+" disponibles":"")+". "+docs.length+(docs.length===1?" documento.":" documentos.")}).catch(function(){var el=$("#s-store");if(el)el.textContent=docs.length+" documentos."})}
  else{$("#s-store").textContent=docs.length+" documentos."}
+}
+/* "Versión a1b2c3d · 5 nov, 15:40": el código coincide con el último commit de GitHub
+   si el teléfono ya tiene la versión publicada */
+function versionText(){
+ var v=typeof __APP_VERSION__!=="undefined"?__APP_VERSION__:"local",t=typeof __BUILD_TIME__!=="undefined"?new Date(__BUILD_TIME__):null,w="";
+ if(t&&!isNaN(t))w=" · "+t.getDate()+" "+MO3[t.getMonth()]+", "+String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0");
+ return "Versión "+v+w;
 }
 function blobToDataURL(b){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result)};r.onerror=function(){rej(r.error)};r.readAsDataURL(b)})}
 function dataURLtoBlob(u){var p=u.split(","),mime=(p[0].match(/:(.*?);/)||[])[1]||"application/octet-stream",bin=atob(p[1]),a=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new Blob([a],{type:mime})}

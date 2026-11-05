@@ -4,6 +4,12 @@ import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig({
   // GitHub Pages publica el repo en https://nicozapatacruz.github.io/tripapp/
   base: "/tripapp/",
+  // Versión visible en Ajustes: commit (GITHUB_SHA lo pone GitHub Actions) y hora del build.
+  // Sirve para saber si el iPhone ya tiene la última versión publicada.
+  define: {
+    __APP_VERSION__: JSON.stringify((process.env.GITHUB_SHA || "").slice(0, 7) || "local"),
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     // Genera el manifest y un service worker que precarga toda la app
     // (HTML, JS, CSS, fuente e íconos) para que abra sin internet.

@@ -341,3 +341,4 @@ button.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-co
 .fab[hidden]{display:none}
 .fabspace{height:72px}
 @media (prefers-reduced-motion:reduce){.fab,.fab span{transition:none}}
+.ver{font-size:12.5px;color:var(--muted);font-family:var(--f-mono)}

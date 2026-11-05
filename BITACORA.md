@@ -20,6 +20,9 @@ Reglas:
   `clientsClaim` (solo lo hace con "auto"), así que cada versión nueva
   quedaba en espera. Activados a mano en `vite.config.js`; falta volver a
   probar sin internet.
+- Ajustes muestra la versión instalada ("Versión a1b2c3d · 5 nov, 15:40"):
+  el código es el commit publicado (`GITHUB_SHA` en Actions) y la hora del
+  build. Para saber si el iPhone ya tiene la última versión.
 - Fases 2 y 3 en pausa: primero se pulen detalles de funcionamiento y
   estética.
 - Tercera ronda de pruebas:
