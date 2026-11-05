@@ -23,6 +23,12 @@ Reglas:
 - Ajustes muestra la versión instalada ("Versión a1b2c3d · 5 nov, 15:40"):
   el código es el commit publicado (`GITHUB_SHA` en Actions) y la hora del
   build. Para saber si el iPhone ya tiene la última versión.
+- Deploy trabado: el commit 6e4aa63 cayó durante una falla de GitHub
+  Actions y su publicación en Pages quedó colgada. Como el ID de cada
+  publicación es el SHA del commit, todos los reintentos sobre ese mismo
+  commit fallaban ("Timeout reached" / "Deployment cancelled"); Evenly
+  publicaba normal. Se resuelve con un commit nuevo (no solo de .md).
+  Anotado en `.github/workflows/deploy.yml`.
 - Fases 2 y 3 en pausa: primero se pulen detalles de funcionamiento y
   estética.
 - Tercera ronda de pruebas:

@@ -32,6 +32,11 @@ jobs:
         with:
           path: dist
 
+  # Ojo: el ID de cada publicación en Pages es el SHA del commit. Si una publicación
+  # queda trabada (pasó el 5 nov 2026 durante una falla de GitHub Actions), reintentar
+  # o usar "Run workflow" sobre el MISMO commit falla siempre ("Timeout reached" o
+  # "Deployment cancelled"). Se arregla con un commit nuevo que no sea solo de .md
+  # (los cambios solo de .md no disparan el deploy, ver paths-ignore).
   deploy:
     needs: build
     runs-on: ubuntu-latest
