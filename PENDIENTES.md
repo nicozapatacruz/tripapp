@@ -3,13 +3,6 @@
 Lista viva. Al resolver algo, se saca de acá y se anota en `BITACORA.md`.
 El viaje empieza el **27 de diciembre de 2026**.
 
-## Fase 1 · Publicar la app (semana del 4 nov)
-
-Probado el 5 nov: PDF, códigos, Maps y márgenes, OK. Falta:
-- [ ] Abrir sin internet: fallaba con "FetchEvent.respondWith received an
-      error: TypeError: Load failed". Corregido que la versión nueva quedaba
-      en espera (faltaban `skipWaiting`/`clientsClaim`); volver a probar.
-
 ## Ahora · Detalles de funcionamiento y estética
 
 Antes de seguir con las fases 2 y 3, Nicolas quiere pulir la app.

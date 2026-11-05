@@ -14,6 +14,9 @@ Reglas:
 
 ## 2026-11-05
 
+- Fase 1 terminada: probado en el iPhone que la app abre sin internet (con
+  la versión que activa el service worker al instante) y "Proteger datos
+  del borrado" responde "Datos protegidos".
 - Fase 1 probada en el iPhone: PDF, códigos, Maps y márgenes OK. Sin
   internet fallaba ("FetchEvent.respondWith… Load failed"). Encontrado: con
   `injectRegister: "script-defer"` el plugin no activa `skipWaiting` ni
