@@ -14,6 +14,14 @@ Reglas:
 
 ## 2026-11-05
 
+- Fase 1 probada en el iPhone: PDF, códigos, Maps y márgenes OK. Sin
+  internet fallaba ("FetchEvent.respondWith… Load failed"). Encontrado: con
+  `injectRegister: "script-defer"` el plugin no activa `skipWaiting` ni
+  `clientsClaim` (solo lo hace con "auto"), así que cada versión nueva
+  quedaba en espera. Activados a mano en `vite.config.js`; falta volver a
+  probar sin internet.
+- Fases 2 y 3 en pausa: primero se pulen detalles de funcionamiento y
+  estética.
 - Tercera ronda de pruebas:
   - Bug: el 27 (día de inicio) solo tiene la pestaña Documentos y la ruta
     con "Editar paradas" vivía en General, así que una parada añadida ahí no

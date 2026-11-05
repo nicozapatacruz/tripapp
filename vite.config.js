@@ -33,6 +33,11 @@ export default defineConfig({
         // De la fuente solo se precargan latin y latin-ext (español, €, flechas).
         // Los otros subconjuntos (cirílico, etc.) se generan pero no se usan.
         globPatterns: ["**/*.{js,css,html,png,svg}", "**/onest-latin*.woff2"],
+        // Con injectRegister "script-defer" el plugin NO activa esto solo (solo lo hace con
+        // "auto"): sin ellas, la versión nueva quedaba "en espera" hasta cerrar la app del
+        // todo, algo que en iPhone casi nunca pasa. Así se activa apenas termina de bajar.
+        skipWaiting: true,
+        clientsClaim: true,
       },
     }),
   ],

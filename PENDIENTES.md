@@ -5,24 +5,16 @@ El viaje empieza el **27 de diciembre de 2026**.
 
 ## Fase 1 · Publicar la app (semana del 4 nov)
 
-- [ ] Probar en el iPhone, con la app ya instalada: subir y abrir un PDF,
-      copiar un código, enlaces de Maps, exportar/importar copia, abrir sin
-      internet.
-- [ ] Revisar que los márgenes del notch/barra inferior se vean bien en modo
-      instalado (el CSS base heredado del contenedor de Claude.ai agrega
-      padding de safe-area en `:root`).
+Probado el 5 nov: PDF, códigos, Maps y márgenes, OK. Falta:
+- [ ] Abrir sin internet: fallaba con "FetchEvent.respondWith received an
+      error: TypeError: Load failed". Corregido que la versión nueva quedaba
+      en espera (faltaban `skipWaiting`/`clientsClaim`); volver a probar.
 
-## Fase 2 · Copia protegida (hasta ~20 nov)
+## Ahora · Detalles de funcionamiento y estética
 
-Implementada (ver bitácora). Falta probar en el iPhone, con la app instalada:
-- [ ] Exportar copia completa con contraseña → "Guardar en Archivos" en
-      iCloud Drive.
-- [ ] Importarla de vuelta: contraseña incorrecta avisa; la correcta abre.
-- [ ] "Solo documentos" no cambia eventos/listas/estados.
-- [ ] Exportar "Solo itinerario" e importarlo en otro teléfono.
-- [ ] Copia grande (varios PDFs): que no se cuelgue al cifrar.
+Antes de seguir con las fases 2 y 3, Nicolas quiere pulir la app.
 
-## Mejoras acordadas (después de las pruebas)
+## Mejoras acordadas
 
 - [ ] Vuelo / tren / bus: campos "Aerolínea" (o "Compañía") y "N.º de vuelo
       / tren". Sin campo Título: se genera solo, p. ej. "Iberia · Madrid →
@@ -35,7 +27,18 @@ Implementada (ver bitácora). Falta probar en el iPhone, con la app instalada:
 - [ ] Calendario: al tocar algo, abrir una ficha de solo lectura con botón
       "Editar".
 
-## Fase 3 · Compartir con Supabase (20 nov – 15 dic, si da el tiempo)
+## Fase 2 · Copia protegida (en pausa)
+
+Implementada (ver bitácora). Pausada el 5 nov hasta terminar los detalles.
+Falta probar en el iPhone, con la app instalada:
+- [ ] Exportar copia completa con contraseña → "Guardar en Archivos" en
+      iCloud Drive.
+- [ ] Importarla de vuelta: contraseña incorrecta avisa; la correcta abre.
+- [ ] "Solo documentos" no cambia eventos/listas/estados.
+- [ ] Exportar "Solo itinerario" e importarlo en otro teléfono.
+- [ ] Copia grande (varios PDFs): que no se cuelgue al cifrar.
+
+## Fase 3 · Compartir con Supabase (en pausa; idea original: 20 nov – 15 dic)
 
 - [ ] Esquema aparte dentro del proyecto de Supabase actual (ver cómo está
       armado en Evenly: `src/lib/supabaseClient.js`).
