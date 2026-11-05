@@ -20,6 +20,13 @@ Reglas:
     se podía quitar. Ahora la ruta se ve también en Documentos ese día, y el
     formulario lista las paradas con "Quitar". Quitar una parada pide un
     segundo toque para confirmar ("Quitar" → "Confirmar" en rojo).
+  - Probado en el iPhone por Nicolas: todo lo de ubicaciones y el formulario
+    (las tres rondas). Faltan las pruebas de Fase 1 y 2.
+  - Vuelo/tren/bus en un día cuyos tramos ya tienen billete: aviso suave
+    ("Ya tienes el vuelo Málaga → Tenerife…"), sin bloquear, porque cada
+    persona puede tener su propio billete. El coche no avisa.
+  - El botón "Confirmar" lleva además un fondo rojo muy claro, para que se
+    note que el botón cambió.
   - Todas las acciones que borran (eliminar documento, evento o lugar,
     restaurar lista, quitar parada) piden un segundo toque igual: el botón
     pasa a "Confirmar" en rojo durante 4 s. Antes decía "Toca otra vez

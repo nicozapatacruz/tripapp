@@ -298,6 +298,23 @@ describe("formulario: ubicaciones", () => {
     expect([...document.querySelectorAll("#v-docs .ticket")].some((x) => x.textContent.includes("Otro"))).toBe(false);
   });
 
+  it("18c) trayecto que ya tiene billete: avisa pero deja añadir otro (p. ej. de otra persona)", async () => {
+    const JAN6 = "2027-01-06";
+    openNew(JAN6, "vuelo");
+    expect($("#f-dupnote").hidden).toBe(true);
+    $("#f-title").value = "Vuelo Ana";
+    await save();
+    openNew(JAN6, "vuelo");
+    expect($("#f-dupnote").hidden).toBe(false);
+    expect($("#f-dupnote").textContent).toContain("Ya tienes el vuelo Málaga → Tenerife");
+    click($('.ty[data-type="coche"]'));
+    expect($("#f-dupnote").hidden).toBe(true);
+    click($('.ty[data-type="vuelo"]'));
+    $("#f-title").value = "Vuelo Nico";
+    await save();
+    expect($("#sheet").hidden).toBe(true);
+  });
+
   it("19) dos «Casa» en ciudades distintas se ven como «Casa (Madrid)» y «Casa (Pamplona)»", () => {
     savedLinks();
     const t = $("#v-docs").textContent;

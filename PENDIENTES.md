@@ -22,13 +22,6 @@ Implementada (ver bitácora). Falta probar en el iPhone, con la app instalada:
 - [ ] Exportar "Solo itinerario" e importarlo en otro teléfono.
 - [ ] Copia grande (varios PDFs): que no se cuelgue al cifrar.
 
-Ubicaciones (corregido el 5 nov, falta probar en el iPhone):
-- [ ] Pegar el enlace antes y después del nombre; botón "Pegar enlace".
-- [ ] Dos "Casa" en la misma ciudad: aviso, "Usar esa" y "Casa 2".
-- [ ] Día con dos ciudades: pregunta "¿Dónde está?".
-- [ ] Segunda ronda (5 nov): trayecto fijo y "Añadir parada", hotel el 27,
-      ejemplos del título, asteriscos, guardar solo con tipo y día.
-
 ## Mejoras acordadas (después de las pruebas)
 
 - [ ] Vuelo / tren / bus: campos "Aerolínea" (o "Compañía") y "N.º de vuelo
@@ -74,6 +67,10 @@ Ubicaciones (corregido el 5 nov, falta probar en el iPhone):
 - Tipo de cambio, y "pagado/pendiente".
 - Consejos, platos y horas de traslado editables.
 - Mapa dentro de la app.
+- Editar la ruta: excursiones de un día (Madrid → Toledo → Madrid), cambiar
+  cuántas noches se queda en cada ciudad, etc. Hasta entonces, vuelo/tren/
+  bus solo se pueden poner en días con traslado. Cuando exista, el aviso
+  "Este día no tiene traslados" llevará al final un enlace "Editar ruta".
 - V2: crear lugares y sugerencias con IA.
 - Más tests a medida que la lógica salga de `src/app.js` (hoy un solo IIFE)
   a módulos como `src/backup.js`.

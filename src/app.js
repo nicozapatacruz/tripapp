@@ -749,7 +749,7 @@ function openDocSheet(o){
  viaOpen=false;planeNote=null;
  if(!d&&planeFix())dayId=formDay;              // hotel nuevo en una noche de avión → día siguiente
  if(!legSel&&!d){legSel=onlyLeg(dayId);if(legSel)legManual=true}
- var types=Object.keys(TYPES).map(function(k){return '<button type="button" class="ty" role="radio" data-act="type" data-type="'+k+'" aria-checked="'+(k===selType)+'" aria-disabled="'+!typeOk(k,dayId)+'" style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],22)+TYPES[k].l+'</button>'}).join("")+'<p class="tynote" id="f-tynote"'+(typeOk(selType,dayId)?" hidden":"")+'>'+NOLEG+'</p>';
+ var types=Object.keys(TYPES).map(function(k){return '<button type="button" class="ty" role="radio" data-act="type" data-type="'+k+'" aria-checked="'+(k===selType)+'" aria-disabled="'+!typeOk(k,dayId)+'" style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],22)+TYPES[k].l+'</button>'}).join("")+'<p class="tynote" id="f-tynote"'+(typeOk(selType,dayId)?" hidden":"")+'>'+NOLEG+'</p><p class="dupnote" id="f-dupnote"'+(dupTicketText(selType,dayId)?"":" hidden")+'>'+esc(dupTicketText(selType,dayId))+'</p>';
  var prev="";
  if(d&&d.blob){var u=objUrl(d);prev=(d.mime||"").indexOf("image/")===0?'<img class="prev" src="'+u+'" alt="Vista previa de '+esc(d.fileName)+'">':'<a class="btn" href="'+u+'" target="_blank" rel="noopener">'+svg("file",18)+'Abrir '+esc(d.fileName||"archivo")+'</a>'}
  openSheet('<div class="sh-head"><h2 id="sh-title">'+(d?"Documento":"Nuevo documento")+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
@@ -775,6 +775,17 @@ function refreshTypes(showNote){
  var day=curDay();
  sheetBody.querySelectorAll(".ty").forEach(function(x){x.setAttribute("aria-disabled",String(!typeOk(x.dataset.type,day)))});
  var n=$("#f-tynote");if(n)n.hidden=!(showNote||!typeOk(selType,day));
+ var dn=$("#f-dupnote"),dt=n&&!n.hidden?"":dupTicketText(selType,day);if(dn){dn.textContent=dt;dn.hidden=!dt}
+}
+/* Aviso (no bloquea) si todos los tramos del día ya tienen billete: puede ser el de otra persona */
+function dupTicketText(t,dayId){
+ if(editing||(t!=="vuelo"&&t!=="tren"&&t!=="bus"))return "";
+ var day=dayById(dayId);if(!day||!day.legs)return "";
+ if(pendTickets().some(function(p){return p.day.d===dayId}))return "";
+ var own=docsOf(dayId).filter(function(d){return TRIPT[d.type]});if(!own.length)return "";
+ var segs=[];day.legs.forEach(function(l,i){segs=segs.concat(legSegs(day,i))});
+ var what=segs.length===1?"Ya tienes "+(own[0].type==="bus"?"el bus":own[0].type==="tren"?"el tren":own[0].type==="coche"?"el traslado":"el vuelo")+" "+segText(segs[0])+".":"Ya hay billete para todos los trayectos de este día.";
+ return what+" Si es otro billete del mismo viaje (por ejemplo, de otra persona), puedes añadirlo.";
 }
 /* Título si no se escribe ninguno: tipo + lugar o trayecto ("Comida · Casa Lucio",
    "Vuelo · Medellín → Madrid"); si no hay nada más, solo el tipo. */
