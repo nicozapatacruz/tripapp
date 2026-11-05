@@ -4,6 +4,10 @@ import {
   buildBackup, encryptBackup, decryptBackup, parseBackupText, importPlan, itineraryKV,
   cryptoAvailable, WrongPasswordError,
 } from "./backup.js";
+import {
+  extractMapsUrl, normName, slotCities, needsCityChoice, cityChoices, cityMismatch,
+  resolvePlace, freeName, placeSuggestions,
+} from "./places.js";
 
 (function(){
 "use strict";
@@ -191,7 +195,6 @@ var TRIPT={vuelo:1,tren:1,bus:1,coche:1};
 function gmap(q){return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q)}
 function safeDec(s){try{return decodeURIComponent(s)}catch(e){return s}}
 function norm(s){return String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase()}
-function isMapsUrl(v){return /^https?:\/\/(([a-z0-9-]+\.)*google\.[a-z.]+\/maps|maps\.google\.[a-z.]+|maps\.app\.goo\.gl|goo\.gl\/maps|maps\.apple\.com|g\.co\/kgs)/i.test(String(v).trim())}
 function nameFromUrl(u){
  var m=u.match(/\/maps\/place\/([^\/@?#]+)/)||u.match(/[?&](?:q|query)=([^&#]+)/);
  if(!m)return "";
@@ -213,10 +216,24 @@ function detectCity(t,u){
  return null;
 }
 var PLACES=["Madrid Puerta de Atocha","Madrid Chamartín-Clara Campoamor","Aeropuerto Adolfo Suárez Madrid-Barajas","Estación de Pamplona-Iruña","Estación de autobuses de Pamplona","Aeropuerto de Pamplona","Sevilla Santa Justa","Estación de autobuses Plaza de Armas, Sevilla","Aeropuerto de Sevilla San Pablo","Córdoba Central (estación de tren)","Estación de autobuses de Córdoba","Estación de tren de Granada","Estación de autobuses de Granada","Málaga María Zambrano","Estación de autobuses de Málaga","Aeropuerto de Málaga-Costa del Sol","Aeropuerto Tenerife Sur","Aeropuerto Tenerife Norte-Ciudad de La Laguna","Aeropuerto José María Córdova (MDE), Rionegro","Aeropuerto Olaya Herrera (EOH), Medellín"];
-function sugMap(){
- var m={};PLACES.forEach(function(p){m[p]=gmap(p)});
- docs.forEach(function(d){[[d.loc1,d.loc1u],[d.loc2,d.loc2u]].forEach(function(x){if(x[0]&&(!(x[0] in m)||x[1]))m[x[0]]=x[1]||m[x[0]]||""})});
- return m;
+/* Lugares guardados (reglas en places.js). Cada ubicación pertenece a la(s) ciudad(es)
+   de su día: hotel = donde se duerme; transporte = origen/destino del tramo; resto =
+   ciudad detectada por el enlace o el nombre, la elegida por el usuario, o las del día. */
+function ctxOf(dayId,type,slot,legVal,s){
+ var day=dayById(dayId),lf=null,lt=null;
+ if(day&&day.legs&&legVal){var p=String(legVal).split("-"),sg=legSegs(day,+p[0])[+(p[1]||0)];if(sg){lf=sg.f.id;lt=sg.t.id}}
+ return {type:type,slot:slot,transport:!!TRIPT[type],stops:day?day.stops:null,sleep:day?day.sleep:null,legFrom:lf,legTo:lt,detected:detectCity(s.t,s.u),chosen:s.c||null};
+}
+function placeIndex(){
+ var out=[];
+ docs.forEach(function(d){[1,2].forEach(function(n){
+  if(n===2&&!TRIPT[d.type])return;
+  var t=n===1?d.loc1:d.loc2;if(!t)return;
+  var s={t:t,u:(n===1?d.loc1u:d.loc2u)||"",c:n===1?d.loc1c:d.loc2c};
+  out.push({name:t,url:s.u,cities:slotCities(ctxOf(d.dayId,d.type,n,d.leg!=null?d.leg+"-"+(d.seg||0):"",s)),docId:d.id});
+ })});
+ PLACES.forEach(function(p){var c=detectCity(p,"");out.push({name:p,url:gmap(p),cities:c?[c]:null,docId:"_places"})});
+ return out;
 }
 function locRow(l,t,u){
  if(!t&&!u)return "";
@@ -231,20 +248,63 @@ function locsHTML(d){
 var LOCPH={hotel:"Dirección o nombre del hotel",entrada:"Dirección del lugar",comida:"Dirección del restaurante",seguro:"Dirección (opcional)",otro:"Dirección o lugar"};
 var LOCPH1={vuelo:"Ej. Aeropuerto de Medellín (MDE)",tren:"Ej. Madrid Puerta de Atocha",bus:"Ej. Estación de autobuses",coche:"Ej. Agencia de alquiler"};
 var LOCPH2={vuelo:"Ej. Aeropuerto Madrid-Barajas",tren:"Ej. Sevilla Santa Justa",bus:"Ej. Estación de autobuses",coche:"Ej. Dirección de destino"};
-var locS={1:{t:"",u:"",src:""},2:{t:"",u:"",src:""}},legSel="",legManual=false,toSel="";
+/* Estado de cada campo de ubicación: t = nombre, u = enlace, src = "link" (pegado: manda)
+   o "sug" (de un lugar guardado), c = ciudad elegida, noAuto = no volver a vincular solo
+   (tras "Quitar enlace", hasta que cambie el nombre). */
+function newLoc(t,u,c){return {t:t||"",u:u||"",src:u?"link":"",c:c||null,noAuto:false}}
+var locS={1:newLoc(),2:newLoc()},legSel="",legManual=false,toSel="",locOpts={1:[],2:[]},sugLabels={1:{},2:{}};
+var formDay="";
+function curDay(){var e=$("#f-day");return e?e.value:formDay}
+function curLeg(){var e=$("#f-leg");return e?e.value:legSel}
+function ctxFor(n){return ctxOf(curDay(),selType,n,curLeg(),locS[n])}
+function queryLoc(n,idx){
+ var s=locS[n],ctx=ctxFor(n);
+ return resolvePlace(idx||placeIndex(),{name:s.t,url:s.u,src:s.src,cities:slotCities(ctx),docId:editing?editing.id:null,noAuto:s.noAuto});
+}
+function citiesText(c){return c&&c.length?c.map(nm).join(" y "):"otra ciudad"}
 function locStat(n){
- var s=locS[n];
- if(s.u)return '<span class="ok">'+svg("check",15)+'Vinculado a Google Maps</span><button type="button" class="mini" data-act="unlink" data-n="'+n+'">Quitar enlace</button>';
- if(s.t)return '<span>Sin enlace al mapa.</span><a class="mini" href="'+gmap(s.t)+'" target="_blank" rel="noopener">'+svg("pin",14)+'Buscar en Maps</a>';
- return '<span>Elige una sugerencia o pega un enlace de Google Maps.</span>';
+ var s=locS[n],ctx=ctxFor(n),idx=placeIndex(),res=queryLoc(n,idx),h="";
+ locOpts[n]=res.options;
+ if(s.u)h='<span class="ok">'+svg("check",15)+'Vinculado a Google Maps</span><button type="button" class="mini" data-act="unlink" data-n="'+n+'">Quitar enlace</button>';
+ else if(s.t)h='<span>Sin enlace al mapa. Pega el enlace de Google Maps en el campo (antes o después del nombre) o toca «Pegar enlace».</span><button type="button" class="mini" data-act="loc-paste" data-n="'+n+'">'+svg("clip",14)+'Pegar enlace</button><a class="mini" href="'+gmap(s.t)+'" target="_blank" rel="noopener">'+svg("pin",14)+'Buscar en Maps</a>';
+ else h='<span>Elige una sugerencia o pega un enlace de Google Maps, antes o después de escribir el nombre.</span><button type="button" class="mini" data-act="loc-paste" data-n="'+n+'">'+svg("clip",14)+'Pegar enlace</button>';
+ var nmq=esc(s.t.trim());
+ if(res.kind==="conflict"){
+  var where=citiesText(res.options.reduce(function(a,o){return a.concat(o.cities||[])},[]).filter(function(x,i,a){return a.indexOf(x)===i}));
+  h+='<div class="locnote">Ya tienes «'+nmq+'» en '+esc(where)+' con otra ubicación. '+
+   res.options.map(function(o,i){return '<button type="button" class="mini" data-act="loc-use" data-n="'+n+'" data-i="'+i+'">Usar '+(res.options.length>1?'la de '+esc(citiesText(o.cities)):'esa')+'</button>'}).join(" · ")+
+   ' · <button type="button" class="mini" data-act="loc-rename" data-n="'+n+'">Llamar a esta «'+esc(freeName(idx,s.t,slotCities(ctx),editing?editing.id:null))+'»</button></div>';
+ }else if(res.kind==="ambiguous"){
+  h+='<div class="locnote">Hay «'+nmq+'» en '+esc(res.options.map(function(o){return citiesText(o.cities)}).join(" y en "))+'. ¿Cuál es? '+
+   res.options.map(function(o,i){return '<button type="button" class="mini" data-act="loc-use" data-n="'+n+'" data-i="'+i+'">'+esc(citiesText(o.cities))+'</button>'}).join(" · ")+'</div>';
+ }
+ if((s.t.trim()||s.u)&&!ctx.detected&&needsCityChoice(ctx)){
+  h+='<div class="locnote"><span>¿Dónde está?</span> '+cityChoices(ctx).map(function(c){return '<button type="button" class="chip" data-act="loc-city" data-n="'+n+'" data-c="'+c+'" aria-pressed="'+(s.c===c)+'">'+esc(nm(c))+'</button>'}).join("")+'</div>';
+ }
+ var mm=cityMismatch(ctx),dy=dayById(curDay());
+ if(mm&&dy)h+='<div class="locnote warn">Esta ubicación parece estar en '+esc(nm(mm))+', pero ese día estás en '+esc(citiesText(dy.stops))+'. ¿El día es correcto?</div>';
+ return h;
+}
+function refreshLocStat(n){var e=$("#ls-"+n);if(e)e.innerHTML=locStat(n)}
+function locDatalist(n){
+ var sug=placeSuggestions(placeIndex(),slotCities(ctxFor(n)),editing?editing.id:null,nm);
+ sugLabels[n]={};sug.forEach(function(x){sugLabels[n][x.label]=x});
+ return '<datalist id="dl-loc'+n+'">'+sug.map(function(x){return '<option value="'+esc(x.label)+'"></option>'}).join("")+'</datalist>';
 }
 function locField(n,label,ph){
- return '<div class="field"><label for="f-loc'+n+'">'+label+'</label><input id="f-loc'+n+'" type="text" list="dl-loc" data-loc="'+n+'" placeholder="'+esc(ph)+'" value="'+esc(locS[n].t)+'" autocomplete="off" autocorrect="off"><div class="locstat" id="ls-'+n+'">'+locStat(n)+'</div></div>';
+ return '<div class="field"><label for="f-loc'+n+'">'+label+'</label><input id="f-loc'+n+'" type="text" list="dl-loc'+n+'" data-loc="'+n+'" placeholder="'+esc(ph)+'" value="'+esc(locS[n].t)+'" autocomplete="off" autocorrect="off">'+locDatalist(n)+'<div class="locstat" id="ls-'+n+'">'+locStat(n)+'</div></div>';
 }
 function locFields(type){
- var dl='<datalist id="dl-loc">'+Object.keys(sugMap()).map(function(p){return '<option value="'+esc(p)+'"></option>'}).join("")+'</datalist>';
- if(TRIPT[type])return locField(1,"Salida (opcional)",LOCPH1[type])+locField(2,"Llegada (opcional)",LOCPH2[type])+dl;
- return locField(1,"Ubicación (opcional)",LOCPH[type]||"Dirección o lugar")+dl;
+ if(TRIPT[type])return locField(1,"Salida (opcional)",LOCPH1[type])+locField(2,"Llegada (opcional)",LOCPH2[type]);
+ return locField(1,"Ubicación (opcional)",LOCPH[type]||"Dirección o lugar");
+}
+function refreshLocFields(){var w=$("#f-loc");if(w)w.innerHTML=locFields(selType)}
+/* Aplica "vincular solo" cuando hay una única coincidencia, salvo que el enlace sea pegado */
+function autoLink(n){
+ var s=locS[n];if(s.src==="link")return;
+ var r=queryLoc(n);
+ if(r.kind==="auto"){s.u=r.options[0].url;s.src="sug"}
+ else{s.u="";s.src=""}
 }
 function norm(x){return String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")}
 function viaOf(dayId,i){var v=kv["via:"+dayId+":"+i];return Array.isArray(v)?v:[]}
@@ -605,9 +665,9 @@ function timeLabel(t){return t==="hotel"?"Check-in y check-out (opcional)":TRIPT
 function openDocSheet(o){
  var d=o.id?docs.filter(function(x){return x.id===o.id})[0]:null;editing=d||null;
  selType=d?d.type:(o.type||"hotel");
- locS={1:{t:d?(d.loc1||""):"",u:d?(d.loc1u||""):"",src:d&&d.loc1u?"link":""},2:{t:d?(d.loc2||""):"",u:d?(d.loc2u||""):"",src:d&&d.loc2u?"link":""}};
+ locS={1:newLoc(d&&d.loc1,d&&d.loc1u,d&&d.loc1c),2:newLoc(d&&d.loc2,d&&d.loc2u,d&&d.loc2c)};
  legSel=d&&d.leg!=null?(d.leg+"-"+(d.seg||0)):(o.leg!=null&&o.leg!==""?(String(o.leg).indexOf("-")<0?o.leg+"-0":String(o.leg)):"");legManual=!!(d||legSel!=="");
- var dayId=d?d.dayId:o.day;toSel=d?(d.nightTo||(d.type==="hotel"?d.dayId:"")):(o.to||"");
+ var dayId=d?d.dayId:o.day;formDay=dayId;toSel=d?(d.nightTo||(d.type==="hotel"?d.dayId:"")):(o.to||"");
  var types=Object.keys(TYPES).map(function(k){return '<button type="button" class="ty" role="radio" data-act="type" data-type="'+k+'" aria-checked="'+(k===selType)+'" style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],22)+TYPES[k].l+'</button>'}).join("");
  var prev="";
  if(d&&d.blob){var u=objUrl(d);prev=(d.mime||"").indexOf("image/")===0?'<img class="prev" src="'+u+'" alt="Vista previa de '+esc(d.fileName)+'">':'<a class="btn" href="'+u+'" target="_blank" rel="noopener">'+svg("file",18)+'Abrir '+esc(d.fileName||"archivo")+'</a>'}
@@ -615,12 +675,12 @@ function openDocSheet(o){
  '<div class="field"><span class="fl">Archivo (PDF o foto)</span><label class="drop" for="f-file">'+svg("clip",22)+'<span id="f-name">'+(d&&d.fileName?esc(d.fileName):"Elegir archivo")+'<small>'+(d&&d.fileName?"Toca para reemplazarlo":"Opcional si solo guardas un código")+'</small></span></label><input id="f-file" type="file" accept="application/pdf,image/*" hidden></div>'+prev+
  '<div class="field"><span class="fl">Tipo</span><div class="types" role="radiogroup" aria-label="Tipo de documento">'+types+'</div></div>'+
  '<div class="field"><label for="f-title">Título</label><input id="f-title" type="text" placeholder="Ej. Hotel Alfonso XIII" value="'+esc(d?d.title:(o.title||""))+'" autocomplete="off"></div>'+
- '<div class="field"><label for="f-code">Código de reserva</label><input id="f-code" class="code" type="text" placeholder="Localizador o número" value="'+esc(d?d.code:"")+'" autocomplete="off" autocapitalize="characters"></div>'+
- priceField(d)+
- '<div id="f-loc">'+locFields(selType)+'</div>'+
  '<div class="field"><label for="f-day" id="f-daylb">'+(selType==="hotel"?"Primera noche":"Día")+'</label><select id="f-day">'+dayOptions(dayId)+'</select></div>'+
  '<div id="f-towrap" style="display:contents">'+toField(dayId,selType,toSel)+'</div>'+
  '<div id="f-legwrap" style="display:contents">'+legField(dayId,selType,legSel)+'</div>'+
+ '<div class="field"><label for="f-code">Código de reserva</label><input id="f-code" class="code" type="text" placeholder="Localizador o número" value="'+esc(d?d.code:"")+'" autocomplete="off" autocapitalize="characters"></div>'+
+ priceField(d)+
+ '<div id="f-loc">'+locFields(selType)+'</div>'+
  '<div class="field"><span class="fl" id="f-tlab">'+timeLabel(selType)+'</span><div class="timerow"><input id="f-t1" type="time" value="'+esc(d&&d.t1||"")+'" aria-label="Hora de inicio"><span>–</span><input id="f-t2" type="time" value="'+esc(d&&d.t2||"")+'" aria-label="Hora de fin"></div></div>'+
  '<div class="field"><label for="f-note">Nota</label><textarea id="f-note" placeholder="Hora, dirección, andén...">'+esc(d?d.note:"")+'</textarea></div>'+
  '<p class="err" id="f-err" role="alert"></p>'+
@@ -636,10 +696,19 @@ async function saveFromSheet(){
  var d=editing?Object.assign({},editing):{id:uid(),created:Date.now()};
  var t1=$("#f-t1").value||"",t2=$("#f-t2").value||"";
  if(t1&&t2&&selType!=="hotel"&&!TRIPT[selType]&&t2<=t1){$("#f-err").textContent="La hora de fin debe ser posterior a la de inicio.";return}
+ var tr=!!TRIPT[selType],dy=dayById(day),ls=$("#f-leg"),idx=placeIndex(),slots=tr?[1,2]:[1];
+ // No puede haber dos lugares con el mismo nombre y distinto enlace en la misma ciudad
+ for(var si=0;si<slots.length;si++){
+  var qn=slots[si],rq=queryLoc(qn,idx);
+  if(rq.kind==="conflict"){
+   var wc=rq.options.reduce(function(a,o){return a.concat(o.cities||[])},[]).filter(function(x,i,a){return a.indexOf(x)===i});
+   $("#f-err").textContent="Ya existe «"+locS[qn].t.trim()+"» en "+citiesText(wc)+" con otra ubicación. Usa la existente o cambia el nombre.";return}
+ }
  d.type=selType;d.dayId=day;d.code=code;d.note=note;d.price=pr;d.cur=cur;d.t1=t1;d.t2=t2;
  if(pr!=null)setKV("lastCur",cur);
- var tr=!!TRIPT[selType],dy=dayById(day),ls=$("#f-leg");
  d.loc1=locS[1].t.trim();d.loc1u=locS[1].u;d.loc2=tr?locS[2].t.trim():"";d.loc2u=tr?locS[2].u:"";
+ // ciudad elegida a mano: solo se guarda si ese día hay varias ciudades posibles
+ [1,2].forEach(function(n){var k="loc"+n+"c",c=locS[n].c;if((n===1||tr)&&c&&needsCityChoice(ctxFor(n))&&d["loc"+n])d[k]=c;else delete d[k]});
  d.leg=(tr&&dy&&dy.legs&&ls&&ls.value!=="")?Number(ls.value.split("-")[0]):null;
  d.seg=d.leg!=null?Number(ls.value.split("-")[1]||0):0;
  var te=$("#f-to");if(selType==="hotel"&&te&&te.value)d.nightTo=te.value;else delete d.nightTo;
@@ -980,7 +1049,33 @@ document.addEventListener("click",function(e){
  else if(a==="type"){
   selType=b.dataset.type;sheetBody.querySelectorAll(".ty").forEach(function(x){x.setAttribute("aria-checked",x===b?"true":"false")});
   $("#f-loc").innerHTML=locFields(selType);refreshLegField();autoLeg();var tl=$("#f-tlab");if(tl)tl.textContent=timeLabel(selType)}
- else if(a==="unlink"){var un=+b.dataset.n;locS[un].u="";locS[un].src="";var lse=$("#ls-"+un);if(lse)lse.innerHTML=locStat(un)}
+ else if(a==="unlink"){var un=+b.dataset.n;locS[un].u="";locS[un].src="";locS[un].noAuto=true;refreshLocStat(un)}
+ else if(a==="loc-use"){
+  // usar un lugar existente: su nombre, su enlace y (si es una sola) su ciudad
+  var lu=+b.dataset.n,op=locOpts[lu][+b.dataset.i];if(!op)return;
+  var ls1=locS[lu];ls1.t=op.name;ls1.u=op.url;ls1.src="sug";ls1.noAuto=false;
+  if(op.cities&&op.cities.length===1&&needsCityChoice(ctxFor(lu)))ls1.c=op.cities[0];
+  var li=$("#f-loc"+lu);if(li)li.value=op.name;refreshLocStat(lu);autoLeg();
+ }
+ else if(a==="loc-rename"){
+  var lr=+b.dataset.n,ls2=locS[lr];
+  ls2.t=freeName(placeIndex(),ls2.t,slotCities(ctxFor(lr)),editing?editing.id:null);
+  var lri=$("#f-loc"+lr);if(lri)lri.value=ls2.t;refreshLocStat(lr);
+ }
+ else if(a==="loc-city"){
+  var lc=+b.dataset.n;locS[lc].c=locS[lc].c===b.dataset.c?null:b.dataset.c;
+  autoLink(lc);refreshLocStat(lc);
+ }
+ else if(a==="loc-paste"){
+  var lp=+b.dataset.n;
+  if(!navigator.clipboard||!navigator.clipboard.readText){toast("Pega el enlace en el campo, antes o después del nombre");return}
+  navigator.clipboard.readText().then(function(txt){
+   var ex=extractMapsUrl(txt);if(!ex.url){toast("No hay un enlace de Google Maps copiado");return}
+   var s3=locS[lp];s3.u=ex.url;s3.src="link";s3.noAuto=false;
+   if(!s3.t.trim()){s3.t=ex.rest||nameFromUrl(ex.url)||"";var pi=$("#f-loc"+lp);if(pi)pi.value=s3.t}
+   refreshLocStat(lp);autoLeg();toast("Enlace vinculado");
+  }).catch(function(){toast("Pega el enlace en el campo, antes o después del nombre")});
+ }
  else if(a==="theme"){setKV("theme",b.dataset.v);applyTheme();sheetBody.querySelectorAll("[data-act=theme]").forEach(function(x){x.setAttribute("aria-pressed",x===b?"true":"false")})}
  else if(a==="cfold"){var ck=b.dataset.k;colap[ck]=!colap[ck];b.setAttribute("aria-expanded",String(!colap[ck]));b.parentNode.classList.toggle("fold",!!colap[ck])}
  else if(a==="go"){var ge=document.getElementById(b.dataset.id);if(ge)ge.scrollIntoView({behavior:"smooth",block:"start"})}
@@ -1017,25 +1112,35 @@ document.addEventListener("click",function(e){
 document.addEventListener("change",function(e){
  if(e.target.classList&&e.target.classList.contains("statsel")){var sv=+e.target.value;e.target.className="stat statsel s"+sv;setKV(e.target.dataset.k,sv);return}
  if(e.target.id==="f-file"){var f=e.target.files[0];if(f){$("#f-name").innerHTML=esc(f.name)+"<small>"+fmtSize(f.size)+"</small>";if(!$("#f-title").value)$("#f-title").value=f.name.replace(/\.[^.]+$/,"")}}
- else if(e.target.id==="f-day"){legSel="";legManual=false;toSel="";refreshLegField();autoLeg()}
+ else if(e.target.id==="f-day"){
+  legSel="";legManual=false;toSel="";formDay=e.target.value;refreshLegField();autoLeg();
+  // otro día = otras ciudades: se recalculan sugerencias, vínculos automáticos y avisos
+  [1,2].forEach(function(n){var s=locS[n];if(s.c&&cityChoices(ctxFor(n)).indexOf(s.c)<0)s.c=null;s.noAuto=false;autoLink(n)});
+  refreshLocFields();
+ }
  else if(e.target.id==="f-to"){toSel=e.target.value}
- else if(e.target.id==="f-leg"){legSel=e.target.value;legManual=true}
+ else if(e.target.id==="f-leg"){legSel=e.target.value;legManual=true;[1,2].forEach(autoLink);refreshLocFields()}
  else if(e.target.id==="s-import"){var f2=e.target.files[0];if(f2)importBackup(f2)}
 });
 document.addEventListener("input",function(e){
  var el=e.target,n=el.dataset&&el.dataset.loc;if(!n)return;n=+n;
- var s=locS[n],v=el.value,m=sugMap();
- if(isMapsUrl(v)){
-  var nn=nameFromUrl(v.trim());s.u=v.trim();s.t=nn;s.src="link";el.value=nn;
+ var s=locS[n],v=el.value,ex=extractMapsUrl(v),pick=sugLabels[n][v];
+ if(ex.url){
+  // enlace pegado (antes o después del nombre): manda. Se conserva el nombre escrito.
+  var nn=ex.rest||s.t.trim()||nameFromUrl(ex.url)||"";
+  s.u=ex.url;s.src="link";s.noAuto=false;s.t=nn;el.value=nn;
   el.placeholder=nn?"Nombre del lugar":"Escribe un nombre para este enlace";
   if(!nn){try{el.focus()}catch(_){}}
+ }else if(pick&&pick.url&&(s.src!=="link"||pick.label!==pick.name)){
+  // eligió una sugerencia de la lista ("Casa · Madrid" se elige aunque haya un enlace pegado)
+  s.t=pick.name;s.u=pick.url;s.src="sug";s.noAuto=false;el.value=pick.name;
+  if(pick.cities&&pick.cities.length===1&&needsCityChoice(ctxFor(n)))s.c=pick.cities[0];
  }else{
-  s.t=v;
-  if(Object.prototype.hasOwnProperty.call(m,v)&&m[v]){s.u=m[v];s.src="sug"}
-  else if(s.src!=="link"){s.u="";s.src=""}
+  if(normName(v)!==normName(s.t))s.noAuto=false; // cambió el nombre: puede volver a vincularse solo
+  s.t=v;autoLink(n);                           // un enlace pegado nunca se pisa (ver autoLink)
  }
- var lse=$("#ls-"+n);if(lse)lse.innerHTML=locStat(n);
  autoLeg();
+ refreshLocStat(n);
 });
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!sheet.hidden)closeSheet()});
 window.addEventListener("hashchange",route);

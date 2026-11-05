@@ -12,6 +12,36 @@ Reglas:
 
 ---
 
+## 2026-11-05
+
+- Bug: a `index.html` le faltaba el elemento `#toast` (quedó fuera al separar
+  el HTML original en la Fase 1), así que cada aviso emergente lanzaba un
+  error de JavaScript. Restaurado. Revisado que no falte ningún otro id.
+- Ubicaciones en el formulario de documentos (encontrado por Nicolas):
+  - Bug: un enlace pegado se reemplazaba por el de un lugar guardado al
+    escribir un nombre que coincidía ("Casa"), y se perdía al seguir
+    escribiendo ("Casa P"). Ahora un enlace pegado manda: escribir nunca lo
+    pisa; solo se quita con "Quitar enlace".
+  - El enlace se puede pegar antes o después del nombre (se detecta dentro
+    del texto) y hay un botón "Pegar enlace" que lee el portapapeles.
+  - El campo Día pasa a ir justo después del Título.
+  - Cada lugar guardado pertenece a la ciudad de su día (hotel: donde se
+    duerme; transporte: origen/destino del tramo; resto: ciudad detectada
+    por el enlace o el nombre, o la elegida). Solo se sugiere en documentos
+    de esa ciudad. En días con varias ciudades, si no se puede detectar, se
+    pregunta "¿Dónde está?".
+  - Solo se vincula solo si hay una única coincidencia; con varias ("Casa"
+    en Madrid y en Pamplona el 31 dic) se pregunta cuál.
+  - Regla: no puede haber dos lugares con el mismo nombre y distinto enlace
+    en la misma ciudad. Aviso con "Usar esa" / "Llamar a esta «Casa 2»", en
+    cualquier orden (pegar y escribir, o escribir, quitar y pegar), y no deja
+    guardar hasta resolverlo.
+  - Aviso (no bloquea) si la ubicación detectada no es de la ciudad del día.
+    Solo funciona con enlaces largos o nombres con pistas: los enlaces cortos
+    del iPhone (maps.app.goo.gl) no traen coordenadas.
+  - Lógica en `src/places.js` con tests; flujos del formulario probados en
+    jsdom (`src/__tests__/locform.test.js`).
+
 ## 2026-11-04
 
 - Logo de Journest: una "j" cursiva trazada como ruta punteada. El punto

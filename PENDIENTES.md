@@ -22,6 +22,19 @@ Implementada (ver bitácora). Falta probar en el iPhone, con la app instalada:
 - [ ] Exportar "Solo itinerario" e importarlo en otro teléfono.
 - [ ] Copia grande (varios PDFs): que no se cuelgue al cifrar.
 
+Ubicaciones (corregido el 5 nov, falta probar en el iPhone):
+- [ ] Pegar el enlace antes y después del nombre; botón "Pegar enlace".
+- [ ] Dos "Casa" en la misma ciudad: aviso, "Usar esa" y "Casa 2".
+- [ ] Día con dos ciudades: pregunta "¿Dónde está?".
+
+## Mejoras acordadas (después de las pruebas)
+
+- [ ] Vuelo / tren / bus: campos "Aerolínea" (o "Compañía") y "N.º de vuelo
+      / tren". Sin campo Título: se genera solo, p. ej. "Iberia · Madrid →
+      Pamplona". Hoteles, entradas y otros conservan el Título.
+- [ ] Calendario: al tocar algo, abrir una ficha de solo lectura con botón
+      "Editar".
+
 ## Fase 3 · Compartir con Supabase (20 nov – 15 dic, si da el tiempo)
 
 - [ ] Esquema aparte dentro del proyecto de Supabase actual (ver cómo está
@@ -31,6 +44,11 @@ Implementada (ver bitácora). Falta probar en el iPhone, con la app instalada:
 - [ ] Enlaces de edición / solo ver para los otros 2, revocables.
 - [ ] Cola de cambios pendientes sin internet.
 - Plan B si no da el tiempo: compartir el "solo itinerario" exportado.
+- Quizás: función en Supabase que "abra" los enlaces cortos de Maps
+  (maps.app.goo.gl) y devuelva el enlace largo con nombre y coordenadas.
+  Así la ciudad se detecta sola (casi nunca habría que preguntar "¿Dónde
+  está?") y el aviso de "parece estar en otra ciudad" funcionaría con
+  enlaces del iPhone. Ojo con las páginas de consentimiento de Google.
 
 ## Fase 4 · Contenido (en paralelo)
 
