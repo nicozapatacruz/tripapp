@@ -211,6 +211,12 @@ button.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-co
 .locnote{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;background:var(--surface2);border-radius:12px;padding:9px 12px;color:var(--ink)}
 .locnote.warn{background:var(--warn-bg);color:var(--warn-ink)}
 .locnote .chip{min-height:32px}
+.locnote svg{flex:none}
+.req{color:var(--danger);margin-left:3px}
+.legfix{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.legfix b{font:650 15.5px var(--f);color:var(--ink)}
+.viarow{flex-basis:100%;display:flex;align-items:center;gap:12px}
+.viarow input{flex:1;min-width:0}
 .mini{display:inline-flex;align-items:center;gap:5px;border:0;background:none;padding:2px 0;font:650 13px var(--f);color:var(--ink);text-decoration:underline;text-underline-offset:2px}
 .lh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
 .lh .lab{margin:0}

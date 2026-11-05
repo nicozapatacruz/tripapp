@@ -63,6 +63,18 @@ describe("ciudad de cada ubicación", () => {
     expect(slotCities(c)).toEqual(["madrid"]);
     expect(needsCityChoice(c)).toBe(true);
   });
+  it("una ciudad elegida que ya no es posible (otro día o trayecto) no cuenta", () => {
+    const c = { type: "entrada", stops: ["tenerife"], sleep: "tenerife", chosen: "madrid" };
+    expect(slotCities(c)).toEqual(["tenerife"]);
+    const t = { type: "tren", transport: true, ...dec31, legFrom: "madrid", legTo: "pamplona", chosen: "pamplona" };
+    expect(slotCities({ ...t, slot: 1 })).toEqual(["madrid"]);
+  });
+  it("transporte sin trayecto elegido: salida entre orígenes, llegada entre destinos", () => {
+    const jan3 = { type: "tren", transport: true, stops: ["sevilla", "cordoba", "granada"], sleep: "granada",
+      legFroms: ["sevilla", "cordoba"], legTos: ["cordoba", "granada"] };
+    expect(cityChoices({ ...jan3, slot: 1 })).toEqual(["sevilla", "cordoba"]);
+    expect(cityChoices({ ...jan3, slot: 2 })).toEqual(["cordoba", "granada"]);
+  });
   it("documento de todo el viaje: sin ciudad (se cruza con todas)", () => {
     expect(slotCities({ type: "seguro", stops: null })).toBeNull();
   });

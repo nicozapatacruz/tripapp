@@ -35,16 +35,27 @@ export function normName(s) {
 /**
  * Ciudades a las que pertenece una ubicación. null = sin ciudad conocida (documento
  * de "todo el viaje"): se cruza con cualquiera.
- * ctx: {type, slot, transport, stops, sleep, legFrom, legTo, detected, chosen}
+ * ctx: {type, slot, transport, stops, sleep, legFrom, legTo, legFroms, legTos, detected, chosen}
+ *  legFroms / legTos: orígenes y destinos de los tramos del día (si aún no se eligió el
+ *  trayecto, la salida solo puede ser un origen y la llegada un destino).
+ *  chosen: ciudad elegida a mano; solo cuenta si está entre las posibles.
  */
 export function slotCities(ctx) {
-  const { type, slot, transport, stops, sleep, legFrom, legTo, detected, chosen } = ctx;
-  if (chosen) return [chosen];
+  const base = baseCities(ctx);
+  if (ctx.chosen && base && base.length > 1 && base.indexOf(ctx.chosen) >= 0) return [ctx.chosen];
+  return base;
+}
+
+function baseCities(ctx) {
+  const { type, slot, transport, stops, sleep, legFrom, legTo, legFroms, legTos, detected } = ctx;
   if (!stops || !stops.length) return detected ? [detected] : null;
   if (type === "hotel") return sleep ? [sleep] : detected ? [detected] : stops.slice();
   if (transport) {
     const leg = slot === 2 ? legTo : legFrom;
     if (leg) return [leg];
+    if (detected) return [detected];
+    const ends = slot === 2 ? legTos : legFroms;
+    if (ends && ends.length) return ends.slice();
   }
   return detected ? [detected] : stops.slice();
 }
@@ -52,13 +63,13 @@ export function slotCities(ctx) {
 /** ¿Hay que preguntar en qué ciudad está? (día con varias ciudades y sin pistas) */
 export function needsCityChoice(ctx) {
   // se calcula sin la elección, para seguir mostrando las opciones y poder cambiarla
-  const c = slotCities(Object.assign({}, ctx, { chosen: null }));
+  const c = baseCities(ctx);
   return !!c && c.length > 1;
 }
 
 /** Ciudades entre las que se pregunta (las del día). */
 export function cityChoices(ctx) {
-  return slotCities(Object.assign({}, ctx, { chosen: null })) || [];
+  return baseCities(ctx) || [];
 }
 
 /** Ciudad detectada que no corresponde al día (aviso, no bloquea). */

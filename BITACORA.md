@@ -14,6 +14,32 @@ Reglas:
 
 ## 2026-11-05
 
+- Segunda ronda de pruebas de Nicolas en el iPhone (formulario de documentos):
+  - Trayecto: si el día tiene un solo tramo, queda puesto y se muestra fijo
+    (sin selector), con "Añadir parada" ahí mismo: la parada se guarda en el
+    itinerario y el trayecto se parte en tramos. Con varios tramos sigue el
+    selector sin valor por defecto.
+  - Sin trayecto elegido, la Salida solo puede ser una ciudad de origen y la
+    Llegada una de destino; elegir la ciudad en "¿Dónde está?" elige el
+    trayecto. Arregla que el 17 ene "Casa" se sugiriera en Llegada (Medellín).
+  - El 27 dic pasa a ser "Noche en el avión" (se ve en la ruta y en el día).
+    Un hotel elegido ese día empieza el 28, con aviso. Decidido: cuando se
+    haga la mejora de vuelos, la llegada tendrá "Mismo día / Día siguiente"
+    (horas locales, como "15:00 +1") y eso decidirá si la noche es en el
+    avión.
+  - Ejemplo del Título según el tipo (vuelo, tren, comida…).
+  - Obligatorios con asterisco rojo; sin "(opcional)" en ningún formulario.
+    Se quitó la regla "archivo, título o código": se puede guardar solo con
+    tipo y día; el título sale solo ("Comida · Casa Lucio", "Vuelo · Madrid
+    → Medellín" o solo el tipo).
+  - El error de nombre repetido se borra al resolverlo ("Casa 2" / "Usar
+    esa").
+  - Con «¿Cuál es?» (Casa en Madrid y en Pamplona) ya no se pregunta además
+    «¿Dónde está?».
+  - "Pegar enlace" en un toque no es posible: iOS siempre pide confirmar
+    "Pegar" cuando una web lee el portapapeles. Se deja así.
+  - Aclarado: cada documento guarda su propia ciudad; elegir Medellín para
+    "Casa" el 17 no cambia la Casa de Madrid del 28.
 - Bug: a `index.html` le faltaba el elemento `#toast` (quedó fuera al separar
   el HTML original en la Fase 1), así que cada aviso emergente lanzaba un
   error de JavaScript. Restaurado. Revisado que no falte ningún otro id.

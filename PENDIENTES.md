@@ -26,12 +26,19 @@ Ubicaciones (corregido el 5 nov, falta probar en el iPhone):
 - [ ] Pegar el enlace antes y después del nombre; botón "Pegar enlace".
 - [ ] Dos "Casa" en la misma ciudad: aviso, "Usar esa" y "Casa 2".
 - [ ] Día con dos ciudades: pregunta "¿Dónde está?".
+- [ ] Segunda ronda (5 nov): trayecto fijo y "Añadir parada", hotel el 27,
+      ejemplos del título, asteriscos, guardar solo con tipo y día.
 
 ## Mejoras acordadas (después de las pruebas)
 
 - [ ] Vuelo / tren / bus: campos "Aerolínea" (o "Compañía") y "N.º de vuelo
       / tren". Sin campo Título: se genera solo, p. ej. "Iberia · Madrid →
       Pamplona". Hoteles, entradas y otros conservan el Título.
+- [ ] Llegada con "Mismo día / Día siguiente" (horas locales, como "15:00
+      +1"); se pone sola en "Día siguiente" si la llegada es antes que la
+      salida. Si el vuelo cruza la noche, esa noche es en el avión y no se
+      pide hotel; si llega el mismo día, se pide hotel (hoy el 27 dic está
+      fijo como noche en el avión).
 - [ ] Calendario: al tocar algo, abrir una ficha de solo lectura con botón
       "Editar".
 

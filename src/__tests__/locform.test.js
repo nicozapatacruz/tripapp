@@ -9,7 +9,9 @@ const A = "https://maps.app.goo.gl/AAAA1111";
 const B = "https://maps.app.goo.gl/BBBB2222";
 const C = "https://maps.app.goo.gl/CCCC3333";
 const D = "https://maps.app.goo.gl/DDDD4444";
+const E = "https://maps.app.goo.gl/EEEE5555";
 const MADRID = "2026-12-28", DEC31 = "2026-12-31", TENERIFE = "2027-01-08";
+const PAMPLONA = "2027-01-11", DEC17 = "2027-01-17";
 
 const $ = (s) => document.querySelector(s);
 const tick = () => new Promise((r) => setTimeout(r, 0));
@@ -84,6 +86,7 @@ describe("formulario: ubicaciones", () => {
     click($('[data-act="loc-rename"]'));
     expect($("#f-loc1").value).toBe("Casa 2");
     expect(status()).not.toContain("Ya tienes");
+    expect($("#f-err").textContent).toBe("");     // el error de abajo se borra al resolverlo
     await save();
     expect(savedLinks()).toContain(B);
   });
@@ -133,6 +136,100 @@ describe("formulario: ubicaciones", () => {
     typeLoc("Casa Pedro " + D);
     expect($("#f-loc1").value).toBe("Casa Pedro");
     expect(status()).toContain("Vinculado");
+    click($('[data-act="close"]'));
+  });
+
+  it("8) 31 dic con «Casa» en Madrid y en Pamplona: pregunta cuál, sin repetir «¿Dónde está?»", async () => {
+    openNew(PAMPLONA);
+    typeLoc("Casa " + E);
+    $("#f-title").value = "Casa Pamplona";
+    await save();
+    openNew(DEC31);
+    typeLoc("Casa");
+    expect(status()).toContain("¿Cuál es?");
+    expect(status()).not.toContain("¿Dónde está?");
+    const pam = [...document.querySelectorAll('#ls-1 [data-act="loc-use"]')].find((b) => b.textContent === "Pamplona");
+    click(pam);
+    expect(status()).not.toContain("¿Cuál es?");
+    expect(status()).toContain("Vinculado");
+    click($('[data-act="close"]'));
+  });
+
+  it("9) vuelo del 17 ene: un solo trayecto, ya puesto; Salida = Madrid y Llegada = Medellín", () => {
+    openNew(DEC17, "vuelo");
+    expect($("#f-leg").value).toBe("0-0");
+    expect($("#f-leg").type).toBe("hidden");
+    expect($("#sheet-body").textContent).toContain("Madrid → Medellín");
+    const opts = (n) => [...document.querySelectorAll("#dl-loc" + n + " option")].map((o) => o.value);
+    expect(opts(1)).toContain("Casa");
+    expect(opts(2)).not.toContain("Casa");
+    typeLoc("Casa", 1);
+    expect(status(1)).toContain("Vinculado");
+    expect(status(1)).not.toContain("¿Dónde está?");
+    typeLoc("Casa", 2);
+    expect(status(2)).not.toContain("Vinculado");
+    expect(status(2)).not.toContain("¿Dónde está?");
+    click($('[data-act="close"]'));
+  });
+
+  it("10) el 17 ene, elegir Medellín para «Casa» no cambia la Casa de Madrid", async () => {
+    openNew(DEC17);
+    typeLoc("Casa");
+    expect(status()).toContain("Vinculado");     // la de Madrid, con pregunta de ciudad
+    click($('#ls-1 [data-act="loc-city"][data-c="medellin"]'));
+    expect(status()).not.toContain("Vinculado"); // en Medellín no hay ninguna Casa
+    $("#f-title").value = "Casa Medellín";
+    await save();
+    openNew(MADRID);
+    typeLoc("Casa");
+    expect(status()).toContain("Vinculado");     // la del 28 sigue en Madrid
+    click($('[data-act="close"]'));
+  });
+
+  it("11) hotel el 27 (noche en el avión): empieza el 28 y sugiere las noches de Madrid", () => {
+    openNew("2026-12-27", "hotel");
+    expect($("#f-day").value).toBe("2026-12-28");
+    expect($("#sheet-body").textContent).toContain("es en el avión");
+    expect($("#f-to").options.length).toBe(3);
+    click($('[data-act="close"]'));
+  });
+
+  it("12) el ejemplo del título cambia con el tipo", () => {
+    openNew(MADRID, "hotel");
+    expect($("#f-title").placeholder).toContain("Hotel");
+    click($('.ty[data-type="vuelo"]'));
+    expect($("#f-title").placeholder).toContain("Iberia");
+    click($('[data-act="close"]'));
+  });
+
+  it("13) se puede guardar solo con tipo y día: el título es el tipo", async () => {
+    openNew(TENERIFE, "seguro");
+    await save();
+    expect($("#sheet").hidden).toBe(true);
+    savedLinks();
+    expect($("#v-docs").textContent).toContain("Seguro");
+  });
+
+  it("14) 3 ene (dos tramos): Salida pregunta entre orígenes y elegir uno pone el trayecto", () => {
+    openNew("2027-01-03", "tren");
+    expect($("#f-leg").tagName).toBe("SELECT");
+    expect($("#f-leg").value).toBe("");
+    typeLoc("Estación");
+    const cs = [...document.querySelectorAll('#ls-1 [data-act="loc-city"]')].map((b) => b.dataset.c);
+    expect(cs).toEqual(["sevilla", "cordoba"]);
+    click($('#ls-1 [data-act="loc-city"][data-c="cordoba"]'));
+    expect($("#f-leg").value).toBe("1-0");       // Córdoba → Granada
+    click($('[data-act="close"]'));
+  });
+
+  it("15) añadir parada desde el formulario parte el trayecto en dos", async () => {
+    openNew("2027-01-10", "vuelo");
+    click($('[data-act="leg-via-open"]'));
+    $("#f-via").value = "Bilbao";
+    click($('[data-act="leg-via-add"]'));
+    for (let i = 0; i < 5; i++) await tick();
+    const o = [...$("#f-leg").options].map((x) => x.textContent);
+    expect(o).toEqual(["Sin asignar", "Tenerife → Bilbao", "Bilbao → Pamplona"]);
     click($('[data-act="close"]'));
   });
 });

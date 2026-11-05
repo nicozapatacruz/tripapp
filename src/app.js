@@ -157,7 +157,7 @@ medellin:{name:"Medellín",c1:"#334155",c2:"#64748B",temp:"",origin:true}
 };
 
 var TRIP=[
- {d:"2026-12-27",stops:["medellin","madrid"],start:true,base:"medellin",legs:[{f:"medellin",t:"madrid",m:"vuelo",w:""}]},
+ {d:"2026-12-27",stops:["medellin","madrid"],start:true,plane:true,base:"medellin",legs:[{f:"medellin",t:"madrid",m:"vuelo",w:""}]},
  {d:"2026-12-28",stops:["madrid"],sleep:"madrid",ev:["Hoy es el Día de los Santos Inocentes: en España se hacen bromas, como el April Fools en otros países."]},
  {d:"2026-12-29",stops:["madrid"],sleep:"madrid"},
  {d:"2026-12-30",stops:["madrid"],sleep:"madrid"},
@@ -220,9 +220,15 @@ var PLACES=["Madrid Puerta de Atocha","Madrid Chamartín-Clara Campoamor","Aerop
    de su día: hotel = donde se duerme; transporte = origen/destino del tramo; resto =
    ciudad detectada por el enlace o el nombre, la elegida por el usuario, o las del día. */
 function ctxOf(dayId,type,slot,legVal,s){
- var day=dayById(dayId),lf=null,lt=null;
- if(day&&day.legs&&legVal){var p=String(legVal).split("-"),sg=legSegs(day,+p[0])[+(p[1]||0)];if(sg){lf=sg.f.id;lt=sg.t.id}}
- return {type:type,slot:slot,transport:!!TRIPT[type],stops:day?day.stops:null,sleep:day?day.sleep:null,legFrom:lf,legTo:lt,detected:detectCity(s.t,s.u),chosen:s.c||null};
+ var day=dayById(dayId),lf=null,lt=null,fs=[],ts=[];
+ if(day&&day.legs){
+  if(legVal){var p=String(legVal).split("-"),sg=legSegs(day,+p[0])[+(p[1]||0)];if(sg){lf=sg.f.id;lt=sg.t.id}}
+  day.legs.forEach(function(l,i){legSegs(day,i).forEach(function(g){
+   if(g.f.id&&fs.indexOf(g.f.id)<0){fs.push(g.f.id)}
+   if(g.t.id&&ts.indexOf(g.t.id)<0){ts.push(g.t.id)}
+  })});
+ }
+ return {type:type,slot:slot,transport:!!TRIPT[type],stops:day?day.stops:null,sleep:day?day.sleep:null,legFrom:lf,legTo:lt,legFroms:fs,legTos:ts,detected:detectCity(s.t,s.u),chosen:s.c||null};
 }
 function placeIndex(){
  var out=[];
@@ -245,7 +251,10 @@ function locsHTML(d){
  a=a.filter(Boolean);
  return a.length?'<div class="locs">'+a.join("")+'</div>':"";
 }
-var LOCPH={hotel:"Dirección o nombre del hotel",entrada:"Dirección del lugar",comida:"Dirección del restaurante",seguro:"Dirección (opcional)",otro:"Dirección o lugar"};
+var LOCPH={hotel:"Dirección o nombre del hotel",entrada:"Dirección del lugar",comida:"Dirección del restaurante",seguro:"Dirección",otro:"Dirección o lugar"};
+var TITLEPH={hotel:"Ej. Hotel Alfonso XIII",vuelo:"Ej. Iberia Medellín → Madrid",tren:"Ej. AVE Madrid → Pamplona",bus:"Ej. ALSA Granada → Málaga",coche:"Ej. Alquiler de coche en Málaga",entrada:"Ej. Entradas a la Alhambra",seguro:"Ej. Seguro de viaje",comida:"Ej. Cena en Casa Lucio",otro:"Ej. Tarjeta de transporte"};
+/* Campo obligatorio: asterisco rojo (los opcionales no llevan marca) */
+var REQ='<span class="req" aria-hidden="true">*</span>';
 var LOCPH1={vuelo:"Ej. Aeropuerto de Medellín (MDE)",tren:"Ej. Madrid Puerta de Atocha",bus:"Ej. Estación de autobuses",coche:"Ej. Agencia de alquiler"};
 var LOCPH2={vuelo:"Ej. Aeropuerto Madrid-Barajas",tren:"Ej. Sevilla Santa Justa",bus:"Ej. Estación de autobuses",coche:"Ej. Dirección de destino"};
 /* Estado de cada campo de ubicación: t = nombre, u = enlace, src = "link" (pegado: manda)
@@ -266,7 +275,7 @@ function locStat(n){
  var s=locS[n],ctx=ctxFor(n),idx=placeIndex(),res=queryLoc(n,idx),h="";
  locOpts[n]=res.options;
  if(s.u)h='<span class="ok">'+svg("check",15)+'Vinculado a Google Maps</span><button type="button" class="mini" data-act="unlink" data-n="'+n+'">Quitar enlace</button>';
- else if(s.t)h='<span>Sin enlace al mapa. Pega el enlace de Google Maps en el campo (antes o después del nombre) o toca «Pegar enlace».</span><button type="button" class="mini" data-act="loc-paste" data-n="'+n+'">'+svg("clip",14)+'Pegar enlace</button><a class="mini" href="'+gmap(s.t)+'" target="_blank" rel="noopener">'+svg("pin",14)+'Buscar en Maps</a>';
+ else if(s.t)h='<span>Sin enlace al mapa. Pega el enlace de Google Maps en el campo o toca «Pegar enlace».</span><button type="button" class="mini" data-act="loc-paste" data-n="'+n+'">'+svg("clip",14)+'Pegar enlace</button><a class="mini" href="'+gmap(s.t)+'" target="_blank" rel="noopener">'+svg("pin",14)+'Buscar en Maps</a>';
  else h='<span>Elige una sugerencia o pega un enlace de Google Maps, antes o después de escribir el nombre.</span><button type="button" class="mini" data-act="loc-paste" data-n="'+n+'">'+svg("clip",14)+'Pegar enlace</button>';
  var nmq=esc(s.t.trim());
  if(res.kind==="conflict"){
@@ -278,14 +287,22 @@ function locStat(n){
   h+='<div class="locnote">Hay «'+nmq+'» en '+esc(res.options.map(function(o){return citiesText(o.cities)}).join(" y en "))+'. ¿Cuál es? '+
    res.options.map(function(o,i){return '<button type="button" class="mini" data-act="loc-use" data-n="'+n+'" data-i="'+i+'">'+esc(citiesText(o.cities))+'</button>'}).join(" · ")+'</div>';
  }
- if((s.t.trim()||s.u)&&!ctx.detected&&needsCityChoice(ctx)){
+ // con «¿Cuál es?» no se pregunta además «¿Dónde está?»: elegir una ya responde la ciudad
+ if(res.kind!=="ambiguous"&&(s.t.trim()||s.u)&&!ctx.detected&&needsCityChoice(ctx)){
   h+='<div class="locnote"><span>¿Dónde está?</span> '+cityChoices(ctx).map(function(c){return '<button type="button" class="chip" data-act="loc-city" data-n="'+n+'" data-c="'+c+'" aria-pressed="'+(s.c===c)+'">'+esc(nm(c))+'</button>'}).join("")+'</div>';
  }
  var mm=cityMismatch(ctx),dy=dayById(curDay());
  if(mm&&dy)h+='<div class="locnote warn">Esta ubicación parece estar en '+esc(nm(mm))+', pero ese día estás en '+esc(citiesText(dy.stops))+'. ¿El día es correcto?</div>';
  return h;
 }
-function refreshLocStat(n){var e=$("#ls-"+n);if(e)e.innerHTML=locStat(n)}
+function refreshLocStat(n){var e=$("#ls-"+n);if(e)e.innerHTML=locStat(n);clearConflictErr()}
+/* Mensajes de error del formulario; el de nombre repetido se borra solo al resolverlo */
+function formErr(msg,kind){var e=$("#f-err");if(!e)return;e.textContent=msg||"";if(kind)e.dataset.k=kind;else delete e.dataset.k}
+function clearConflictErr(){
+ var e=$("#f-err");if(!e||e.dataset.k!=="conflict")return;
+ var slots=TRIPT[selType]?[1,2]:[1],idx=placeIndex();
+ if(!slots.some(function(n){return queryLoc(n,idx).kind==="conflict"}))formErr("");
+}
 function locDatalist(n){
  var sug=placeSuggestions(placeIndex(),slotCities(ctxFor(n)),editing?editing.id:null,nm);
  sugLabels[n]={};sug.forEach(function(x){sugLabels[n][x.label]=x});
@@ -295,10 +312,12 @@ function locField(n,label,ph){
  return '<div class="field"><label for="f-loc'+n+'">'+label+'</label><input id="f-loc'+n+'" type="text" list="dl-loc'+n+'" data-loc="'+n+'" placeholder="'+esc(ph)+'" value="'+esc(locS[n].t)+'" autocomplete="off" autocorrect="off">'+locDatalist(n)+'<div class="locstat" id="ls-'+n+'">'+locStat(n)+'</div></div>';
 }
 function locFields(type){
- if(TRIPT[type])return locField(1,"Salida (opcional)",LOCPH1[type])+locField(2,"Llegada (opcional)",LOCPH2[type]);
- return locField(1,"Ubicación (opcional)",LOCPH[type]||"Dirección o lugar");
+ if(TRIPT[type])return locField(1,"Salida",LOCPH1[type])+locField(2,"Llegada",LOCPH2[type]);
+ return locField(1,"Ubicación",LOCPH[type]||"Dirección o lugar");
 }
-function refreshLocFields(){var w=$("#f-loc");if(w)w.innerHTML=locFields(selType)}
+function refreshLocFields(){var w=$("#f-loc");if(w)w.innerHTML=locFields(selType);clearConflictErr()}
+/* Otro día o trayecto = otras ciudades: se recalculan ciudad elegida y vínculos automáticos */
+function dayChanged(){[1,2].forEach(function(n){var s=locS[n];if(s.c&&cityChoices(ctxFor(n)).indexOf(s.c)<0)s.c=null;s.noAuto=false;autoLink(n)})}
 /* Aplica "vincular solo" cuando hay una única coincidencia, salvo que el enlace sea pegado */
 function autoLink(n){
  var s=locS[n];if(s.src==="link")return;
@@ -315,19 +334,43 @@ function legSegs(day,i){
 }
 function segText(s){return s.f.n+" → "+s.t.n}
 function segType(l,j){return l.m==="vuelo"&&j===0?"vuelo":"tren"}
+/* Si el día tiene un solo tramo, el trayecto es ese (valor "0-0"); si no, "" */
+function onlyLeg(dayId){var day=dayById(dayId);return day&&day.legs&&day.legs.length===1&&legSegs(day,0).length===1?"0-0":""}
+var viaOpen=false;
 function legField(dayId,type,sel){
  var day=dayById(dayId);
  if(!day||!day.legs||!TRIPT[type])return "";
+ // parada intermedia desde el formulario (solo si el día tiene un único traslado)
+ var via=day.legs.length!==1?"":viaOpen?
+  '<div class="viarow"><input id="f-via" type="text" placeholder="Parada intermedia, ej. Bogotá" autocomplete="off" aria-label="Parada intermedia"><button type="button" class="mini" data-act="leg-via-add">Añadir</button><button type="button" class="mini" data-act="leg-via-cancel">Cancelar</button></div>':
+  '<button type="button" class="mini" data-act="leg-via-open">'+svg("plus",14)+'Añadir parada</button>';
+ if(onlyLeg(dayId)){
+  var s0=legSegs(day,0)[0];
+  return '<div class="field"><span class="fl">Trayecto</span><div class="legfix"><b>'+esc(segText(s0))+'</b>'+via+'</div><input type="hidden" id="f-leg" value="0-0"></div>';
+ }
  var o='<option value="">Sin asignar</option>';
  day.legs.forEach(function(l,i){legSegs(day,i).forEach(function(s){var v=i+"-"+s.j;o+='<option value="'+v+'"'+(String(sel)===v?" selected":"")+'>'+esc(segText(s))+'</option>'})});
- return '<div class="field"><label for="f-leg">Trayecto</label><select id="f-leg">'+o+'</select></div>';
+ return '<div class="field"><label for="f-leg">Trayecto</label><select id="f-leg">'+o+'</select>'+(via?'<div class="legfix">'+via+'</div>':"")+'</div>';
+}
+/* Añade la parada al traslado del día (queda en el itinerario, igual que desde la hoja de paradas) */
+async function addViaFromForm(){
+ var inp=$("#f-via"),nme=inp?inp.value.trim():"",day=dayById(curDay());
+ if(!nme){formErr("Escribe el nombre de la parada.");return}
+ if(!day||!day.legs||day.legs.length!==1)return;
+ var c={d:day.d,i:0},v=viaOf(c.d,0).slice(),j=v.length;
+ v.splice(j,0,nme);
+ await shiftSegs(c,j+1,1);
+ await setKV("via:"+c.d+":0",v);
+ viaOpen=false;legSel="";legManual=false;formErr("");
+ refreshLegField();autoLeg();[1,2].forEach(autoLink);refreshLocFields();refresh();
+ toast("Parada añadida");
 }
 function ptMatch(p,cid,txt){if(p.id)return !!cid&&cid===p.id;return !!txt&&txt.indexOf(norm(p.n))>=0}
 function autoLeg(){
  if(legManual)return;
  var dayEl=$("#f-day");if(!dayEl||!TRIPT[selType])return;
  var day=dayById(dayEl.value);if(!day||!day.legs)return;
- var c1=detectCity(locS[1].t,locS[1].u),c2=detectCity(locS[2].t,locS[2].u),t1=norm(locS[1].t),t2=norm(locS[2].t),best=null,bs=0,tie=false;
+ var c1=locS[1].c||detectCity(locS[1].t,locS[1].u),c2=locS[2].c||detectCity(locS[2].t,locS[2].u),t1=norm(locS[1].t),t2=norm(locS[2].t),best=null,bs=0,tie=false;
  day.legs.forEach(function(l,i){legSegs(day,i).forEach(function(sg){
   var sc=(ptMatch(sg.f,c1,t1)?1:0)+(ptMatch(sg.t,c2,t2)?1:0);
   if(sc>bs){bs=sc;best=i+"-"+sg.j;tie=false}else if(sc===bs&&sc>0)tie=true})});
@@ -371,13 +414,27 @@ function hotelEnd(dayId){
  for(var k=0;k<st.nights.length;k++){var n=st.nights[k];if(n.d<dayId)continue;if(n.d!==dayId&&cov[n.d])break;last=n.d}
  return last;
 }
+/* Noche en el avión: un hotel no puede empezar esa noche, se pasa al día siguiente */
+var planeNote=null;
+function planeFix(){
+ planeNote=null;
+ if(selType!=="hotel")return false;
+ var day=dayById(curDay()),nx=day&&DAYS[day.i+1];
+ if(!day||!day.plane||!nx)return false;
+ planeNote=day.d;formDay=nx.d;var e=$("#f-day");if(e)e.value=nx.d;
+ return true;
+}
+function planeNoteHTML(){
+ var a=planeNote&&dayById(planeNote),b=a&&DAYS[a.i+1];if(!a||!b)return "";
+ return '<div class="field"><div class="locnote">'+svg("vuelo",15)+'<span>La noche del '+a.dt.getDate()+' es en el avión, así que la primera noche de hotel es el '+b.dt.getDate()+'.</span></div></div>';
+}
 function toField(dayId,type,sel){
  if(type!=="hotel")return "";
  var st=stayOfDay(dayId);if(!st)return "";
  var nights=st.nights.filter(function(n){return n.d>=dayId});if(!nights.length)return "";
  var cur=sel||hotelEnd(dayId)||nights[nights.length-1].d;
  if(!nights.some(function(n){return n.d===cur}))cur=nights[nights.length-1].d;
- return '<div class="field"><label for="f-to">Última noche</label><select id="f-to">'+nights.map(function(n,k){return '<option value="'+n.d+'"'+(n.d===cur?" selected":"")+'>'+esc(cap(shortDay(n)))+' · '+(k+1)+(k?" noches":" noche")+'</option>'}).join("")+'</select></div>';
+ return planeNoteHTML()+'<div class="field"><label for="f-to">Última noche</label><select id="f-to">'+nights.map(function(n,k){return '<option value="'+n.d+'"'+(n.d===cur?" selected":"")+'>'+esc(cap(shortDay(n)))+' · '+(k+1)+(k?" noches":" noche")+'</option>'}).join("")+'</select></div>';
 }
 function nightsText(d){
  var a=dayById(d.dayId),b=d.nightTo&&dayById(d.nightTo);
@@ -413,7 +470,7 @@ function priceHTML(d){return d.price!=null?'<div class="price">'+esc(fmtMoney(d.
 function daySum(list){var t=sumText(sumDocs(list));return t?'<div class="sum"><span>Total del día</span><b>'+esc(t)+'</b></div>':""}
 function priceField(d){
  var cur=d?(d.cur||"EUR"):(kv.lastCur||"EUR");
- return '<div class="field"><label for="f-price">Precio (opcional)</label><div class="pricerow"><input id="f-price" type="text" inputmode="decimal" placeholder="0,00" value="'+(d&&d.price!=null?String(d.price).replace(".",","):"")+'" autocomplete="off"><select id="f-cur" aria-label="Moneda">'+CURS.map(function(c){return '<option value="'+c+'"'+(c===cur?" selected":"")+'>'+c+'</option>'}).join("")+'</select></div></div>';
+ return '<div class="field"><label for="f-price">Precio</label><div class="pricerow"><input id="f-price" type="text" inputmode="decimal" placeholder="0,00" value="'+(d&&d.price!=null?String(d.price).replace(".",","):"")+'" autocomplete="off"><select id="f-cur" aria-label="Moneda">'+CURS.map(function(c){return '<option value="'+c+'"'+(c===cur?" selected":"")+'>'+c+'</option>'}).join("")+'</select></div></div>';
 }
 function summaryHTML(shown){
  var pr=shown.filter(function(d){return d.price!=null});if(!pr.length)return "";
@@ -426,7 +483,7 @@ function summaryHTML(shown){
  if(np>0)h+='<p class="foot">'+np+(np===1?" documento sin precio.":" documentos sin precio.")+'</p>';
  return h+'</section>';
 }
-function refreshLegField(){var w=$("#f-legwrap"),dy=$("#f-day");if(w&&dy)w.innerHTML=legField(dy.value,selType,legSel);var t=$("#f-towrap");if(t&&dy)t.innerHTML=toField(dy.value,selType,toSel);var lb=$("#f-daylb");if(lb)lb.textContent=selType==="hotel"?"Primera noche":"Día"}
+function refreshLegField(){var w=$("#f-legwrap"),dy=$("#f-day");if(w&&dy)w.innerHTML=legField(dy.value,selType,legSel);var t=$("#f-towrap");if(t&&dy)t.innerHTML=toField(dy.value,selType,toSel);var lb=$("#f-daylb");if(lb)lb.innerHTML=(selType==="hotel"?"Primera noche":"Día")+REQ}
 
 /* ================= Fechas ================= */
 var WD=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
@@ -528,6 +585,7 @@ function renderHome(){
    if(d.start)meta.push('<span class="pill">Inicio del viaje'+pdT+'</span>');
    else if(d.legs)meta.push('<span class="pill">'+svg(legIcon(d,0),14)+esc(dayLabel(d))+pdT+'</span>');
    if(d.sleep)meta.push('<span>'+svg("bed",15)+esc(nm(d.sleep))+(cov[d.d]?"":'<i class="pdot" title="Falta hotel"></i>')+'</span>');
+   else if(d.plane)meta.push('<span>'+svg("vuelo",15)+'Noche en el avión</span>');
    else if(d.last)meta.push('<span>Último día</span>');
    if(n)meta.push('<span>'+svg("clip",15)+n+(n===1?" documento":" documentos")+'</span>');
    return '<a class="day'+(d.d===t?" today":"")+'" id="d-'+d.d+'" href="#dia-'+d.d+'" style="--c:'+c.c1+'"><div class="rail"><small>'+WD3[d.dt.getDay()]+'</small><b>'+d.dt.getDate()+'</b></div><div class="dcard"><div class="stops">'+stopsHTML(d)+'</div><div class="meta">'+meta.join("")+'</div></div></a>';
@@ -616,7 +674,7 @@ function renderDay(day){
  var panels={general:general,comer:eat,docs:docsPanel(day)};
  V.day.style.setProperty("--c1",c[0]);V.day.style.setProperty("--c2",c[1]);
  var rbar=day.stops.map(function(s){return '<i style="background:'+CITIES[s].c1+'"></i>'}).join("");
- V.day.innerHTML='<header class="dh"><div class="in"><div class="dtop"><a class="back" href="#inicio" aria-label="Volver a la ruta">'+svg("back",20)+'</a><span class="dnum">'+(isToday?"Hoy · ":"")+'Día '+(i+1)+' de '+DAYS.length+'</span></div><p class="dwd">'+esc(longDate(day))+'</p><h1>'+titleHTML(day)+'</h1><div class="rbar">'+rbar+'</div>'+(day.sleep?'<p class="sleep">'+svg("bed",17)+'Dormimos en '+esc(nm(day.sleep))+'</p>':'<p class="sleep">'+(day.start?"Inicio del viaje":"Fin del viaje")+'</p>')+'</div></header>'+
+ V.day.innerHTML='<header class="dh"><div class="in"><div class="dtop"><a class="back" href="#inicio" aria-label="Volver a la ruta">'+svg("back",20)+'</a><span class="dnum">'+(isToday?"Hoy · ":"")+'Día '+(i+1)+' de '+DAYS.length+'</span></div><p class="dwd">'+esc(longDate(day))+'</p><h1>'+titleHTML(day)+'</h1><div class="rbar">'+rbar+'</div>'+(day.sleep?'<p class="sleep">'+svg("bed",17)+'Dormimos en '+esc(nm(day.sleep))+'</p>':day.plane?'<p class="sleep">'+svg("vuelo",17)+(day.start?"Inicio del viaje · ":"")+'Noche en el avión</p>':'<p class="sleep">'+(day.start?"Inicio del viaje":"Fin del viaje")+'</p>')+'</div></header>'+
  '<nav class="tabs" role="tablist" aria-label="Secciones del día"><div class="in"><div class="trk">'+tabList.map(function(t){return '<button type="button" role="tab" class="tab" data-act="tab" data-tab="'+t[0]+'" aria-selected="'+(tab===t[0])+'">'+t[1]+(t[0]==="docs"&&n?' <em>'+n+'</em>':"")+'</button>'}).join("")+'</div></div></nav>'+
  '<main class="in panel" role="tabpanel">'+panels[tab]+'</main>'+
  '<div class="in dnav">'+(prev?'<a href="#dia-'+prev.d+'"><small>← Anterior</small><b>'+esc(shortDay(prev))+' · '+esc(nm(prev.stops[prev.stops.length-1]))+'</b></a>':'<span style="flex:1"></span>')+(next?'<a class="next" href="#dia-'+next.d+'"><small>Siguiente →</small><b>'+esc(shortDay(next))+' · '+esc(nm(next.stops[0]))+'</b></a>':'<span style="flex:1"></span>')+'</div>';
@@ -661,21 +719,24 @@ var sheet=$("#sheet"),sheetBody=$("#sheet-body"),selType="hotel",editing=null,de
 function openSheet(html){sheetBody.innerHTML=html;sheet.hidden=false;document.documentElement.style.overflow="hidden";var f=sheetBody.querySelector("input,select,button");if(f&&f.type!=="file")try{f.focus({preventScroll:true})}catch(e){}}
 function closeSheet(){evEditing=null;sheet.hidden=true;sheetBody.innerHTML="";document.documentElement.style.overflow="";editing=null}
 function dayOptions(sel){return DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===sel?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'<option value="trip"'+(sel==="trip"?" selected":"")+'>Todo el viaje (sin día)</option>'}
-function timeLabel(t){return t==="hotel"?"Check-in y check-out (opcional)":TRIPT[t]?"Salida y llegada (opcional)":"Hora de inicio y fin (opcional)"}
+function timeLabel(t){return t==="hotel"?"Check-in y check-out":TRIPT[t]?"Salida y llegada":"Hora de inicio y fin"}
 function openDocSheet(o){
  var d=o.id?docs.filter(function(x){return x.id===o.id})[0]:null;editing=d||null;
  selType=d?d.type:(o.type||"hotel");
  locS={1:newLoc(d&&d.loc1,d&&d.loc1u,d&&d.loc1c),2:newLoc(d&&d.loc2,d&&d.loc2u,d&&d.loc2c)};
  legSel=d&&d.leg!=null?(d.leg+"-"+(d.seg||0)):(o.leg!=null&&o.leg!==""?(String(o.leg).indexOf("-")<0?o.leg+"-0":String(o.leg)):"");legManual=!!(d||legSel!=="");
  var dayId=d?d.dayId:o.day;formDay=dayId;toSel=d?(d.nightTo||(d.type==="hotel"?d.dayId:"")):(o.to||"");
+ viaOpen=false;planeNote=null;
+ if(!d&&planeFix())dayId=formDay;              // hotel nuevo en una noche de avión → día siguiente
+ if(!legSel&&!d){legSel=onlyLeg(dayId);if(legSel)legManual=true}
  var types=Object.keys(TYPES).map(function(k){return '<button type="button" class="ty" role="radio" data-act="type" data-type="'+k+'" aria-checked="'+(k===selType)+'" style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],22)+TYPES[k].l+'</button>'}).join("");
  var prev="";
  if(d&&d.blob){var u=objUrl(d);prev=(d.mime||"").indexOf("image/")===0?'<img class="prev" src="'+u+'" alt="Vista previa de '+esc(d.fileName)+'">':'<a class="btn" href="'+u+'" target="_blank" rel="noopener">'+svg("file",18)+'Abrir '+esc(d.fileName||"archivo")+'</a>'}
  openSheet('<div class="sh-head"><h2 id="sh-title">'+(d?"Documento":"Nuevo documento")+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
- '<div class="field"><span class="fl">Archivo (PDF o foto)</span><label class="drop" for="f-file">'+svg("clip",22)+'<span id="f-name">'+(d&&d.fileName?esc(d.fileName):"Elegir archivo")+'<small>'+(d&&d.fileName?"Toca para reemplazarlo":"Opcional si solo guardas un código")+'</small></span></label><input id="f-file" type="file" accept="application/pdf,image/*" hidden></div>'+prev+
- '<div class="field"><span class="fl">Tipo</span><div class="types" role="radiogroup" aria-label="Tipo de documento">'+types+'</div></div>'+
- '<div class="field"><label for="f-title">Título</label><input id="f-title" type="text" placeholder="Ej. Hotel Alfonso XIII" value="'+esc(d?d.title:(o.title||""))+'" autocomplete="off"></div>'+
- '<div class="field"><label for="f-day" id="f-daylb">'+(selType==="hotel"?"Primera noche":"Día")+'</label><select id="f-day">'+dayOptions(dayId)+'</select></div>'+
+ '<div class="field"><span class="fl">Archivo (PDF o foto)</span><label class="drop" for="f-file">'+svg("clip",22)+'<span id="f-name">'+(d&&d.fileName?esc(d.fileName):"Elegir archivo")+'<small>'+(d&&d.fileName?"Toca para reemplazarlo":"PDF del billete, la reserva o una captura")+'</small></span></label><input id="f-file" type="file" accept="application/pdf,image/*" hidden></div>'+prev+
+ '<div class="field"><span class="fl">Tipo'+REQ+'</span><div class="types" role="radiogroup" aria-label="Tipo de documento">'+types+'</div></div>'+
+ '<div class="field"><label for="f-title">Título</label><input id="f-title" type="text" placeholder="'+esc(TITLEPH[selType]||"")+'" value="'+esc(d?d.title:(o.title||""))+'" autocomplete="off"></div>'+
+ '<div class="field"><label for="f-day" id="f-daylb">'+(selType==="hotel"?"Primera noche":"Día")+REQ+'</label><select id="f-day">'+dayOptions(dayId)+'</select></div>'+
  '<div id="f-towrap" style="display:contents">'+toField(dayId,selType,toSel)+'</div>'+
  '<div id="f-legwrap" style="display:contents">'+legField(dayId,selType,legSel)+'</div>'+
  '<div class="field"><label for="f-code">Código de reserva</label><input id="f-code" class="code" type="text" placeholder="Localizador o número" value="'+esc(d?d.code:"")+'" autocomplete="off" autocapitalize="characters"></div>'+
@@ -687,22 +748,28 @@ function openDocSheet(o){
  '<div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="save">Guardar</button>'+(d?'<button type="button" class="btn danger" data-act="delete">Eliminar</button>':"")+'</div>');
  delArm=null;
 }
+/* Título si no se escribe ninguno: tipo + lugar o trayecto ("Comida · Casa Lucio",
+   "Vuelo · Medellín → Madrid"); si no hay nada más, solo el tipo. */
+function autoTitle(d,dy){
+ var t=TYPES[d.type].l,extra=d.loc1||"";
+ if(!extra&&TRIPT[d.type]&&dy&&d.leg!=null){var sg=legSegs(dy,d.leg)[d.seg||0];if(sg)extra=segText(sg)}
+ return extra?t+" · "+extra:t;
+}
 async function saveFromSheet(){
  var title=$("#f-title").value.trim(),code=$("#f-code").value.trim(),note=$("#f-note").value.trim(),day=$("#f-day").value,file=$("#f-file").files[0];
- if(!file&&!title&&!code&&!(editing&&editing.blob)){$("#f-err").textContent="Añade un archivo, un título o un código de reserva.";return}
  var pr=parsePrice($("#f-price").value);
- if(pr===undefined){$("#f-err").textContent="El precio no es válido. Usa solo números, por ejemplo 125,50.";return}
+ if(pr===undefined){formErr("El precio no es válido. Usa solo números, por ejemplo 125,50.");return}
  var cur=$("#f-cur").value;
  var d=editing?Object.assign({},editing):{id:uid(),created:Date.now()};
  var t1=$("#f-t1").value||"",t2=$("#f-t2").value||"";
- if(t1&&t2&&selType!=="hotel"&&!TRIPT[selType]&&t2<=t1){$("#f-err").textContent="La hora de fin debe ser posterior a la de inicio.";return}
+ if(t1&&t2&&selType!=="hotel"&&!TRIPT[selType]&&t2<=t1){formErr("La hora de fin debe ser posterior a la de inicio.");return}
  var tr=!!TRIPT[selType],dy=dayById(day),ls=$("#f-leg"),idx=placeIndex(),slots=tr?[1,2]:[1];
  // No puede haber dos lugares con el mismo nombre y distinto enlace en la misma ciudad
  for(var si=0;si<slots.length;si++){
   var qn=slots[si],rq=queryLoc(qn,idx);
   if(rq.kind==="conflict"){
    var wc=rq.options.reduce(function(a,o){return a.concat(o.cities||[])},[]).filter(function(x,i,a){return a.indexOf(x)===i});
-   $("#f-err").textContent="Ya existe «"+locS[qn].t.trim()+"» en "+citiesText(wc)+" con otra ubicación. Usa la existente o cambia el nombre.";return}
+   formErr("Ya existe «"+locS[qn].t.trim()+"» en "+citiesText(wc)+" con otra ubicación. Usa la existente o cambia el nombre.","conflict");return}
  }
  d.type=selType;d.dayId=day;d.code=code;d.note=note;d.price=pr;d.cur=cur;d.t1=t1;d.t2=t2;
  if(pr!=null)setKV("lastCur",cur);
@@ -712,7 +779,7 @@ async function saveFromSheet(){
  d.leg=(tr&&dy&&dy.legs&&ls&&ls.value!=="")?Number(ls.value.split("-")[0]):null;
  d.seg=d.leg!=null?Number(ls.value.split("-")[1]||0):0;
  var te=$("#f-to");if(selType==="hotel"&&te&&te.value)d.nightTo=te.value;else delete d.nightTo;
- d.title=title||(file?file.name.replace(/\.[^.]+$/,""):(editing&&editing.title)||TYPES[selType].l);
+ d.title=title||(file?file.name.replace(/\.[^.]+$/,""):(editing&&editing.title)||autoTitle(d,dy));
  if(file){if(urls[d.id]){try{URL.revokeObjectURL(urls[d.id])}catch(e){}delete urls[d.id]}d.blob=file;d.fileName=file.name;d.mime=file.type||"application/octet-stream";d.size=file.size}
  await saveDoc(d);closeSheet();refresh();toast("Documento guardado");
 }
@@ -766,9 +833,9 @@ function openItemForm(id){
  var c=listCtx,p=id==null?null:listOf(c.cid,c.kind).filter(function(x){return x.id===id})[0]||null;
  itemEd=p;itemArm=null;
  openSheet('<div class="sh-head"><h2 id="sh-title">'+(p?"Editar":"Añadir")+' · '+esc(listTitle(c.kind))+'</h2><button type="button" class="x" data-act="item-back">Volver</button></div>'+
- '<div class="field"><label for="i-n">Nombre</label><input id="i-n" type="text" placeholder="'+(c.kind==="see"?"Ej. Museo del Prado":"Ej. Casa Lucio")+'" value="'+esc(p?p.n:"")+'" autocomplete="off"></div>'+
- '<div class="field"><label for="i-d">Descripción (opcional)</label><textarea id="i-d" placeholder="Qué es, qué pedir, horarios...">'+esc(p?p.d:"")+'</textarea></div>'+
- '<div class="field"><label for="i-u">Enlace de Google Maps (opcional)</label><input id="i-u" type="text" placeholder="Si lo dejas vacío, el mapa busca por nombre" value="'+esc(p?p.u:"")+'" autocomplete="off"></div>'+
+ '<div class="field"><label for="i-n">Nombre'+REQ+'</label><input id="i-n" type="text" placeholder="'+(c.kind==="see"?"Ej. Museo del Prado":"Ej. Casa Lucio")+'" value="'+esc(p?p.n:"")+'" autocomplete="off"></div>'+
+ '<div class="field"><label for="i-d">Descripción</label><textarea id="i-d" placeholder="Qué es, qué pedir, horarios...">'+esc(p?p.d:"")+'</textarea></div>'+
+ '<div class="field"><label for="i-u">Enlace de Google Maps</label><input id="i-u" type="text" placeholder="Si lo dejas vacío, el mapa busca por nombre" value="'+esc(p?p.u:"")+'" autocomplete="off"></div>'+
  '<p class="err" id="i-err" role="alert"></p>'+
  '<div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="item-save">Guardar</button>'+(p?'<button type="button" class="btn danger" data-act="item-del">Eliminar</button>':"")+'</div>');
 }
@@ -811,7 +878,7 @@ function openExportSheet(){
  openSheet('<div class="sh-head"><h2 id="sh-title">Exportar copia</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
  '<div class="kv"><div class="chips">'+[["full","Copia completa"],["itinerary","Solo itinerario"]].map(function(t){return '<button type="button" class="chip" data-act="exp-kind" data-v="'+t[0]+'" aria-pressed="'+(expKind===t[0])+'">'+t[1]+'</button>'}).join("")+'</div>'+
  '<p id="e-desc">'+expDesc()+'</p>'+
- '<div class="field"><label for="e-pass">Contraseña (opcional)</label><input id="e-pass" type="password" autocomplete="new-password" placeholder="Mínimo '+MIN_PASS+' caracteres"></div>'+
+ '<div class="field"><label for="e-pass">Contraseña</label><input id="e-pass" type="password" autocomplete="new-password" placeholder="Opcional · mínimo '+MIN_PASS+' caracteres"></div>'+
  '<div class="field"><label for="e-pass2">Repite la contraseña</label><input id="e-pass2" type="password" autocomplete="new-password"></div>'+
  '<p>Con contraseña, la copia queda cifrada en este teléfono antes de salir de él. Si la olvidas, no se puede abrir: nadie puede recuperarla.</p>'+
  '<div class="actions"><button type="button" class="btn primary" data-act="exp-make">Preparar copia</button></div>'+
@@ -983,10 +1050,10 @@ function openEventSheet(o){
  var e=o.id?evList().filter(function(x){return x.id===o.id})[0]:null;evEditing=e||null;
  var day=e?e.day:(dayById(o.day)?o.day:(calSel&&dayById(calSel)?calSel:DAYS[0].d));
  openSheet('<div class="sh-head"><h2 id="sh-title">'+(e?"Evento":"Nuevo evento")+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
- '<div class="field"><label for="e-title">Nombre</label><input id="e-title" type="text" placeholder="Ej. Visita a Plaza de España" value="'+esc(e?e.title:(o.title||""))+'" autocomplete="off"></div>'+
+ '<div class="field"><label for="e-title">Nombre'+REQ+'</label><input id="e-title" type="text" placeholder="Ej. Visita a Plaza de España" value="'+esc(e?e.title:(o.title||""))+'" autocomplete="off"></div>'+
  '<div class="field"><label for="e-day">Día</label><select id="e-day">'+DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===day?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'</select></div>'+
- '<div class="field"><span class="fl">Hora de inicio y fin (opcional)</span><div class="timerow"><input id="e-t1" type="time" value="'+esc(e&&e.t1||"")+'" aria-label="Hora de inicio"><span>–</span><input id="e-t2" type="time" value="'+esc(e&&e.t2||"")+'" aria-label="Hora de fin"></div></div>'+
- '<div class="field"><label for="e-note">Nota o lugar (opcional)</label><input id="e-note" type="text" placeholder="Ej. Entrada por la puerta principal" value="'+esc(e&&e.note||"")+'" autocomplete="off"></div>'+
+ '<div class="field"><span class="fl">Hora de inicio y fin</span><div class="timerow"><input id="e-t1" type="time" value="'+esc(e&&e.t1||"")+'" aria-label="Hora de inicio"><span>–</span><input id="e-t2" type="time" value="'+esc(e&&e.t2||"")+'" aria-label="Hora de fin"></div></div>'+
+ '<div class="field"><label for="e-note">Nota o lugar</label><input id="e-note" type="text" placeholder="Ej. Entrada por la puerta principal" value="'+esc(e&&e.note||"")+'" autocomplete="off"></div>'+
  '<p class="err" id="e-err" role="alert"></p><div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="ev-save">Guardar</button>'+(e?'<button type="button" class="btn danger" data-act="ev-del">Eliminar</button>':"")+'</div>');
 }
 async function saveEvent(){
@@ -1048,7 +1115,13 @@ document.addEventListener("click",function(e){
  else if(a==="close"){closeSheet()}
  else if(a==="type"){
   selType=b.dataset.type;sheetBody.querySelectorAll(".ty").forEach(function(x){x.setAttribute("aria-checked",x===b?"true":"false")});
-  $("#f-loc").innerHTML=locFields(selType);refreshLegField();autoLeg();var tl=$("#f-tlab");if(tl)tl.textContent=timeLabel(selType)}
+  var tt=$("#f-title");if(tt)tt.placeholder=TITLEPH[selType]||"";
+  if(planeFix())toSel="";                       // hotel en una noche de avión → día siguiente
+  if(TRIPT[selType]&&!legSel){legSel=onlyLeg(curDay());legManual=!!legSel}
+  refreshLegField();autoLeg();dayChanged();refreshLocFields();var tl=$("#f-tlab");if(tl)tl.textContent=timeLabel(selType)}
+ else if(a==="leg-via-open"){viaOpen=true;refreshLegField();var fv=$("#f-via");if(fv)try{fv.focus()}catch(_){}}
+ else if(a==="leg-via-cancel"){viaOpen=false;refreshLegField()}
+ else if(a==="leg-via-add"){addViaFromForm()}
  else if(a==="unlink"){var un=+b.dataset.n;locS[un].u="";locS[un].src="";locS[un].noAuto=true;refreshLocStat(un)}
  else if(a==="loc-use"){
   // usar un lugar existente: su nombre, su enlace y (si es una sola) su ciudad
@@ -1064,7 +1137,9 @@ document.addEventListener("click",function(e){
  }
  else if(a==="loc-city"){
   var lc=+b.dataset.n;locS[lc].c=locS[lc].c===b.dataset.c?null:b.dataset.c;
-  autoLink(lc);refreshLocStat(lc);
+  // en traslados, la ciudad elegida puede decidir el trayecto (y con él la otra ciudad)
+  var lg0=curLeg();autoLeg();
+  if(curLeg()!==lg0){[1,2].forEach(autoLink);refreshLocFields()}else{autoLink(lc);refreshLocStat(lc)}
  }
  else if(a==="loc-paste"){
   var lp=+b.dataset.n;
@@ -1113,13 +1188,12 @@ document.addEventListener("change",function(e){
  if(e.target.classList&&e.target.classList.contains("statsel")){var sv=+e.target.value;e.target.className="stat statsel s"+sv;setKV(e.target.dataset.k,sv);return}
  if(e.target.id==="f-file"){var f=e.target.files[0];if(f){$("#f-name").innerHTML=esc(f.name)+"<small>"+fmtSize(f.size)+"</small>";if(!$("#f-title").value)$("#f-title").value=f.name.replace(/\.[^.]+$/,"")}}
  else if(e.target.id==="f-day"){
-  legSel="";legManual=false;toSel="";formDay=e.target.value;refreshLegField();autoLeg();
-  // otro día = otras ciudades: se recalculan sugerencias, vínculos automáticos y avisos
-  [1,2].forEach(function(n){var s=locS[n];if(s.c&&cityChoices(ctxFor(n)).indexOf(s.c)<0)s.c=null;s.noAuto=false;autoLink(n)});
-  refreshLocFields();
+  formDay=e.target.value;toSel="";viaOpen=false;planeFix();
+  legSel=onlyLeg(formDay);legManual=!!legSel;refreshLegField();autoLeg();
+  dayChanged();refreshLocFields();
  }
  else if(e.target.id==="f-to"){toSel=e.target.value}
- else if(e.target.id==="f-leg"){legSel=e.target.value;legManual=true;[1,2].forEach(autoLink);refreshLocFields()}
+ else if(e.target.id==="f-leg"){legSel=e.target.value;legManual=true;dayChanged();refreshLocFields()}
  else if(e.target.id==="s-import"){var f2=e.target.files[0];if(f2)importBackup(f2)}
 });
 document.addEventListener("input",function(e){
