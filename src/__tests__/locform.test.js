@@ -231,7 +231,11 @@ describe("formulario: ubicaciones", () => {
     const o = [...$("#f-leg").options].map((x) => x.textContent);
     expect(o).toEqual(["Sin asignar", "Tenerife → Bilbao", "Bilbao → Pamplona"]);
     // y se puede quitar desde el mismo formulario
-    click($('[data-act="leg-via-del"][data-k="0"]'));
+    const del = $('[data-act="leg-via-del"][data-k="0"]');
+    click(del);                                  // primer toque: pide confirmar
+    expect(del.textContent).toBe("Confirmar");
+    expect($("#f-leg").tagName).toBe("SELECT");
+    click(del);                                  // segundo toque: quita
     for (let i = 0; i < 5; i++) await tick();
     expect($("#f-leg").type).toBe("hidden");
     expect($("#sheet-body").textContent).toContain("Tenerife → Pamplona");
@@ -277,6 +281,21 @@ describe("formulario: ubicaciones", () => {
     savedLinks();
     expect($("#v-docs").textContent).not.toContain("Test");
     expect($("#v-docs").textContent).toContain("Otro");
+  });
+
+  it("18b) eliminar un documento: Eliminar → Confirmar → eliminado", async () => {
+    savedLinks();
+    const tk = [...document.querySelectorAll("#v-docs .ticket")].find((x) => x.textContent.includes("Otro"));
+    click(tk.querySelector('[data-act="edit"]') || tk);
+    const del = $('[data-act="delete"]');
+    click(del);
+    expect(del.textContent).toBe("Confirmar");
+    expect($("#sheet").hidden).toBe(false);
+    click(del);
+    for (let i = 0; i < 5; i++) await tick();
+    expect($("#sheet").hidden).toBe(true);
+    savedLinks();
+    expect([...document.querySelectorAll("#v-docs .ticket")].some((x) => x.textContent.includes("Otro"))).toBe(false);
   });
 
   it("19) dos «Casa» en ciudades distintas se ven como «Casa (Madrid)» y «Casa (Pamplona)»", () => {

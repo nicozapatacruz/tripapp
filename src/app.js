@@ -735,7 +735,7 @@ function renderDocsView(){
 }
 
 /* ================= Hoja: añadir / editar documento ================= */
-var sheet=$("#sheet"),sheetBody=$("#sheet-body"),selType="hotel",editing=null,delArm=null;
+var sheet=$("#sheet"),sheetBody=$("#sheet-body"),selType="hotel",editing=null;
 function openSheet(html){sheetBody.innerHTML=html;sheet.hidden=false;document.documentElement.style.overflow="hidden";var f=sheetBody.querySelector("input,select,button");if(f&&f.type!=="file")try{f.focus({preventScroll:true})}catch(e){}}
 function closeSheet(){evEditing=null;sheet.hidden=true;sheetBody.innerHTML="";document.documentElement.style.overflow="";editing=null}
 function dayOptions(sel){return DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===sel?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'<option value="trip"'+(sel==="trip"?" selected":"")+'>Todo el viaje (sin día)</option>'}
@@ -766,7 +766,6 @@ function openDocSheet(o){
  '<div class="field"><label for="f-note">Nota</label><textarea id="f-note" placeholder="Hora, dirección, andén...">'+esc(d?d.note:"")+'</textarea></div>'+
  '<p class="err" id="f-err" role="alert"></p>'+
  '<div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="save">Guardar</button>'+(d?'<button type="button" class="btn danger" data-act="delete">Eliminar</button>':"")+'</div>');
- delArm=null;
 }
 /* Vuelo, tren y bus solo en días con traslado (el coche de alquiler sirve cualquier día).
    Una excursión (p. ej. a Toledo) llegará cuando se pueda editar la ruta. */
@@ -852,7 +851,7 @@ async function delVia(k){
 }
 
 /* ================= Hoja: editar listas de lugares y restaurantes ================= */
-var listCtx=null,itemEd=null,itemArm=null,resetArm=null;
+var listCtx=null,itemEd=null;
 function listTitle(kind){return kind==="see"?"Qué ver":"Dónde comer"}
 function openListSheet(cid,kind){
  listCtx={cid:cid,kind:kind};itemEd=null;
@@ -860,11 +859,10 @@ function openListSheet(cid,kind){
  openSheet('<div class="sh-head"><h2 id="sh-title">'+listTitle(kind)+' · '+esc(nm(cid))+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
  (l.length?'<ul class="rows">'+l.map(function(p){return '<li class="pl"><div><b>'+esc(p.n)+'</b>'+(p.d?'<p>'+esc(p.d)+'</p>':"")+'</div><button type="button" class="x" data-act="item-edit" data-id="'+esc(p.id)+'">Editar</button></li>'}).join("")+'</ul>':'<p class="foot">Lista vacía.</p>')+
  '<div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="item-add">'+svg("plus",20)+'Añadir</button>'+(custom?'<button type="button" class="btn" data-act="list-reset">Restaurar lista original</button>':"")+'</div>');
- resetArm=null;
 }
 function openItemForm(id){
  var c=listCtx,p=id==null?null:listOf(c.cid,c.kind).filter(function(x){return x.id===id})[0]||null;
- itemEd=p;itemArm=null;
+ itemEd=p;
  openSheet('<div class="sh-head"><h2 id="sh-title">'+(p?"Editar":"Añadir")+' · '+esc(listTitle(c.kind))+'</h2><button type="button" class="x" data-act="item-back">Volver</button></div>'+
  '<div class="field"><label for="i-n">Nombre'+REQ+'</label><input id="i-n" type="text" placeholder="'+(c.kind==="see"?"Ej. Museo del Prado":"Ej. Casa Lucio")+'" value="'+esc(p?p.n:"")+'" autocomplete="off"></div>'+
  '<div class="field"><label for="i-d">Descripción</label><textarea id="i-d" placeholder="Qué es, qué pedir, horarios...">'+esc(p?p.d:"")+'</textarea></div>'+
@@ -1009,7 +1007,15 @@ async function applyImport(mode,btn){
 /* ================= Navegación ================= */
 
 /* ================= Calendario ================= */
-var calTab="dias",calSel=null,curDayId=null,calScrolled=false,evEditing=null,evArm=null;
+/* Confirmar con un segundo toque (4 s), como al eliminar un documento */
+var tapArm=null;
+function confirmTap(b,msg,fn){
+ if(tapArm&&tapArm.el===b){clearTimeout(tapArm.t);tapArm=null;fn();return}
+ if(tapArm){clearTimeout(tapArm.t);tapArm.el.textContent=tapArm.txt;tapArm.el.classList.remove("armed")}
+ tapArm={el:b,txt:b.textContent,t:setTimeout(function(){if(tapArm&&tapArm.el===b){b.textContent=tapArm.txt;b.classList.remove("armed");tapArm=null}},4000)};
+ b.textContent=msg;b.classList.add("armed");
+}
+var calTab="dias",calSel=null,curDayId=null,calScrolled=false,evEditing=null;
 function evList(){return Array.isArray(kv.events)?kv.events:[]}
 function tmin(t){if(!/^\d{1,2}:\d{2}$/.test(t||""))return null;var a=t.split(":");return +a[0]*60+ +a[1]}
 function colOf(t){return TYPES[t]?TYPES[t].t:"var(--accent)"}
@@ -1138,11 +1144,11 @@ document.addEventListener("click",function(e){
  else if(a==="ev-add"){openEventSheet({day:b.dataset.day,title:b.dataset.title})}
  else if(a==="ev-edit"){openEventSheet({id:b.dataset.id})}
  else if(a==="ev-save"){saveEvent()}
- else if(a==="ev-del"){if(evArm){clearTimeout(evArm);evArm=null;deleteEvent()}else{evArm=setTimeout(function(){evArm=null;b.textContent="Eliminar"},4000);b.textContent="Toca otra vez para eliminar"}}
+ else if(a==="ev-del"){confirmTap(b,"Confirmar",deleteEvent)}
  else if(a==="dtab"){docsTab=b.dataset.v;renderDocsView()}
  else if(a==="via"){openViaSheet(b.dataset.day,Number(b.dataset.leg))}
  else if(a==="via-add"){addVia()}
- else if(a==="via-del"){delVia(Number(b.dataset.k))}
+ else if(a==="via-del"){confirmTap(b,"Confirmar",function(){delVia(Number(b.dataset.k))})}
  else if(a==="edit"){openDocSheet({id:b.dataset.id})}
  else if(a==="copy"){copyText(b.dataset.code)}
  else if(a==="close"){closeSheet()}
@@ -1157,7 +1163,7 @@ document.addEventListener("click",function(e){
  else if(a==="leg-via-open"){viaOpen=true;refreshLegField();var fv=$("#f-via");if(fv)try{fv.focus()}catch(_){}}
  else if(a==="leg-via-cancel"){viaOpen=false;refreshLegField()}
  else if(a==="leg-via-add"){addViaFromForm()}
- else if(a==="leg-via-del"){delViaFromForm(Number(b.dataset.k))}
+ else if(a==="leg-via-del"){confirmTap(b,"Confirmar",function(){delViaFromForm(Number(b.dataset.k))})}
  else if(a==="unlink"){var un=+b.dataset.n;locS[un].u="";locS[un].src="";locS[un].noAuto=true;refreshLocStat(un)}
  else if(a==="loc-use"){
   // usar un lugar existente: su nombre, su enlace y (si es una sola) su ciudad
@@ -1195,19 +1201,10 @@ document.addEventListener("click",function(e){
  else if(a==="item-add"){openItemForm(null)}
  else if(a==="item-back"){openListSheet(listCtx.cid,listCtx.kind)}
  else if(a==="item-save"){saveItem()}
- else if(a==="item-del"){
-  if(itemArm){clearTimeout(itemArm);itemArm=null;deleteItem()}
-  else{itemArm=setTimeout(function(){itemArm=null;b.textContent="Eliminar"},4000);b.textContent="Toca otra vez para eliminar"}
- }
- else if(a==="list-reset"){
-  if(resetArm){clearTimeout(resetArm);resetArm=null;var rc=listCtx;delKV("pl:"+rc.cid+":"+rc.kind).then(function(){refresh();openListSheet(rc.cid,rc.kind);toast("Lista restaurada")})}
-  else{resetArm=setTimeout(function(){resetArm=null;b.textContent="Restaurar lista original"},4000);b.textContent="Toca otra vez para restaurar"}
- }
+ else if(a==="item-del"){confirmTap(b,"Confirmar",deleteItem)}
+ else if(a==="list-reset"){confirmTap(b,"Confirmar",function(){var rc=listCtx;delKV("pl:"+rc.cid+":"+rc.kind).then(function(){refresh();openListSheet(rc.cid,rc.kind);toast("Lista restaurada")})})}
  else if(a==="save"){saveFromSheet()}
- else if(a==="delete"){
-  if(delArm){removeDoc(editing.id).then(function(){closeSheet();refresh();toast("Documento eliminado")})}
-  else{delArm=setTimeout(function(){delArm=null;b.textContent="Eliminar"},4000);b.textContent="Toca otra vez para eliminar"}
- }
+ else if(a==="delete"){confirmTap(b,"Confirmar",function(){removeDoc(editing.id).then(function(){closeSheet();refresh();toast("Documento eliminado")})})}
  else if(a==="resto"){var s=((kv[b.dataset.k]||0)+1)%4;setKV(b.dataset.k,s).then(refresh)}
  else if(a==="filter"){docFilter=b.dataset.f;renderDocsView()}
  else if(a==="settings"){openSettings()}

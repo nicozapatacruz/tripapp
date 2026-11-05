@@ -213,6 +213,8 @@ button.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-co
 .locnote .chip{min-height:32px}
 .locnote svg{flex:none}
 .req{color:var(--danger);margin-left:3px}
+.mini.armed,.x.armed,.btn.armed{color:var(--danger);font-weight:750}
+.btn.armed{border-color:currentColor}
 .ty[aria-disabled="true"]{opacity:.4}
 .tynote{grid-column:1/-1;margin:2px 0 0;font-size:13.5px;color:var(--warn-ink);background:var(--warn-bg);border-radius:12px;padding:9px 12px}
 .tynote[hidden]{display:none}

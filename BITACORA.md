@@ -18,7 +18,12 @@ Reglas:
   - Bug: el 27 (día de inicio) solo tiene la pestaña Documentos y la ruta
     con "Editar paradas" vivía en General, así que una parada añadida ahí no
     se podía quitar. Ahora la ruta se ve también en Documentos ese día, y el
-    formulario lista las paradas con "Quitar".
+    formulario lista las paradas con "Quitar". Quitar una parada pide un
+    segundo toque para confirmar ("Quitar" → "Confirmar" en rojo).
+  - Todas las acciones que borran (eliminar documento, evento o lugar,
+    restaurar lista, quitar parada) piden un segundo toque igual: el botón
+    pasa a "Confirmar" en rojo durante 4 s. Antes decía "Toca otra vez
+    para eliminar", demasiado largo para el botón.
   - Vuelo, tren y bus solo en días con traslado (botones atenuados, aviso y
     no deja guardar). El coche sigue permitido cualquier día (alquiler).
     Excursiones como Madrid → Toledo esperan a poder editar la ruta.
