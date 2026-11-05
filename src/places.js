@@ -136,7 +136,7 @@ export function freeName(index, name, cities, docId) {
 
 /**
  * Sugerencias para un campo: lugares de esas ciudades, uno por (nombre, enlace).
- * Si un nombre se repite con enlaces distintos, la etiqueta lleva la ciudad: "Casa · Madrid".
+ * Si un nombre se repite con enlaces distintos, la etiqueta lleva la ciudad: "Casa (Madrid)".
  * cityName(id) → nombre visible.
  * → [{label, name, url, cities}]
  */
@@ -162,8 +162,8 @@ export function placeSuggestions(index, cities, docId, cityName) {
     const used = {};
     g.forEach((x, i) => {
       const where = x.cities ? x.cities.map(cityName).join(" y ") : "";
-      let label = where ? x.name + " · " + where : x.name + " · " + (i + 1);
-      if (used[label]) label += " (" + (i + 1) + ")";
+      let label = x.name + " (" + (where || i + 1) + ")";
+      if (used[label]) label = x.name + " (" + (where ? where + " " : "") + (i + 1) + ")";
       used[label] = 1;
       out.push(Object.assign({ label }, x));
     });

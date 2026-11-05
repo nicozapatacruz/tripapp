@@ -195,10 +195,10 @@ describe("formulario: ubicaciones", () => {
   });
 
   it("12) el ejemplo del título cambia con el tipo", () => {
-    openNew(MADRID, "hotel");
+    openNew(DEC31, "hotel");
     expect($("#f-title").placeholder).toContain("Hotel");
-    click($('.ty[data-type="vuelo"]'));
-    expect($("#f-title").placeholder).toContain("Iberia");
+    click($('.ty[data-type="tren"]'));
+    expect($("#f-title").placeholder).toContain("AVE");
     click($('[data-act="close"]'));
   });
 
@@ -230,6 +230,59 @@ describe("formulario: ubicaciones", () => {
     for (let i = 0; i < 5; i++) await tick();
     const o = [...$("#f-leg").options].map((x) => x.textContent);
     expect(o).toEqual(["Sin asignar", "Tenerife → Bilbao", "Bilbao → Pamplona"]);
+    // y se puede quitar desde el mismo formulario
+    click($('[data-act="leg-via-del"][data-k="0"]'));
+    for (let i = 0; i < 5; i++) await tick();
+    expect($("#f-leg").type).toBe("hidden");
+    expect($("#sheet-body").textContent).toContain("Tenerife → Pamplona");
     click($('[data-act="close"]'));
+  });
+
+  it("16) el día de inicio muestra la ruta con «Añadir parada» en Documentos", () => {
+    location.hash = "#dia-2026-12-27";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect($('#v-day [data-act="via"]')).not.toBeNull();
+  });
+
+  it("17) vuelo, tren o bus no se pueden poner en un día sin traslado", async () => {
+    openNew(MADRID, "entrada");
+    const tren = $('.ty[data-type="tren"]');
+    expect(tren.getAttribute("aria-disabled")).toBe("true");
+    expect($('.ty[data-type="coche"]').getAttribute("aria-disabled")).toBe("false");
+    click(tren);
+    expect(tren.getAttribute("aria-checked")).toBe("false");
+    expect($("#f-tynote").hidden).toBe(false);
+    click($('[data-act="close"]'));
+    // si se cambia el día a uno sin traslado con un vuelo elegido, no deja guardar
+    openNew(DEC17, "vuelo");
+    const day = $("#f-day");
+    day.value = MADRID;
+    day.dispatchEvent(new Event("change", { bubbles: true }));
+    await save();
+    expect($("#sheet").hidden).toBe(false);
+    expect($("#f-err").textContent).toContain("no tiene traslados");
+    click($('[data-act="close"]'));
+  });
+
+  it("18) borrar el título al editar lo vuelve automático", async () => {
+    openNew(TENERIFE, "otro");
+    $("#f-title").value = "Test";
+    await save();
+    savedLinks();
+    const tk = [...document.querySelectorAll("#v-docs .ticket")].find((x) => x.textContent.includes("Test"));
+    click(tk.querySelector('[data-act="edit"]') || tk);
+    expect($("#f-title").value).toBe("Test");
+    $("#f-title").value = "";
+    await save();
+    savedLinks();
+    expect($("#v-docs").textContent).not.toContain("Test");
+    expect($("#v-docs").textContent).toContain("Otro");
+  });
+
+  it("19) dos «Casa» en ciudades distintas se ven como «Casa (Madrid)» y «Casa (Pamplona)»", () => {
+    savedLinks();
+    const t = $("#v-docs").textContent;
+    expect(t).toContain("Casa (Madrid)");
+    expect(t).toContain("Casa (Pamplona)");
   });
 });

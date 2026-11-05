@@ -245,9 +245,17 @@ function locRow(l,t,u){
  if(!t&&!u)return "";
  return '<div class="loc"><span><small>'+l+'</small>'+esc(t||"Ubicación en Google Maps")+'</span>'+(u?'<a class="map" href="'+esc(u)+'" target="_blank" rel="noopener" aria-label="Abrir en Google Maps">'+svg("pin",16)+'Mapa</a>':"")+'</div>';
 }
+/* Nombre visible: si hay otro lugar con el mismo nombre y otro enlace, se añade la ciudad: "Casa (Madrid)" */
+function locLabel(d,n,idx){
+ var t=n===1?d.loc1:d.loc2,u=(n===1?d.loc1u:d.loc2u)||"";if(!t)return t;
+ var key=normName(t),dup=idx.some(function(r){return r.docId!==d.id&&r.url&&r.url!==u&&normName(r.name)===key});
+ if(!dup)return t;
+ var cs=slotCities(ctxOf(d.dayId,d.type,n,d.leg!=null?d.leg+"-"+(d.seg||0):"",{t:t,u:u,c:n===1?d.loc1c:d.loc2c}));
+ return cs&&cs.length===1?t+" ("+nm(cs[0])+")":t;
+}
 function locsHTML(d){
- var t=TRIPT[d.type],a=[locRow(t?"Salida":"Ubicación",d.loc1,d.loc1u)];
- if(t)a.push(locRow("Llegada",d.loc2,d.loc2u));
+ var t=TRIPT[d.type],idx=placeIndex(),a=[locRow(t?"Salida":"Ubicación",locLabel(d,1,idx),d.loc1u)];
+ if(t)a.push(locRow("Llegada",locLabel(d,2,idx),d.loc2u));
  a=a.filter(Boolean);
  return a.length?'<div class="locs">'+a.join("")+'</div>':"";
 }
@@ -341,9 +349,10 @@ function legField(dayId,type,sel){
  var day=dayById(dayId);
  if(!day||!day.legs||!TRIPT[type])return "";
  // parada intermedia desde el formulario (solo si el día tiene un único traslado)
- var via=day.legs.length!==1?"":viaOpen?
+ var vv=day.legs.length===1?viaOf(day.d,0):[];
+ var via=day.legs.length!==1?"":(vv.length?'<div class="viarow">Paradas: '+vv.map(function(x,k){return esc(x)+' <button type="button" class="mini" data-act="leg-via-del" data-k="'+k+'" aria-label="Quitar la parada '+esc(x)+'">Quitar</button>'}).join(" · ")+'</div>':"")+(viaOpen?
   '<div class="viarow"><input id="f-via" type="text" placeholder="Parada intermedia, ej. Bogotá" autocomplete="off" aria-label="Parada intermedia"><button type="button" class="mini" data-act="leg-via-add">Añadir</button><button type="button" class="mini" data-act="leg-via-cancel">Cancelar</button></div>':
-  '<button type="button" class="mini" data-act="leg-via-open">'+svg("plus",14)+'Añadir parada</button>';
+  '<button type="button" class="mini" data-act="leg-via-open">'+svg("plus",14)+'Añadir parada</button>');
  if(onlyLeg(dayId)){
   var s0=legSegs(day,0)[0];
   return '<div class="field"><span class="fl">Trayecto</span><div class="legfix"><b>'+esc(segText(s0))+'</b>'+via+'</div><input type="hidden" id="f-leg" value="0-0"></div>';
@@ -364,6 +373,16 @@ async function addViaFromForm(){
  viaOpen=false;legSel="";legManual=false;formErr("");
  refreshLegField();autoLeg();[1,2].forEach(autoLink);refreshLocFields();refresh();
  toast("Parada añadida");
+}
+async function delViaFromForm(k){
+ var day=dayById(curDay());if(!day||!day.legs||day.legs.length!==1)return;
+ var c={d:day.d,i:0},v=viaOf(c.d,0).slice();if(k<0||k>=v.length)return;
+ v.splice(k,1);
+ await shiftSegs(c,k+1,-1);
+ if(v.length)await setKV("via:"+c.d+":0",v);else await delKV("via:"+c.d+":0");
+ legSel=onlyLeg(c.d);legManual=!!legSel;
+ refreshLegField();autoLeg();[1,2].forEach(autoLink);refreshLocFields();refresh();
+ toast("Parada quitada");
 }
 function ptMatch(p,cid,txt){if(p.id)return !!cid&&cid===p.id;return !!txt&&txt.indexOf(norm(p.n))>=0}
 function autoLeg(){
@@ -671,7 +690,8 @@ function renderDay(day){
  if(day.start)tab="docs";
  var general=(day.ev||[]).map(function(e){return '<div class="note">'+svg("flag",20)+'<p>'+esc(e)+'</p></div>'}).join("")+legsHTML(day)+(function(l){return l.map(function(x){return cityGeneral(x,day.d,l.length>1)}).join("")})(day.stops.filter(hasInfo))+'<p class="foot">Sugerencias de partida. Confirma horarios, precios y reservas antes de ir.</p>';
  var eat=(function(l){return l.map(function(x){return cityEat(x,day.d,l.length>1)}).join("")})(day.stops.filter(hasInfo))+'<p class="foot">Toca el estado de cada sitio para marcarlo: quiero ir, reservado o ya fui. Confirma horarios y reserva en fechas señaladas.</p>';
- var panels={general:general,comer:eat,docs:docsPanel(day)};
+ // el día de inicio solo tiene la pestaña Documentos: ahí va también la ruta (y sus paradas)
+ var panels={general:general,comer:eat,docs:(day.start?legsHTML(day):"")+docsPanel(day)};
  V.day.style.setProperty("--c1",c[0]);V.day.style.setProperty("--c2",c[1]);
  var rbar=day.stops.map(function(s){return '<i style="background:'+CITIES[s].c1+'"></i>'}).join("");
  V.day.innerHTML='<header class="dh"><div class="in"><div class="dtop"><a class="back" href="#inicio" aria-label="Volver a la ruta">'+svg("back",20)+'</a><span class="dnum">'+(isToday?"Hoy · ":"")+'Día '+(i+1)+' de '+DAYS.length+'</span></div><p class="dwd">'+esc(longDate(day))+'</p><h1>'+titleHTML(day)+'</h1><div class="rbar">'+rbar+'</div>'+(day.sleep?'<p class="sleep">'+svg("bed",17)+'Dormimos en '+esc(nm(day.sleep))+'</p>':day.plane?'<p class="sleep">'+svg("vuelo",17)+(day.start?"Inicio del viaje · ":"")+'Noche en el avión</p>':'<p class="sleep">'+(day.start?"Inicio del viaje":"Fin del viaje")+'</p>')+'</div></header>'+
@@ -729,13 +749,13 @@ function openDocSheet(o){
  viaOpen=false;planeNote=null;
  if(!d&&planeFix())dayId=formDay;              // hotel nuevo en una noche de avión → día siguiente
  if(!legSel&&!d){legSel=onlyLeg(dayId);if(legSel)legManual=true}
- var types=Object.keys(TYPES).map(function(k){return '<button type="button" class="ty" role="radio" data-act="type" data-type="'+k+'" aria-checked="'+(k===selType)+'" style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],22)+TYPES[k].l+'</button>'}).join("");
+ var types=Object.keys(TYPES).map(function(k){return '<button type="button" class="ty" role="radio" data-act="type" data-type="'+k+'" aria-checked="'+(k===selType)+'" aria-disabled="'+!typeOk(k,dayId)+'" style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],22)+TYPES[k].l+'</button>'}).join("")+'<p class="tynote" id="f-tynote"'+(typeOk(selType,dayId)?" hidden":"")+'>'+NOLEG+'</p>';
  var prev="";
  if(d&&d.blob){var u=objUrl(d);prev=(d.mime||"").indexOf("image/")===0?'<img class="prev" src="'+u+'" alt="Vista previa de '+esc(d.fileName)+'">':'<a class="btn" href="'+u+'" target="_blank" rel="noopener">'+svg("file",18)+'Abrir '+esc(d.fileName||"archivo")+'</a>'}
  openSheet('<div class="sh-head"><h2 id="sh-title">'+(d?"Documento":"Nuevo documento")+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
  '<div class="field"><span class="fl">Archivo (PDF o foto)</span><label class="drop" for="f-file">'+svg("clip",22)+'<span id="f-name">'+(d&&d.fileName?esc(d.fileName):"Elegir archivo")+'<small>'+(d&&d.fileName?"Toca para reemplazarlo":"PDF del billete, la reserva o una captura")+'</small></span></label><input id="f-file" type="file" accept="application/pdf,image/*" hidden></div>'+prev+
  '<div class="field"><span class="fl">Tipo'+REQ+'</span><div class="types" role="radiogroup" aria-label="Tipo de documento">'+types+'</div></div>'+
- '<div class="field"><label for="f-title">Título</label><input id="f-title" type="text" placeholder="'+esc(TITLEPH[selType]||"")+'" value="'+esc(d?d.title:(o.title||""))+'" autocomplete="off"></div>'+
+ '<div class="field"><label for="f-title">Título</label><input id="f-title" type="text" placeholder="'+esc(TITLEPH[selType]||"")+'" value="'+esc(d?(d.titleAuto?"":d.title):(o.title||""))+'" autocomplete="off"></div>'+
  '<div class="field"><label for="f-day" id="f-daylb">'+(selType==="hotel"?"Primera noche":"Día")+REQ+'</label><select id="f-day">'+dayOptions(dayId)+'</select></div>'+
  '<div id="f-towrap" style="display:contents">'+toField(dayId,selType,toSel)+'</div>'+
  '<div id="f-legwrap" style="display:contents">'+legField(dayId,selType,legSel)+'</div>'+
@@ -748,6 +768,15 @@ function openDocSheet(o){
  '<div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="save">Guardar</button>'+(d?'<button type="button" class="btn danger" data-act="delete">Eliminar</button>':"")+'</div>');
  delArm=null;
 }
+/* Vuelo, tren y bus solo en días con traslado (el coche de alquiler sirve cualquier día).
+   Una excursión (p. ej. a Toledo) llegará cuando se pueda editar la ruta. */
+var NOLEG="Este día no tiene traslados. Elige un día con trayecto o, para una excursión, usa Entrada u Otro.";
+function typeOk(t,dayId){if(t!=="vuelo"&&t!=="tren"&&t!=="bus")return true;var dy=dayById(dayId);return !!(dy&&dy.legs)}
+function refreshTypes(showNote){
+ var day=curDay();
+ sheetBody.querySelectorAll(".ty").forEach(function(x){x.setAttribute("aria-disabled",String(!typeOk(x.dataset.type,day)))});
+ var n=$("#f-tynote");if(n)n.hidden=!(showNote||!typeOk(selType,day));
+}
 /* Título si no se escribe ninguno: tipo + lugar o trayecto ("Comida · Casa Lucio",
    "Vuelo · Medellín → Madrid"); si no hay nada más, solo el tipo. */
 function autoTitle(d,dy){
@@ -757,6 +786,7 @@ function autoTitle(d,dy){
 }
 async function saveFromSheet(){
  var title=$("#f-title").value.trim(),code=$("#f-code").value.trim(),note=$("#f-note").value.trim(),day=$("#f-day").value,file=$("#f-file").files[0];
+ if(!typeOk(selType,day)){formErr(NOLEG);return}
  var pr=parsePrice($("#f-price").value);
  if(pr===undefined){formErr("El precio no es válido. Usa solo números, por ejemplo 125,50.");return}
  var cur=$("#f-cur").value;
@@ -779,7 +809,10 @@ async function saveFromSheet(){
  d.leg=(tr&&dy&&dy.legs&&ls&&ls.value!=="")?Number(ls.value.split("-")[0]):null;
  d.seg=d.leg!=null?Number(ls.value.split("-")[1]||0):0;
  var te=$("#f-to");if(selType==="hotel"&&te&&te.value)d.nightTo=te.value;else delete d.nightTo;
- d.title=title||(file?file.name.replace(/\.[^.]+$/,""):(editing&&editing.title)||autoTitle(d,dy));
+ // título vacío = automático (también al editar); titleAuto hace que se regenere y que el campo se vea vacío
+ if(title){d.title=title;delete d.titleAuto}
+ else if(file){d.title=file.name.replace(/\.[^.]+$/,"");delete d.titleAuto}
+ else{d.title=autoTitle(d,dy);d.titleAuto=true}
  if(file){if(urls[d.id]){try{URL.revokeObjectURL(urls[d.id])}catch(e){}delete urls[d.id]}d.blob=file;d.fileName=file.name;d.mime=file.type||"application/octet-stream";d.size=file.size}
  await saveDoc(d);closeSheet();refresh();toast("Documento guardado");
 }
@@ -1051,7 +1084,7 @@ function openEventSheet(o){
  var day=e?e.day:(dayById(o.day)?o.day:(calSel&&dayById(calSel)?calSel:DAYS[0].d));
  openSheet('<div class="sh-head"><h2 id="sh-title">'+(e?"Evento":"Nuevo evento")+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
  '<div class="field"><label for="e-title">Nombre'+REQ+'</label><input id="e-title" type="text" placeholder="Ej. Visita a Plaza de España" value="'+esc(e?e.title:(o.title||""))+'" autocomplete="off"></div>'+
- '<div class="field"><label for="e-day">Día</label><select id="e-day">'+DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===day?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'</select></div>'+
+ '<div class="field"><label for="e-day">Día'+REQ+'</label><select id="e-day">'+DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===day?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'</select></div>'+
  '<div class="field"><span class="fl">Hora de inicio y fin</span><div class="timerow"><input id="e-t1" type="time" value="'+esc(e&&e.t1||"")+'" aria-label="Hora de inicio"><span>–</span><input id="e-t2" type="time" value="'+esc(e&&e.t2||"")+'" aria-label="Hora de fin"></div></div>'+
  '<div class="field"><label for="e-note">Nota o lugar</label><input id="e-note" type="text" placeholder="Ej. Entrada por la puerta principal" value="'+esc(e&&e.note||"")+'" autocomplete="off"></div>'+
  '<p class="err" id="e-err" role="alert"></p><div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="ev-save">Guardar</button>'+(e?'<button type="button" class="btn danger" data-act="ev-del">Eliminar</button>':"")+'</div>');
@@ -1114,7 +1147,9 @@ document.addEventListener("click",function(e){
  else if(a==="copy"){copyText(b.dataset.code)}
  else if(a==="close"){closeSheet()}
  else if(a==="type"){
+  if(b.getAttribute("aria-disabled")==="true"){refreshTypes(true);return}
   selType=b.dataset.type;sheetBody.querySelectorAll(".ty").forEach(function(x){x.setAttribute("aria-checked",x===b?"true":"false")});
+  refreshTypes(false);formErr("");
   var tt=$("#f-title");if(tt)tt.placeholder=TITLEPH[selType]||"";
   if(planeFix())toSel="";                       // hotel en una noche de avión → día siguiente
   if(TRIPT[selType]&&!legSel){legSel=onlyLeg(curDay());legManual=!!legSel}
@@ -1122,6 +1157,7 @@ document.addEventListener("click",function(e){
  else if(a==="leg-via-open"){viaOpen=true;refreshLegField();var fv=$("#f-via");if(fv)try{fv.focus()}catch(_){}}
  else if(a==="leg-via-cancel"){viaOpen=false;refreshLegField()}
  else if(a==="leg-via-add"){addViaFromForm()}
+ else if(a==="leg-via-del"){delViaFromForm(Number(b.dataset.k))}
  else if(a==="unlink"){var un=+b.dataset.n;locS[un].u="";locS[un].src="";locS[un].noAuto=true;refreshLocStat(un)}
  else if(a==="loc-use"){
   // usar un lugar existente: su nombre, su enlace y (si es una sola) su ciudad
@@ -1190,7 +1226,7 @@ document.addEventListener("change",function(e){
  else if(e.target.id==="f-day"){
   formDay=e.target.value;toSel="";viaOpen=false;planeFix();
   legSel=onlyLeg(formDay);legManual=!!legSel;refreshLegField();autoLeg();
-  dayChanged();refreshLocFields();
+  dayChanged();refreshLocFields();refreshTypes(false);
  }
  else if(e.target.id==="f-to"){toSel=e.target.value}
  else if(e.target.id==="f-leg"){legSel=e.target.value;legManual=true;dayChanged();refreshLocFields()}

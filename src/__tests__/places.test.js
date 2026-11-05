@@ -137,7 +137,7 @@ describe("coincidencias y conflictos", () => {
     expect(r.kind).toBe("ambiguous");
     expect(r.options.map((o) => o.url).sort()).toEqual([SHORT_B, SHORT_C].sort());
     const sug = placeSuggestions(idx, ["madrid", "pamplona"], null, cityName).map((s) => s.label);
-    expect(sug.sort()).toEqual(["Casa · Madrid", "Casa · Pamplona"]);
+    expect(sug.sort()).toEqual(["Casa (Madrid)", "Casa (Pamplona)"]);
   });
 
   it("31 dic con Casa solo en Madrid: la sugiere y la vincula", () => {

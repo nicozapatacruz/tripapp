@@ -14,6 +14,22 @@ Reglas:
 
 ## 2026-11-05
 
+- Tercera ronda de pruebas:
+  - Bug: el 27 (día de inicio) solo tiene la pestaña Documentos y la ruta
+    con "Editar paradas" vivía en General, así que una parada añadida ahí no
+    se podía quitar. Ahora la ruta se ve también en Documentos ese día, y el
+    formulario lista las paradas con "Quitar".
+  - Vuelo, tren y bus solo en días con traslado (botones atenuados, aviso y
+    no deja guardar). El coche sigue permitido cualquier día (alquiler).
+    Excursiones como Madrid → Toledo esperan a poder editar la ruta.
+  - Bug: borrar el título de un documento existente no se guardaba (volvía
+    el anterior). Ahora vacío = automático también al editar; se marca con
+    `titleAuto` para que se regenere y el campo se vea vacío.
+  - Lugares con el mismo nombre en ciudades distintas se muestran como
+    "Casa (Madrid)" / "Casa (Pamplona)" en sugerencias y tarjetas.
+  - Asterisco también en el Día del formulario de eventos.
+  - "Todo el viaje (sin día)" en el selector de día viene de la app
+    original: es para documentos que no son de un día (seguro, etc.).
 - Segunda ronda de pruebas de Nicolas en el iPhone (formulario de documentos):
   - Trayecto: si el día tiene un solo tramo, queda puesto y se muestra fijo
     (sin selector), con "Añadir parada" ahí mismo: la parada se guarda en el
