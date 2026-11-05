@@ -315,6 +315,19 @@ describe("formulario: ubicaciones", () => {
     expect($("#sheet").hidden).toBe(true);
   });
 
+  it("18d) botón flotante «+»: solo en Documentos (lista) y abre un documento nuevo", () => {
+    location.hash = "#inicio";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect($("#fab").hidden).toBe(true);
+    savedLinks();
+    expect($("#fab").hidden).toBe(false);
+    expect($("#fab").classList.contains("wide")).toBe(true); // jsdom no hace scroll: ya está «al final»
+    click($("#fab"));
+    expect($("#sheet").hidden).toBe(false);
+    expect($("#sh-title").textContent).toBe("Nuevo documento");
+    click($('[data-act="close"]'));
+  });
+
   it("19) dos «Casa» en ciudades distintas se ven como «Casa (Madrid)» y «Casa (Pamplona)»", () => {
     savedLinks();
     const t = $("#v-docs").textContent;

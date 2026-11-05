@@ -22,6 +22,12 @@ Reglas:
     segundo toque para confirmar ("Quitar" → "Confirmar" en rojo).
   - Probado en el iPhone por Nicolas: todo lo de ubicaciones y el formulario
     (las tres rondas). Faltan las pruebas de Fase 1 y 2.
+  - Documentos: el botón "Añadir documento" del final de la lista pasa a ser
+    un "+" flotante sobre la barra de navegación (como el de Evenly). Al
+    llegar al final del scroll se estira hacia la izquierda y se convierte en
+    "Añadir documento"; al subir vuelve a ser "+". Solo en la lista (no en
+    Pendientes ni en el día, donde el botón ya está arriba).
+  - Avisos informativos en azul (`--info-bg` / `--info-ink`).
   - Vuelo/tren/bus en un día cuyos tramos ya tienen billete: aviso suave
     ("Ya tienes el vuelo Málaga → Tenerife…"), sin bloquear, porque cada
     persona puede tener su propio billete. El coche no avisa.

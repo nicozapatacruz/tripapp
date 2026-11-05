@@ -723,7 +723,7 @@ function renderPend(){
  V.docs.innerHTML='<div class="in"><div class="page-h"><h1>Documentos</h1><p>Reservas, billetes y códigos, ordenados por día.</p></div>'+segHTML()+'<div class="pstats">'+stat("Noches con hotel",nt-pn,nt)+stat("Traslados con billete",nl-pt.length,nl)+'</div>'+body+'<div style="height:24px"></div></div>';
 }
 function renderDocsView(){
- if(docsTab==="pend"){renderPend();return}
+ if(docsTab==="pend"){renderPend();updateFab();return}
  var counts={};docs.forEach(function(d){counts[d.type]=(counts[d.type]||0)+1});
  var chips='<button type="button" class="chip" data-act="filter" data-f="all" aria-pressed="'+(docFilter==="all")+'">Todos '+docs.length+'</button>'+Object.keys(TYPES).filter(function(k){return counts[k]}).map(function(k){return '<button type="button" class="chip" data-act="filter" data-f="'+k+'" aria-pressed="'+(docFilter===k)+'">'+TYPES[k].l+' '+counts[k]+'</button>'}).join("");
  var shown=docs.filter(function(d){return docFilter==="all"||d.type===docFilter});
@@ -731,7 +731,8 @@ function renderDocsView(){
  var order=DAYS.map(function(d){return d.d}).concat(["trip"]).filter(function(k){return groups[k]});
  var body=order.map(function(k){var day=dayById(k);var items=groups[k].sort(function(a,b){return a.created-b.created});
   return '<section><div class="group-h">'+(day?'<a href="#dia-'+k+'">'+esc(cap(shortDay(day)))+' · '+esc(routeText(day))+'</a>':'<a href="#documentos">Todo el viaje</a>')+'<span>'+items.length+'</span></div><div class="tickets">'+items.map(ticketHTML).join("")+'</div></section>'}).join("");
- V.docs.innerHTML='<div class="in"><div class="page-h"><h1>Documentos</h1><p>Reservas, billetes y códigos, ordenados por día.</p></div>'+segHTML()+summaryHTML(shown)+'<div class="filters">'+chips+'</div><div style="display:flex;flex-direction:column;gap:22px">'+(body||'<div class="empty"><b>Todavía no hay documentos</b><span>Añade el primero y asígnalo a un día del viaje.</span></div>')+'</div><div style="padding-block:20px"><button type="button" class="btn primary" style="width:100%;--c1:var(--accent)" data-act="add" data-day="'+(dayById(todayStr())?todayStr():DAYS[0].d)+'">'+svg("plus",20)+'Añadir documento</button></div></div>';
+ V.docs.innerHTML='<div class="in"><div class="page-h"><h1>Documentos</h1><p>Reservas, billetes y códigos, ordenados por día.</p></div>'+segHTML()+summaryHTML(shown)+'<div class="filters">'+chips+'</div><div style="display:flex;flex-direction:column;gap:22px">'+(body||'<div class="empty"><b>Todavía no hay documentos</b><span>Añade el primero y asígnalo a un día del viaje.</span></div>')+'</div><div class="fabspace"></div></div>';
+ updateFab();
 }
 
 /* ================= Hoja: añadir / editar documento ================= */
@@ -1139,6 +1140,17 @@ function route(){
  if(changed){window.scrollTo(0,v==="day"?0:(scrollPos[v]||0))}
  if(v==="cal"&&calTab==="dias"&&!calScrolled){calScrolled=true;var ce=document.getElementById("c-"+todayStr());if(ce)requestAnimationFrame(function(){ce.scrollIntoView({block:"start"});window.scrollBy(0,-12)})}
  if(v==="home"&&!homeScrolled){homeScrolled=true;var te=document.getElementById("d-"+todayStr());if(te)requestAnimationFrame(function(){te.scrollIntoView({block:"center"})})}
+ updateFab();
+}
+/* Botón flotante "+" en Documentos (lista). Al final del scroll se estira a "Añadir documento". */
+var fab=$("#fab");
+function updateFab(){
+ if(!fab)return;
+ var show=view==="docs"&&docsTab!=="pend";
+ fab.hidden=!show;if(!show)return;
+ fab.dataset.day=dayById(todayStr())?todayStr():DAYS[0].d;
+ var de=document.documentElement,atEnd=window.innerHeight+window.scrollY>=de.scrollHeight-48;
+ fab.classList.toggle("wide",atEnd);
 }
 function refresh(){var y=window.scrollY;var h=location.hash.replace(/^#/,"");
  if(view==="day"){var d=dayById(h.slice(4));if(d)renderDay(d)}else if(view==="docs")renderDocsView();else if(view==="cal")renderCal();else renderHome();
@@ -1263,6 +1275,9 @@ document.addEventListener("input",function(e){
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!sheet.hidden)closeSheet()});
 window.addEventListener("hashchange",route);
 
+if(fab)fab.innerHTML=svg("plus",24)+'<span>Añadir documento</span>';
+window.addEventListener("scroll",updateFab,{passive:true});
+window.addEventListener("resize",updateFab);
 $("#nav-home").innerHTML=svg("route",24)+"Ruta";
 $("#nav-cal").innerHTML=svg("cal",24)+"Calendario";
 $("#nav-docs").innerHTML=svg("file",24)+"Documentos";
