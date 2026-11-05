@@ -23,6 +23,8 @@ Reglas:
 - Ajustes muestra la versión instalada ("Versión a1b2c3d · 5 nov, 15:40"):
   el código es el commit publicado (`GITHUB_SHA` en Actions) y la hora del
   build. Para saber si el iPhone ya tiene la última versión.
+- `npm run dev` usa el puerto fijo 5180 (y `npm run preview` el 5181) para
+  no chocar con Evenly, que usa el 5173.
 - Deploy trabado: el commit 6e4aa63 cayó durante una falla de GitHub
   Actions y su publicación en Pages quedó colgada. Como el ID de cada
   publicación es el SHA del commit, todos los reintentos sobre ese mismo

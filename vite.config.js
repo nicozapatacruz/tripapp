@@ -4,6 +4,9 @@ import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig({
   // GitHub Pages publica el repo en https://nicozapatacruz.github.io/tripapp/
   base: "/tripapp/",
+  // Puerto fijo para no chocar con Evenly (que usa el 5173 por defecto)
+  server: { port: 5180, strictPort: true },
+  preview: { port: 5181, strictPort: true },
   // Versión visible en Ajustes: commit (GITHUB_SHA lo pone GitHub Actions) y hora del build.
   // Sirve para saber si el iPhone ya tiene la última versión publicada.
   define: {
