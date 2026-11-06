@@ -589,23 +589,27 @@ function titleArea(){
  if(!c[2]||isMulti())return '<div class="field"><label for="f-co">'+c[0]+'</label>'+co+'</div>';
  return '<div class="row2"><div class="field"><label for="f-co">'+c[0]+'</label>'+co+'</div><div class="field"><label for="f-no">'+c[2]+'</label><input id="f-no" type="text" class="code" placeholder="'+esc(c[3])+'" value="'+esc(fx.no)+'" autocomplete="off" autocapitalize="characters"></div></div>';
 }
+/* Mínimo de días de la llegada: si una hora es anterior a la anterior, ya es otro día (no puede ser menos) */
+function minArr(){return autoArr(fxDoc())}
 function arrLine(){
- var t;
+ var t,low=fx.arr<=minArr();
  if(!fx.arr)t='<span class="arrt muted">Llega el mismo día</span>';
  else{var dt=dayPlus(curDay(),fx.arr);t='<span class="arrt">Llega el '+(dt?esc(fmtDt(dt)):"día siguiente")+' · <b>+'+fx.arr+'</b></span>'}
- return '<div class="arrline" id="f-arr">'+t+'<span class="arrbtns"><button type="button" class="stp" data-act="arr-dn" aria-label="Llega un día antes"'+(fx.arr<=0?" disabled":"")+'>−</button><button type="button" class="stp" data-act="arr-up" aria-label="Llega un día después"'+(fx.arr>=3?" disabled":"")+'>+</button></span></div>';
+ return '<div class="arrline" id="f-arr">'+t+'<span class="arrbtns"><button type="button" class="stp" data-act="arr-dn" aria-label="Llega un día antes"'+(low?' aria-disabled="true"':"")+'>−</button><button type="button" class="stp" data-act="arr-up" aria-label="Llega un día después"'+(fx.arr>=3?" disabled":"")+'>+</button></span></div>';
 }
 function timeArea(){
  if(!ARRT[selType])return '<div class="field"><span class="fl" id="f-tlab">'+timeLabel(selType)+'</span><div class="timerow">'+timeBox("f-t1",fx.t1,"Hora de inicio")+'<span>–</span>'+timeBox("f-t2",fx.t2,"Hora de fin")+'</div></div>';
- if(!isMulti())return '<div class="field"><span class="fl" id="f-tlab">Salida y llegada</span><div class="timerow">'+timeBox("f-t1",fx.t1,"Hora de salida")+'<span>–</span>'+timeBox("f-t2",fx.t2,"Hora de llegada")+'</div>'+arrLine()+'</div>';
+ if(!isMulti())return '<div class="field"><span class="fl" id="f-tlab">Salida y llegada</span><div class="timerow">'+timeBox("f-t1",fx.t1,"Hora de salida")+'<span>–</span>'+timeBox("f-t2",fx.t2,"Hora de llegada")+'</div>'+arrLine()+'<p class="err" id="f-arrerr" role="alert"></p></div>';
  var ss=formRange(),c=CO[selType],h='<div class="field"><span class="fl" id="f-tlab">Tramos y horarios</span><div class="hops">';
  ss.forEach(function(sg,k){var x=fx.hops[k]||{};
   if(k>0)h+='<p class="layline" id="f-lay'+(k-1)+'"></p>';
   h+='<div class="hop"><div class="hophead"><b>'+esc(segText(sg))+'</b><input id="f-h'+k+'-no" type="text" class="code" placeholder="'+esc(c[2])+'" aria-label="'+esc(c[2]+", "+segText(sg))+'" value="'+esc(x.no||"")+'" autocomplete="off" autocapitalize="characters"></div>'+
    '<div class="timerow">'+timeBox("f-h"+k+"-t1",x.t1,"Salida de "+sg.f.n)+'<span>–</span>'+timeBox("f-h"+k+"-t2",x.t2,"Llegada a "+sg.t.n)+'</div></div>';
  });
- return h+'</div>'+arrLine()+'</div>';
+ return h+'</div>'+arrLine()+'<p class="err" id="f-arrerr" role="alert"></p></div>';
 }
+var ARRERR="La llegada es antes que la salida: tiene que ser al día siguiente o después.";
+function arrErr(m){var e=$("#f-arrerr");if(e)e.textContent=m||""}
 /* Texto de cada escala: "Escala en Bogotá · 2 h 55 min" (se calcula al escribir las horas) */
 function refreshLays(){
  if(!isMulti())return;
@@ -618,7 +622,7 @@ function refreshArr(){var e=$("#f-arr");if(e)e.outerHTML=arrLine()}
 function refreshTransport(){
  if(!$("#f-timewrap"))return;
  captureFx();syncFxShape();
- if(ARRT[selType]&&!fx.arrManual)fx.arr=autoArr(fxDoc());
+ if(ARRT[selType])fx.arr=fx.arrManual?Math.max(fx.arr,minArr()):autoArr(fxDoc());
  var a=$("#f-tiwrap");if(a)a.innerHTML=titleArea();
  var b=$("#f-timewrap");if(b)b.innerHTML=timeArea();
  refreshLays();
@@ -894,7 +898,7 @@ function openDocSheet(o){
  syncFxShape();
  var types=Object.keys(TYPES).map(function(k){return '<button type="button" class="ty" role="radio" data-act="type" data-type="'+k+'" aria-checked="'+(k===selType)+'" aria-disabled="'+!typeOk(k,dayId)+'" style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],22)+TYPES[k].l+'</button>'}).join("")+'<p class="tynote" id="f-tynote"'+(typeOk(selType,dayId)?" hidden":"")+'>'+esc(typeNote(selType,dayId))+'</p><p class="dupnote" id="f-dupnote"'+(dupTicketText(selType,dayId)?"":" hidden")+'>'+esc(dupTicketText(selType,dayId))+'</p>';
  var prev="";fileDel=false;
- if(d&&d.blob){var u=objUrl(d);prev=(d.mime||"").indexOf("image/")===0?'<img class="prev" src="'+u+'" alt="Vista previa de '+esc(d.fileName)+'">':'<a class="btn" href="'+u+'" target="_blank" rel="noopener">'+svg("file",18)+'Abrir '+esc(d.fileName||"archivo")+'</a>'}
+ if(d&&d.blob){var u=objUrl(d);prev='<a class="btn" href="'+u+'" target="_blank" rel="noopener">'+svg("file",18)+'Abrir '+esc(d.fileName||"archivo")+'</a>'}   // también imágenes: la miniatura ocupaba demasiado
  openSheet('<div class="sh-head"><h2 id="sh-title">'+(d?"Editar documento":"Nuevo documento")+'</h2>'+(d?'<button type="button" class="x" data-act="view" data-id="'+d.id+'">Cancelar</button>':'<button type="button" class="x" data-act="close">Cancelar</button>')+'</div>'+
  '<div class="field"><span class="fl">Archivo (PDF o foto)</span><div class="dropwrap"><label class="drop" for="f-file">'+svg("clip",22)+'<span id="f-name">'+(d&&d.fileName?esc(d.fileName):"Elegir archivo")+'<small>'+(d&&d.fileName?"Toca para reemplazarlo":"PDF del billete, la reserva o una captura")+'</small></span></label><button type="button" class="tclr fdel" data-act="file-del" id="f-filedel" aria-label="Quitar archivo"'+(d&&d.blob?"":" hidden")+'>'+svg("xmark",18)+'</button></div><input id="f-file" type="file" accept="application/pdf,image/*" hidden><p class="tynote" id="f-bignote" hidden></p></div><div id="f-prev">'+prev+'</div>'+
  '<div class="field"><span class="fl">Tipo'+REQ+'</span><div class="types" role="radiogroup" aria-label="Tipo de documento">'+types+'</div></div>'+
@@ -1003,6 +1007,7 @@ async function saveFromSheet(){
  var d=editing?Object.assign({},editing):{id:uid(),created:Date.now()};
  var t1=fx.t1||"",t2=fx.t2||"";
  if(t1&&t2&&selType!=="hotel"&&!TRIPT[selType]&&t2<=t1){formErr("La hora de fin debe ser posterior a la de inicio.");return}
+ if(ARRT[selType]&&fx.arr<minArr()){formErr(ARRERR);arrErr(ARRERR);return}
  var tr=!!TRIPT[selType],dy=dayById(day),ls=$("#f-leg"),idx=placeIndex(),slots=tr?[1,2]:[1];
  // No puede haber dos lugares con el mismo nombre y distinto enlace en la misma ciudad
  for(var si=0;si<slots.length;si++){
@@ -1486,7 +1491,9 @@ document.addEventListener("click",function(e){
  else if(a==="copy"){copyText(b.dataset.code)}
  else if(a==="close"){closeSheet()}
  else if(a==="file-del"){removeFormFile()}
- else if(a==="arr-up"||a==="arr-dn"){captureFx();fx.arr=Math.max(0,Math.min(3,fx.arr+(a==="arr-up"?1:-1)));fx.arrManual=true;refreshArr()}
+ else if(a==="arr-up"||a==="arr-dn"){captureFx();
+  if(a==="arr-dn"&&fx.arr<=minArr()){arrErr(fx.arr>0?ARRERR:"");return}   // atenuado: explica por qué
+  fx.arr=Math.max(0,Math.min(3,fx.arr+(a==="arr-up"?1:-1)));fx.arrManual=true;arrErr("");refreshArr()}
  else if(a==="t-clr"){var ti=document.getElementById(b.dataset.for);if(ti){ti.value="";ti.dispatchEvent(new Event("input",{bubbles:true}));ti.dispatchEvent(new Event("change",{bubbles:true}))}}
  else if(a==="type"){
   if(b.getAttribute("aria-disabled")==="true"){refreshTypes(b.dataset.type);return}
@@ -1568,7 +1575,7 @@ document.addEventListener("change",function(e){
 document.addEventListener("input",function(e){
  if(e.target.type==="time"){syncTimeClr(e.target);
   // traslado: la llegada pasa sola a +1 si es antes que la salida, y se recalculan las escalas
-  if(ARRT[selType]&&$("#f-timewrap")&&$("#f-timewrap").contains(e.target)){captureFx();if(!fx.arrManual)fx.arr=autoArr(fxDoc());refreshArr();refreshLays()}
+  if(ARRT[selType]&&$("#f-timewrap")&&$("#f-timewrap").contains(e.target)){captureFx();if(!fx.arrManual)fx.arr=autoArr(fxDoc());else fx.arr=Math.max(fx.arr,minArr());arrErr("");refreshArr();refreshLays()}
   return}
  if(e.target.id==="e-pass"||e.target.id==="e-pass2"){if(expFile)expReset();expUI();return}
  var el=e.target,n=el.dataset&&el.dataset.loc;if(!n)return;n=+n;

@@ -14,6 +14,14 @@ Reglas:
 
 ## 2026-11-06
 
+- Llegada: no se puede bajar de lo que dicen las horas (si llega antes de
+  salir, mínimo +1; con escalas, según el orden de las horas). En el mínimo
+  el − se ve atenuado y al tocarlo explica por qué; también se valida al
+  guardar.
+- En el formulario, las imágenes adjuntas salen como botón "Abrir …", igual
+  que los PDF (la miniatura ocupaba demasiado). En la ficha (modo vista) se
+  deja la miniatura, útil para ver el billete o el QR.
+
 - Quitar el archivo de un documento: una × dentro del recuadro del archivo
   (como la de las horas, sin sumar altura; primero se probó un botón debajo
   y se descartó por eso). Antes había que borrar el documento entero. Se

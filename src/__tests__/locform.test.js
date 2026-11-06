@@ -596,7 +596,7 @@ describe("formulario: ubicaciones", () => {
     $("#f-t1").value = "09:00"; $("#f-t1").dispatchEvent(new Event("input", { bubbles: true }));
     $("#f-t2").value = "13:00"; $("#f-t2").dispatchEvent(new Event("input", { bubbles: true }));
     expect($("#f-arr").textContent).toContain("mismo día");
-    expect($('[data-act="arr-dn"]').disabled).toBe(true);
+    expect($('[data-act="arr-dn"]').getAttribute("aria-disabled")).toBe("true");
     click($('[data-act="arr-up"]'));                               // a mano: +1
     expect($("#f-arr").textContent).toContain("+1");
     $("#f-t2").value = "14:00"; $("#f-t2").dispatchEvent(new Event("input", { bubbles: true }));
@@ -712,5 +712,24 @@ describe("formulario: ubicaciones", () => {
     click($('[data-act="close"]'));
     savedLinks();
     expect(find().textContent).not.toContain("entrada.pdf");
+  });
+
+  it("34) llegada antes que la salida: no deja bajar de +1 (el − atenuado explica por qué)", async () => {
+    openNew("2027-01-06", "vuelo");
+    const set = (id, v) => { $(id).value = v; $(id).dispatchEvent(new Event("input", { bubbles: true })); };
+    set("#f-t1", "18:00"); set("#f-t2", "11:00");
+    expect($("#f-arr").textContent).toContain("+1");
+    expect($('[data-act="arr-dn"]').getAttribute("aria-disabled")).toBe("true");
+    click($('[data-act="arr-dn"]'));
+    expect($("#f-arr").textContent).toContain("+1");                // sigue en +1
+    expect($("#f-arrerr").textContent).toContain("tiene que ser al día siguiente");
+    click($('[data-act="arr-up"]'));                                 // +2 sí se puede…
+    expect($("#f-arr").textContent).toContain("+2");
+    expect($("#f-arrerr").textContent).toBe("");
+    click($('[data-act="arr-dn"]'));                                 // …y volver a +1
+    expect($("#f-arr").textContent).toContain("+1");
+    set("#f-t2", "20:00");                                           // ahora llega después de salir: el mínimo baja a 0
+    expect($('[data-act="arr-dn"]').getAttribute("aria-disabled")).toBe(null);
+    click($('[data-act="close"]'));
   });
 });
