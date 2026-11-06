@@ -123,7 +123,8 @@ ul,ol{padding:0;list-style:none}
 .spin{width:16px;height:16px;flex:none;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .btn:disabled{opacity:.75}
-.kv p.busyline{display:flex;align-items:center;gap:10px;color:var(--ink)}  /* .kv p lo dejaba gris */
+.kv p.busyline{display:flex;align-items:center;gap:10px;color:var(--ink)}
+.kv p.busyline[hidden]{display:none}  /* .kv p lo dejaba gris */
 .kv p.warnline{background:var(--warn-bg);color:var(--warn-ink);padding:11px 14px;border-radius:14px}
 .kv p.warnline b{color:inherit}
 .lab{font:700 19px/1.2 var(--f);letter-spacing:-.02em;color:var(--ink);margin-bottom:12px}

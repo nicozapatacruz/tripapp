@@ -19,9 +19,14 @@ Reglas:
   estados, "Solo itinerario" los reemplaza, y una copia de 252 MB (con un PDF
   de 150 MB) se exporta e importa bien, aunque tarda.
 - Por eso, indicador de progreso (rueda + texto) en lo que tarda: "Leyendo
-  la copia…" al elegir el archivo, "Descifrando…", "Preparando 2 de 6…",
-  "Cifrando…" e "Importando 3 de 6…". Mientras importa, los otros botones
-  quedan desactivados.
+  la copia…" al elegir el archivo, "Descifrando…", "Cifrando…" e
+  "Importando…". El conteo ("Importando documentos · 3 de 6", "Preparando
+  documentos · 2 de 6") va en una línea encima de los botones, no dentro
+  del botón (no cabía). Sin barra ni modal, para no saturar. Mientras
+  importa, los otros botones quedan desactivados.
+- Compartir: el botón queda en "Compartiendo…" hasta que iOS termina de
+  guardar o enviar (con copias grandes tarda, y esa espera es de iOS: la app
+  no puede mostrar nada encima de su hoja), y luego sale el toast "Listo".
 - Compartir la copia ya no crea un archivo "texto" aparte: era el título que
   se pasaba a la hoja de compartir de iOS.
 

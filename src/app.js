@@ -983,7 +983,7 @@ function openExportSheet(){
  '<p id="e-desc">'+expDesc()+'</p>'+
  '<div class="field"><label for="e-pass" id="e-plab"></label><input id="e-pass" type="password" autocomplete="new-password"></div>'+
  '<div class="field"><label for="e-pass2" id="e-plab2"></label><input id="e-pass2" type="password" autocomplete="new-password"></div>'+
- '<p id="e-phint"></p><p class="err" id="x-err" role="alert"></p>'+
+ '<p id="e-phint"></p><p class="err" id="x-err" role="alert"></p><p class="busyline" id="x-prog" role="status" hidden></p>'+
  '<div class="actions" id="e-make"><button type="button" class="btn primary" data-act="exp-make" id="e-btn">Preparar copia</button></div>'+
  '<div id="e-out"></div></div>');
  expUI();
@@ -1013,6 +1013,8 @@ function expReset(){expFile=null;var o=$("#e-out");if(o)o.innerHTML="";var m=$("
 /* Botón ocupado: rueda + texto (con copias grandes, leer, cifrar o importar tarda) */
 function busy(b,txt){if(!b)return;b.disabled=true;b.innerHTML='<span class="spin" aria-hidden="true"></span>'+esc(txt)}
 function idle(b,txt){if(!b)return;b.disabled=false;b.textContent=txt}
+/* Línea de progreso encima de los botones ("Importando documentos · 3 de 6"); el botón solo dice "Importando…" */
+function progress(txt){var p=$("#x-prog");if(!p)return;p.hidden=!txt;if(txt)p.innerHTML='<span class="spin" aria-hidden="true"></span>'+esc(txt)}
 async function serializeDocs(onStep){
  var out=[];
  for(var i=0;i<docs.length;i++){if(onStep)onStep(i+1,docs.length);var d=Object.assign({},docs[i]);if(d.blob){d.data=await blobToDataURL(d.blob)}delete d.blob;out.push(d)}
@@ -1028,8 +1030,8 @@ async function makeExport(btn){
  var label=btn.textContent;busy(btn,"Preparando…");
  try{
   var kind=expKind;
-  var backup=buildBackup(kind,kv,kind==="full"?await serializeDocs(function(i,n){if(n>1)busy(btn,"Preparando "+i+" de "+n+"…")}):[]);
-  if(p1)busy(btn,"Cifrando…");
+  var backup=buildBackup(kind,kv,kind==="full"?await serializeDocs(function(i,n){if(n>1)progress("Preparando documentos · "+i+" de "+n)}):[]);
+  if(p1){busy(btn,"Cifrando…");progress("Cifrando la copia…")}
   var out=p1?await encryptBackup(backup,p1):backup;
   var name="journest-"+(kind==="full"?"copia":"itinerario")+(p1?"-cifrada":"")+"-"+todayStr()+".json";
   expFile=new File([JSON.stringify(out)],name,{type:"application/json"});
@@ -1039,7 +1041,7 @@ async function makeExport(btn){
    '<div class="actions"><button type="button" class="btn'+(canShare?"":" primary")+'" data-act="exp-dl">Descargar</button>'+(canShare?'<button type="button" class="btn primary" data-act="exp-share">Compartir</button>':"")+'</div>';
   var mk=$("#e-make");if(mk)mk.hidden=true;
  }catch(e){toast("No se pudo generar la copia")}
- idle(btn,label);
+ progress("");idle(btn,label);
 }
 function downloadFile(f){
  if(!f)return;
@@ -1052,7 +1054,10 @@ function shareExport(){
  if(!expFile)return;
  // Se llama directo desde el toque del botón (Safari exige un gesto del usuario para compartir).
  // Sin title ni text: iOS los guardaba como un archivo "texto" aparte junto a la copia.
- navigator.share({files:[expFile]}).catch(function(e){if(!e||e.name!=="AbortError")downloadFile(expFile)});
+ // Mientras iOS guarda o envía (con copias grandes tarda), el botón queda en "Compartiendo…".
+ var b=$('[data-act="exp-share"]'),label=b?b.textContent:"Compartir";
+ var p=navigator.share({files:[expFile]});busy(b,"Compartiendo…");
+ p.then(function(){idle(b,label);toast("Listo")},function(e){idle(b,label);if(!e||e.name!=="AbortError")downloadFile(expFile)});
 }
 
 /* ---- Importar ---- */
@@ -1090,7 +1095,7 @@ function openImportChoice(backup){
  '<div class="kv"><p>Esta copia tiene '+(nd?nd+(nd===1?" documento":" documentos"):"")+(nd&&hasItin?" y ":"")+(hasItin?"el itinerario (eventos, listas y estados)":"")+'.</p>'+
  (nd?'<p><b>Documentos:</b> se agregan a los que ya tienes. Si uno ya existe, se reemplaza por el de la copia.</p>':"")+
  (hasItin?'<p><b>Itinerario:</b> los eventos, listas y estados que estén en la copia reemplazan a los tuyos.</p>':"")+
- '<div class="actions">'+opts.map(function(o,i){return '<button type="button" class="btn'+(i===0?" primary":"")+'" data-act="imp-apply" data-v="'+o[0]+'">'+o[1]+'</button>'}).join("")+'</div></div>');
+ '<p class="busyline" id="x-prog" role="status" hidden></p><div class="actions">'+opts.map(function(o,i){return '<button type="button" class="btn'+(i===0?" primary":"")+'" data-act="imp-apply" data-v="'+o[0]+'">'+o[1]+'</button>'}).join("")+'</div></div>');
 }
 async function applyImport(mode,btn){
  if(!impBackup)return;
@@ -1098,11 +1103,11 @@ async function applyImport(mode,btn){
  all.forEach(function(x){x.disabled=true});busy(btn,"Importando…");
  try{
   var plan=importPlan(impBackup,mode);
-  for(var i=0;i<plan.docs.length;i++){if(plan.docs.length>1)busy(btn,"Importando "+(i+1)+" de "+plan.docs.length+"…");var d=Object.assign({},plan.docs[i]);if(d.data){d.blob=dataURLtoBlob(d.data);delete d.data}await saveDoc(d)}
+  for(var i=0;i<plan.docs.length;i++){if(plan.docs.length>1)progress("Importando documentos · "+(i+1)+" de "+plan.docs.length);var d=Object.assign({},plan.docs[i]);if(d.data){d.blob=dataURLtoBlob(d.data);delete d.data}await saveDoc(d)}
   var ks=Object.keys(plan.kv);for(var k=0;k<ks.length;k++)await setKV(ks[k],plan.kv[ks[k]]);
   impBackup=null;closeSheet();applyTheme();refresh();
   toast(plan.docs.length?"Importados "+plan.docs.length+(plan.docs.length===1?" documento":" documentos"):"Itinerario importado");
- }catch(e){all.forEach(function(x){x.disabled=false});idle(btn,label);toast("No se pudo importar la copia")}
+ }catch(e){all.forEach(function(x){x.disabled=false});progress("");idle(btn,label);toast("No se pudo importar la copia")}
 }
 
 /* ================= Navegación ================= */
