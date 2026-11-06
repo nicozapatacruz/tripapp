@@ -18,17 +18,6 @@ Antes de seguir con las fases 2 y 3, Nicolas quiere pulir la app.
       pide hotel; si llega el mismo día, se pide hotel (hoy el 27 dic está
       fijo como noche en el avión).
 
-## Fase 2 · Copia protegida (en pausa)
-
-Implementada (ver bitácora). Pausada el 5 nov hasta terminar los detalles.
-Falta probar en el iPhone, con la app instalada:
-- [ ] Exportar copia completa con contraseña → "Guardar en Archivos" en
-      iCloud Drive.
-- [ ] Importarla de vuelta: contraseña incorrecta avisa; la correcta abre.
-- [ ] "Solo documentos" no cambia eventos/listas/estados.
-- [ ] Exportar "Solo itinerario" e importarlo en otro teléfono.
-- [ ] Copia grande (varios PDFs): que no se cuelgue al cifrar.
-
 ## Fase 3 · Compartir con Supabase (en pausa; idea original: 20 nov – 15 dic)
 
 - [ ] Esquema aparte dentro del proyecto de Supabase actual (ver cómo está

@@ -1010,9 +1010,12 @@ function expKindChanged(b){
 }
 /* Si cambia el tipo o la contraseña, la copia preparada ya no vale: se vuelve a "Preparar copia" */
 function expReset(){expFile=null;var o=$("#e-out");if(o)o.innerHTML="";var m=$("#e-make");if(m)m.hidden=false}
-async function serializeDocs(){
+/* Botón ocupado: rueda + texto (con copias grandes, leer, cifrar o importar tarda) */
+function busy(b,txt){if(!b)return;b.disabled=true;b.innerHTML='<span class="spin" aria-hidden="true"></span>'+esc(txt)}
+function idle(b,txt){if(!b)return;b.disabled=false;b.textContent=txt}
+async function serializeDocs(onStep){
  var out=[];
- for(var i=0;i<docs.length;i++){var d=Object.assign({},docs[i]);if(d.blob){d.data=await blobToDataURL(d.blob)}delete d.blob;out.push(d)}
+ for(var i=0;i<docs.length;i++){if(onStep)onStep(i+1,docs.length);var d=Object.assign({},docs[i]);if(d.blob){d.data=await blobToDataURL(d.blob)}delete d.blob;out.push(d)}
  return out;
 }
 async function makeExport(btn){
@@ -1022,10 +1025,11 @@ async function makeExport(btn){
  if(p1&&p1.length<MIN_PASS){err("Usa al menos "+MIN_PASS+" caracteres.");return}
  if(p1!==p2){err("Las contraseñas no coinciden.");return}
  if(p1&&!cryptoAvailable()){err("Este navegador no permite cifrar.");return}
- var label=btn.textContent;btn.disabled=true;btn.textContent=p1?"Cifrando...":"Preparando...";
+ var label=btn.textContent;busy(btn,"Preparando…");
  try{
   var kind=expKind;
-  var backup=buildBackup(kind,kv,kind==="full"?await serializeDocs():[]);
+  var backup=buildBackup(kind,kv,kind==="full"?await serializeDocs(function(i,n){if(n>1)busy(btn,"Preparando "+i+" de "+n+"…")}):[]);
+  if(p1)busy(btn,"Cifrando…");
   var out=p1?await encryptBackup(backup,p1):backup;
   var name="journest-"+(kind==="full"?"copia":"itinerario")+(p1?"-cifrada":"")+"-"+todayStr()+".json";
   expFile=new File([JSON.stringify(out)],name,{type:"application/json"});
@@ -1035,7 +1039,7 @@ async function makeExport(btn){
    '<div class="actions"><button type="button" class="btn'+(canShare?"":" primary")+'" data-act="exp-dl">Descargar</button>'+(canShare?'<button type="button" class="btn primary" data-act="exp-share">Compartir</button>':"")+'</div>';
   var mk=$("#e-make");if(mk)mk.hidden=true;
  }catch(e){toast("No se pudo generar la copia")}
- btn.disabled=false;btn.textContent=label;
+ idle(btn,label);
 }
 function downloadFile(f){
  if(!f)return;
@@ -1046,14 +1050,17 @@ function downloadFile(f){
 }
 function shareExport(){
  if(!expFile)return;
- // Se llama directo desde el toque del botón (Safari exige un gesto del usuario para compartir)
- navigator.share({files:[expFile],title:"Copia de Journest"}).catch(function(e){if(!e||e.name!=="AbortError")downloadFile(expFile)});
+ // Se llama directo desde el toque del botón (Safari exige un gesto del usuario para compartir).
+ // Sin title ni text: iOS los guardaba como un archivo "texto" aparte junto a la copia.
+ navigator.share({files:[expFile]}).catch(function(e){if(!e||e.name!=="AbortError")downloadFile(expFile)});
 }
 
 /* ---- Importar ---- */
 async function importBackup(file){
+ openSheet('<div class="sh-head"><h2 id="sh-title">Importar copia</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
+  '<div class="kv"><p class="busyline"><span class="spin" aria-hidden="true"></span>Leyendo la copia'+(file.size>20e6?" ("+fmtSize(file.size)+"). Puede tardar un poco.":"…")+'</p></div>');
  var parsed;
- try{parsed=parseBackupText(await file.text())}catch(e){toast("El archivo no es una copia válida");return}
+ try{parsed=parseBackupText(await file.text())}catch(e){closeSheet();toast("El archivo no es una copia válida");return}
  if(parsed.encrypted)openPassSheet(parsed.wrapper);else openImportChoice(parsed.backup);
 }
 function openPassSheet(wrapper){
@@ -1066,10 +1073,10 @@ function openPassSheet(wrapper){
 async function unlockImport(btn){
  if(!impWrapper)return;
  if(!cryptoAvailable()){toast("Este navegador no permite descifrar");return}
- var label=btn.textContent;btn.disabled=true;btn.textContent="Abriendo...";
+ var label=btn.textContent;busy(btn,"Descifrando…");
  try{var bk=await decryptBackup(impWrapper,$("#i-pass").value);impWrapper=null;openImportChoice(bk);return}
  catch(e){toast(e instanceof WrongPasswordError?"Contraseña incorrecta":"El archivo no es una copia válida")}
- btn.disabled=false;btn.textContent=label;
+ idle(btn,label);
 }
 function openImportChoice(backup){
  impBackup=backup;
@@ -1087,14 +1094,15 @@ function openImportChoice(backup){
 }
 async function applyImport(mode,btn){
  if(!impBackup)return;
- btn.disabled=true;
+ var label=btn.textContent,all=sheetBody.querySelectorAll("[data-act=imp-apply]");
+ all.forEach(function(x){x.disabled=true});busy(btn,"Importando…");
  try{
   var plan=importPlan(impBackup,mode);
-  for(var i=0;i<plan.docs.length;i++){var d=Object.assign({},plan.docs[i]);if(d.data){d.blob=dataURLtoBlob(d.data);delete d.data}await saveDoc(d)}
+  for(var i=0;i<plan.docs.length;i++){if(plan.docs.length>1)busy(btn,"Importando "+(i+1)+" de "+plan.docs.length+"…");var d=Object.assign({},plan.docs[i]);if(d.data){d.blob=dataURLtoBlob(d.data);delete d.data}await saveDoc(d)}
   var ks=Object.keys(plan.kv);for(var k=0;k<ks.length;k++)await setKV(ks[k],plan.kv[ks[k]]);
   impBackup=null;closeSheet();applyTheme();refresh();
   toast(plan.docs.length?"Importados "+plan.docs.length+(plan.docs.length===1?" documento":" documentos"):"Itinerario importado");
- }catch(e){btn.disabled=false;toast("No se pudo importar la copia")}
+ }catch(e){all.forEach(function(x){x.disabled=false});idle(btn,label);toast("No se pudo importar la copia")}
 }
 
 /* ================= Navegación ================= */

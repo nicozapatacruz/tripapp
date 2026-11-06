@@ -14,6 +14,17 @@ Reglas:
 
 ## 2026-11-06
 
+- Fase 2 probada (iPhone → iPad): copia completa cifrada (contraseña
+  incorrecta avisa, la correcta abre), "Solo documentos" no toca eventos ni
+  estados, "Solo itinerario" los reemplaza, y una copia de 252 MB (con un PDF
+  de 150 MB) se exporta e importa bien, aunque tarda.
+- Por eso, indicador de progreso (rueda + texto) en lo que tarda: "Leyendo
+  la copia…" al elegir el archivo, "Descifrando…", "Preparando 2 de 6…",
+  "Cifrando…" e "Importando 3 de 6…". Mientras importa, los otros botones
+  quedan desactivados.
+- Compartir la copia ya no crea un archivo "texto" aparte: era el título que
+  se pasaba a la hoja de compartir de iOS.
+
 - Los errores de la hoja de exportar salen en rojo (un estilo de `.kv p` los
   dejaba grises). La × de las horas, sin fondo.
 
