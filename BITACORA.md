@@ -14,6 +14,13 @@ Reglas:
 
 ## 2026-11-06
 
+- Visor de imágenes propio: las imágenes adjuntas (desde la miniatura de la
+  ficha o "Abrir" en edición) se abren a pantalla completa sobre negro,
+  ajustadas a la pantalla, con pellizcar para zoom, arrastrar, doble toque
+  (ajustada ↔ 2,5×), ✕ y Compartir (guardar en Fotos, enviar). Antes se
+  abrían como enlace: con la URL arriba y a tamaño real, sin poder alejar.
+  Los PDF siguen con el visor de iOS (pasa páginas y hace zoom bien).
+
 - Llegada: no se puede bajar de lo que dicen las horas (si llega antes de
   salir, mínimo +1; con escalas, según el orden de las horas). En el mínimo
   el − se ve atenuado y al tocarlo explica por qué; también se valida al

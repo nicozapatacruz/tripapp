@@ -732,4 +732,32 @@ describe("formulario: ubicaciones", () => {
     expect($('[data-act="arr-dn"]').getAttribute("aria-disabled")).toBe(null);
     click($('[data-act="close"]'));
   });
+
+  it("35) imágenes: se abren en el visor propio (desde la ficha y desde Abrir en edición); los PDF siguen como enlace", async () => {
+    URL.createObjectURL = URL.createObjectURL || (() => "blob:x");
+    openNew(DEC31, "entrada");
+    $("#f-title").value = "Con foto";
+    const f = new File([new Uint8Array(10)], "qr.png", { type: "image/png" });
+    Object.defineProperty($("#f-file"), "files", { value: [f], configurable: true });
+    $("#f-file").dispatchEvent(new Event("change", { bubbles: true }));
+    await save();
+    savedLinks();
+    const tk = [...document.querySelectorAll("#v-docs .ticket")].find((t) => t.textContent.includes("Con foto"));
+    click(tk.querySelector('[data-act="view"]'));
+    click($('.vthumb[data-act="img-view"]'));
+    expect($("#viewer")).not.toBeNull();
+    expect($("#vw-img").getAttribute("alt")).toBe("qr.png");
+    click($('[data-act="vw-close"]'));
+    expect($("#viewer")).toBeNull();
+    click($('[data-act="edit"]'));
+    const open = $('#f-prev [data-act="img-view"]');
+    expect(open.textContent).toContain("Abrir qr.png");
+    click(open);
+    expect($("#viewer")).not.toBeNull();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect($("#viewer")).toBeNull();
+    expect($("#sheet").hidden).toBe(false);                        // Escape cierra solo el visor
+    click($(".sh-head .x"));
+    click($('[data-act="close"]'));
+  });
 });

@@ -898,7 +898,7 @@ function openDocSheet(o){
  syncFxShape();
  var types=Object.keys(TYPES).map(function(k){return '<button type="button" class="ty" role="radio" data-act="type" data-type="'+k+'" aria-checked="'+(k===selType)+'" aria-disabled="'+!typeOk(k,dayId)+'" style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],22)+TYPES[k].l+'</button>'}).join("")+'<p class="tynote" id="f-tynote"'+(typeOk(selType,dayId)?" hidden":"")+'>'+esc(typeNote(selType,dayId))+'</p><p class="dupnote" id="f-dupnote"'+(dupTicketText(selType,dayId)?"":" hidden")+'>'+esc(dupTicketText(selType,dayId))+'</p>';
  var prev="";fileDel=false;
- if(d&&d.blob){var u=objUrl(d);prev='<a class="btn" href="'+u+'" target="_blank" rel="noopener">'+svg("file",18)+'Abrir '+esc(d.fileName||"archivo")+'</a>'}   // también imágenes: la miniatura ocupaba demasiado
+ if(d&&d.blob)prev=fileBtn(d);   // también imágenes: la miniatura ocupaba demasiado
  openSheet('<div class="sh-head"><h2 id="sh-title">'+(d?"Editar documento":"Nuevo documento")+'</h2>'+(d?'<button type="button" class="x" data-act="view" data-id="'+d.id+'">Cancelar</button>':'<button type="button" class="x" data-act="close">Cancelar</button>')+'</div>'+
  '<div class="field"><span class="fl">Archivo (PDF o foto)</span><div class="dropwrap"><label class="drop" for="f-file">'+svg("clip",22)+'<span id="f-name">'+(d&&d.fileName?esc(d.fileName):"Elegir archivo")+'<small>'+(d&&d.fileName?"Toca para reemplazarlo":"PDF del billete, la reserva o una captura")+'</small></span></label><button type="button" class="tclr fdel" data-act="file-del" id="f-filedel" aria-label="Quitar archivo"'+(d&&d.blob?"":" hidden")+'>'+svg("xmark",18)+'</button></div><input id="f-file" type="file" accept="application/pdf,image/*" hidden><p class="tynote" id="f-bignote" hidden></p></div><div id="f-prev">'+prev+'</div>'+
  '<div class="field"><span class="fl">Tipo'+REQ+'</span><div class="types" role="radiogroup" aria-label="Tipo de documento">'+types+'</div></div>'+
@@ -914,6 +914,63 @@ function openDocSheet(o){
  '<div class="field"><label for="f-note">Nota</label><textarea id="f-note" placeholder="Hora, dirección, andén...">'+esc(d?d.note:"")+'</textarea></div>'+
  '',
  '<p class="err" id="f-err" role="alert"></p><div class="actions">'+(d?'<button type="button" class="btn danger" data-act="delete">Eliminar</button>':"")+'<button type="button" class="btn primary" style="--c1:var(--accent)" data-act="save">Guardar</button></div>');
+}
+/* Abrir el archivo: las imágenes en el visor propio; los PDF con el visor de iOS (pasa páginas y hace zoom bien) */
+function isImg(d){return (d.mime||"").indexOf("image/")===0}
+function fileBtn(d){
+ var lab=svg("file",18)+'Abrir '+esc(d.fileName||"archivo");
+ return isImg(d)?'<button type="button" class="btn" data-act="img-view" data-id="'+d.id+'">'+lab+'</button>':'<a class="btn" href="'+objUrl(d)+'" target="_blank" rel="noopener">'+lab+'</a>';
+}
+/* ---- Visor de imágenes: ajustada a la pantalla, pellizcar para zoom, arrastrar, doble toque ----
+   Abrirla como enlace mostraba la URL y la imagen a tamaño real, sin poder alejar. */
+var vw=null;
+function openViewer(d){
+ if(!d||!d.blob)return;closeViewer();
+ var canShare=false;try{canShare=!!(navigator.canShare&&navigator.share&&navigator.canShare({files:[new File([d.blob],d.fileName||"imagen",{type:d.mime||"image/png"})]}))}catch(e){}
+ var el=document.createElement("div");el.className="viewer";el.id="viewer";el.setAttribute("role","dialog");el.setAttribute("aria-label",d.fileName||"Imagen");
+ el.innerHTML='<div class="vwbar"><button type="button" class="vwbtn" data-act="vw-close" aria-label="Cerrar">'+svg("xmark",22)+'</button>'+(canShare?'<button type="button" class="vwbtn txt" data-act="vw-share" data-id="'+d.id+'">Compartir</button>':"")+'</div><div class="vwstage"><img id="vw-img" src="'+objUrl(d)+'" alt="'+esc(d.fileName||"Imagen")+'" draggable="false"></div>';
+ document.body.appendChild(el);
+ vw={el:el,img:el.querySelector("img"),stage:el.querySelector(".vwstage"),s:1,x:0,y:0,ov:document.documentElement.style.overflow};
+ document.documentElement.style.overflow="hidden";
+ vwBind();
+}
+function closeViewer(){if(!vw)return;vw.el.remove();document.documentElement.style.overflow=vw.ov;vw=null}
+function vwApply(anim){
+ // tamaño sin zoom (offsetWidth no cambia con transform): la imagen no se puede arrastrar fuera de la pantalla
+ var W=vw.stage.clientWidth,H=vw.stage.clientHeight,w=vw.img.offsetWidth,h=vw.img.offsetHeight,mx=Math.max(0,(w*vw.s-W)/2),my=Math.max(0,(h*vw.s-H)/2);
+ vw.x=Math.max(-mx,Math.min(mx,vw.x));vw.y=Math.max(-my,Math.min(my,vw.y));
+ vw.img.style.transition=anim?"transform .2s ease":"none";
+ vw.img.style.transform="translate("+vw.x+"px,"+vw.y+"px) scale("+vw.s+")";
+}
+function vwBind(){
+ var st=vw.stage,t0=null,lastTap=0;
+ function dist(a,b){return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)}
+ function mid(a,b){return {x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2}}
+ st.addEventListener("touchstart",function(e){
+  var t=e.touches;
+  if(t.length===2)t0={d:dist(t[0],t[1]),m:mid(t[0],t[1]),s:vw.s,x:vw.x,y:vw.y};
+  else if(t.length===1){
+   var now=Date.now();
+   if(now-lastTap<300){   // doble toque: ajustada ↔ 2,5×, centrado donde se tocó
+    var r=st.getBoundingClientRect(),cx=t[0].clientX-r.left-r.width/2,cy=t[0].clientY-r.top-r.height/2;
+    if(vw.s>1){vw.s=1;vw.x=0;vw.y=0}else{vw.s=2.5;vw.x=-cx*1.5;vw.y=-cy*1.5}
+    vwApply(true);lastTap=0;t0=null;e.preventDefault();return;
+   }
+   lastTap=now;t0={p:{x:t[0].clientX,y:t[0].clientY},x:vw.x,y:vw.y};
+  }
+ },{passive:false});
+ st.addEventListener("touchmove",function(e){
+  e.preventDefault();var t=e.touches;if(!t0)return;
+  if(t.length===2&&t0.d){var m=mid(t[0],t[1]);vw.s=Math.max(1,Math.min(5,t0.s*dist(t[0],t[1])/t0.d));vw.x=t0.x+(m.x-t0.m.x);vw.y=t0.y+(m.y-t0.m.y);vwApply(false)}
+  else if(t.length===1&&t0.p&&vw.s>1){vw.x=t0.x+(t[0].clientX-t0.p.x);vw.y=t0.y+(t[0].clientY-t0.p.y);vwApply(false)}
+ },{passive:false});
+ st.addEventListener("touchend",function(e){if(!e.touches.length){t0=null;if(vw&&vw.s<1.05){vw.s=1;vw.x=0;vw.y=0;vwApply(true)}}else if(e.touches.length===1)t0={p:{x:e.touches[0].clientX,y:e.touches[0].clientY},x:vw.x,y:vw.y}});
+ // en computador: rueda para zoom
+ st.addEventListener("wheel",function(e){e.preventDefault();vw.s=Math.max(1,Math.min(5,vw.s*(e.deltaY<0?1.15:1/1.15)));if(vw.s===1){vw.x=0;vw.y=0}vwApply(false)},{passive:false});
+}
+function shareImage(id){
+ var d=docs.filter(function(x){return x.id===id})[0];if(!d||!d.blob)return;
+ navigator.share({files:[new File([d.blob],d.fileName||"imagen",{type:d.mime||"image/png"})]}).catch(function(){});
 }
 /* ================= Ficha de solo lectura (documento) ================= */
 function vField(l,h){return '<div class="field"><span class="fl">'+l+'</span>'+h+'</div>'}
@@ -952,7 +1009,7 @@ function openDocView(id){
  if(d.code)h+=vField("Código de reserva",'<div class="tcode big"><code>'+esc(d.code)+'</code><button type="button" class="cp" data-act="copy" data-code="'+esc(d.code)+'" aria-label="Copiar código">'+svg("copy",18)+'</button></div>');
  if(d.price!=null)h+=vField("Precio",priceHTML(d));
  if(!tr)h+=locsHTML(d);
- if(d.blob){var u=objUrl(d);h+=vField("Archivo",(d.mime||"").indexOf("image/")===0?'<a href="'+u+'" target="_blank" rel="noopener"><img class="prev" src="'+u+'" alt="'+esc(d.fileName||"Imagen")+'"></a>':'<a class="btn" href="'+u+'" target="_blank" rel="noopener">'+svg("file",18)+'Abrir '+esc(d.fileName||"archivo")+'</a>')}
+ if(d.blob){var u=objUrl(d);h+=vField("Archivo",isImg(d)?'<button type="button" class="vthumb" data-act="img-view" data-id="'+d.id+'" aria-label="Ver '+esc(d.fileName||"imagen")+'"><img class="prev" src="'+u+'" alt=""></button>':fileBtn(d))}
  if(d.note)h+=vField("Nota",'<p class="vtxt">'+esc(d.note)+'</p>');
  if(d.calHide)h+='<p class="vhide">'+svg("cal",16)+'Oculto del calendario</p>';
  openSheet('<div class="sh-head"><h2 id="sh-title">'+esc(d.title||T.l)+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+h,
@@ -1490,6 +1547,9 @@ document.addEventListener("click",function(e){
  else if(a==="edit"){openDocSheet({id:b.dataset.id})}
  else if(a==="copy"){copyText(b.dataset.code)}
  else if(a==="close"){closeSheet()}
+ else if(a==="img-view"){openViewer(docs.filter(function(x){return x.id===b.dataset.id})[0])}
+ else if(a==="vw-close"){closeViewer()}
+ else if(a==="vw-share"){shareImage(b.dataset.id)}
  else if(a==="file-del"){removeFormFile()}
  else if(a==="arr-up"||a==="arr-dn"){captureFx();
   if(a==="arr-dn"&&fx.arr<=minArr()){arrErr(fx.arr>0?ARRERR:"");return}   // atenuado: explica por qué
@@ -1597,7 +1657,7 @@ document.addEventListener("input",function(e){
  autoLeg();
  refreshLocStat(n);
 });
-document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!sheet.hidden)closeSheet()});
+document.addEventListener("keydown",function(e){if(e.key!=="Escape")return;if(vw){closeViewer();return}if(!sheet.hidden)closeSheet()});
 window.addEventListener("hashchange",route);
 // Es una app: sin zoom con dos dedos. iOS ignora user-scalable=no del viewport, así que se frena el gesto.
 ["gesturestart","gesturechange"].forEach(function(t){document.addEventListener(t,function(e){e.preventDefault()},{passive:false})});

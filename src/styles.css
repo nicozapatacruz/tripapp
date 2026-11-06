@@ -417,3 +417,12 @@ button.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-co
 .fabspace{height:72px}
 @media (prefers-reduced-motion:reduce){.fab,.fab span{transition:none}}
 .ver{font-size:12.5px;color:var(--muted);font-family:var(--f-mono)}
+
+/* Visor de imágenes */
+.viewer{position:fixed;inset:0;z-index:90;background:#000;display:flex;flex-direction:column}
+.vwbar{flex:none;display:flex;justify-content:space-between;align-items:center;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px}
+.vwbtn{min-width:44px;height:44px;border-radius:99px;border:0;background:rgba(255,255,255,.14);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:650 15px var(--f)}
+.vwbtn.txt{padding:0 16px}
+.vwstage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;padding-bottom:env(safe-area-inset-bottom,0px)}
+.vwstage img{max-width:100%;max-height:100%;object-fit:contain;transform-origin:center;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.vthumb{display:block;padding:0;border:0;background:none;align-self:flex-start}
