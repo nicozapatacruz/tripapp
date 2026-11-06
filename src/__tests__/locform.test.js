@@ -186,25 +186,29 @@ describe("formulario: ubicaciones", () => {
     click($('[data-act="close"]'));
   });
 
-  it("11) el 27 (noche en el avión) no deja hotel: sale deshabilitado y se elige el primer tipo disponible", () => {
-    openNew("2026-12-27", "hotel");
-    expect($("#f-day").value).toBe("2026-12-27");                 // no se cambia el día
+  it("11) el 27 ya no es noche en el avión fija: sin billete pide hotel; con llegada +1 no", async () => {
+    const D27 = "2026-12-27";
+    openNew(D27, "hotel");
+    expect($('.ty[data-type="hotel"]').getAttribute("aria-disabled")).toBe("false");
+    expect($('.ty[aria-checked="true"]').dataset.type).toBe("hotel");
+    click($('[data-act="close"]'));
+    // vuelo del 27 que sale a las 18:00 y llega a las 11:00 → +1 solo
+    openNew(D27, "vuelo");
+    $("#f-t1").value = "18:00"; $("#f-t1").dispatchEvent(new Event("input", { bubbles: true }));
+    $("#f-t2").value = "11:00"; $("#f-t2").dispatchEvent(new Event("input", { bubbles: true }));
+    expect($("#f-arr").textContent).toContain("+1");
+    expect($("#f-arr").textContent).toContain("lun 28 dic");
+    await save();
+    openNew(D27, "hotel");
     expect($('.ty[data-type="hotel"]').getAttribute("aria-disabled")).toBe("true");
     expect($('.ty[aria-checked="true"]').dataset.type).not.toBe("hotel");
-    expect($("#f-tynote").hidden).toBe(true);
-    click($('.ty[data-type="hotel"]'));                            // tocarlo explica por qué
-    expect($("#f-tynote").hidden).toBe(false);
+    click($('.ty[data-type="hotel"]'));
     expect($("#f-tynote").textContent).toContain("es en el avión");
     click($('[data-act="close"]'));
-    // «Añadir documento» del día 27 (sin tipo): no abre en Hotel ni cambia el día
-    const ad = document.createElement("button");
-    ad.dataset.act = "add"; ad.dataset.day = "2026-12-27";
-    document.body.appendChild(ad); click(ad); ad.remove();
-    expect($("#f-day").value).toBe("2026-12-27");
-    expect($('.ty[aria-checked="true"]').getAttribute("aria-disabled")).toBe("false");
-    expect($('.ty[aria-checked="true"]').dataset.type).not.toBe("hotel");
-    click($('[data-act="close"]'));
-    // en Madrid (28) sí: el hotel sigue siendo el tipo por defecto y sugiere las noches de Madrid
+    location.hash = "#inicio";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect($("#d-" + D27).textContent).toContain("Noche en el avión");
+    // en Madrid (28) el hotel sigue por defecto y sugiere las noches de Madrid
     openNew("2026-12-28", "hotel");
     expect($('.ty[aria-checked="true"]').dataset.type).toBe("hotel");
     expect($("#f-to").options.length).toBe(3);
@@ -212,13 +216,22 @@ describe("formulario: ubicaciones", () => {
   });
 
 
-  it("12) el ejemplo del título cambia con el tipo", () => {
+
+  it("12) el ejemplo del título cambia con el tipo; en traslados hay Compañía y número en vez de Título", () => {
     openNew(DEC31, "hotel");
     expect($("#f-title").placeholder).toContain("Hotel");
     click($('.ty[data-type="tren"]'));
-    expect($("#f-title").placeholder).toContain("AVE");
+    expect($("#f-title")).toBeNull();
+    expect($("#f-co").placeholder).toContain("Renfe");
+    expect($("#f-no")).not.toBeNull();
+    click($('.ty[data-type="coche"]'));
+    expect($("#f-co").placeholder).toContain("Hertz");
+    expect($("#f-no")).toBeNull();                                 // el coche no lleva número
+    click($('.ty[data-type="entrada"]'));
+    expect($("#f-title")).not.toBeNull();
     click($('[data-act="close"]'));
   });
+
 
   it("13) se puede guardar solo con tipo y día: el título es el tipo", async () => {
     openNew(TENERIFE, "seguro");
@@ -247,7 +260,8 @@ describe("formulario: ubicaciones", () => {
     click($('[data-act="leg-via-add"]'));
     for (let i = 0; i < 5; i++) await tick();
     const o = [...$("#f-leg").options].map((x) => x.textContent);
-    expect(o).toEqual(["Sin asignar", "Tenerife → Bilbao", "Bilbao → Pamplona"]);
+    expect(o).toEqual(["Sin asignar", "Tenerife → Pamplona · vía Bilbao", "Tenerife → Bilbao", "Bilbao → Pamplona"]);
+    expect($("#f-leg").value).toBe("0-0-1");                    // por defecto, un billete para todo
     // y se puede quitar desde el mismo formulario
     const del = $('[data-act="leg-via-del"][data-k="0"]');
     click(del);                                  // primer toque: pide confirmar
@@ -324,7 +338,7 @@ describe("formulario: ubicaciones", () => {
     const JAN6 = "2027-01-06";
     openNew(JAN6, "vuelo");
     expect($("#f-dupnote").hidden).toBe(true);
-    $("#f-title").value = "Vuelo Ana";
+    $("#f-co").value = "Iberia";
     await save();
     openNew(JAN6, "vuelo");
     expect($("#f-dupnote").hidden).toBe(false);
@@ -332,7 +346,7 @@ describe("formulario: ubicaciones", () => {
     click($('.ty[data-type="coche"]'));
     expect($("#f-dupnote").hidden).toBe(true);
     click($('.ty[data-type="vuelo"]'));
-    $("#f-title").value = "Vuelo Nico";
+    $("#f-co").value = "Vueling";
     await save();
     expect($("#sheet").hidden).toBe(true);
   });
@@ -572,5 +586,131 @@ describe("formulario: ubicaciones", () => {
     input.dispatchEvent(new Event("change", { bubbles: true }));
     expect($("#f-bignote").hidden).toBe(true);
     click($('[data-act="close"]'));
+  });
+
+  it("30) vuelo: compañía y número → título automático; llegada +1 a mano con − / +", async () => {
+    const JAN10 = "2027-01-10";
+    openNew(JAN10, "vuelo");
+    $("#f-co").value = "Iberia";
+    $("#f-no").value = "IB3801";
+    $("#f-t1").value = "09:00"; $("#f-t1").dispatchEvent(new Event("input", { bubbles: true }));
+    $("#f-t2").value = "13:00"; $("#f-t2").dispatchEvent(new Event("input", { bubbles: true }));
+    expect($("#f-arr").textContent).toContain("mismo día");
+    expect($('[data-act="arr-dn"]').disabled).toBe(true);
+    click($('[data-act="arr-up"]'));                               // a mano: +1
+    expect($("#f-arr").textContent).toContain("+1");
+    $("#f-t2").value = "14:00"; $("#f-t2").dispatchEvent(new Event("input", { bubbles: true }));
+    expect($("#f-arr").textContent).toContain("+1");               // lo puesto a mano se respeta
+    await save();
+    savedLinks();
+    const tk = [...document.querySelectorAll("#v-docs .ticket")].find((t) => t.textContent.includes("Iberia · Tenerife → Pamplona"));
+    expect(tk.textContent).toContain("IB3801");
+    expect(tk.textContent).toContain("09:00–14:00 +1");
+    click(tk.querySelector('[data-act="view"]'));
+    expect($("#sheet-body").textContent).toContain("14:00 +1");
+    expect($("#sheet-body").textContent).toContain("lun 11 ene");
+    click($('[data-act="edit"]'));
+    expect($("#f-arr").textContent).toContain("+1");
+    click($('[data-act="arr-dn"]'));                               // vuelve al mismo día
+    await save();
+    click($('[data-act="close"]'));
+  });
+
+  it("31) un billete con escala: horarios por tramo, duración de la escala y cubre los dos tramos", async () => {
+    const JAN15 = "2027-01-15";                                     // Pamplona → Madrid
+    openNew(JAN15, "tren");
+    click($('[data-act="leg-via-open"]'));
+    $("#f-via").value = "Zaragoza";
+    click($('[data-act="leg-via-add"]'));
+    for (let i = 0; i < 5; i++) await tick();
+    expect($("#f-leg").value).toBe("0-0-1");
+    expect($("#f-no")).toBeNull();                                  // con escalas, el número va por tramo
+    const set = (id, v) => { $(id).value = v; $(id).dispatchEvent(new Event("input", { bubbles: true })); };
+    $("#f-co").value = "Renfe";
+    $("#f-h0-no").value = "ALV1"; set("#f-h0-t1", "06:00"); set("#f-h0-t2", "07:05");
+    $("#f-h1-no").value = "AVE2"; set("#f-h1-t1", "10:00"); set("#f-h1-t2", "11:30");
+    expect($("#f-lay0").textContent).toContain("Escala en Zaragoza · 2 h 55 min");
+    expect($("#f-arr").textContent).toContain("mismo día");
+    await save();
+    // no pide otro billete para ningún tramo
+    location.hash = "#documentos";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    click($('[data-act="dtab"][data-v="pend"]'));
+    expect($("#v-docs").textContent).not.toContain("Zaragoza");
+    click($('[data-act="dtab"][data-v="docs"]'));
+    const tk = [...document.querySelectorAll("#v-docs .ticket")].find((t) => t.textContent.includes("Renfe · Pamplona → Madrid"));
+    expect(tk.textContent).toContain("ALV1 · AVE2");
+    expect(tk.textContent).toContain("escala 2 h 55 min en Zaragoza");
+    click(tk.querySelector('[data-act="view"]'));
+    expect($("#sheet-body").textContent).toContain("Escala en Zaragoza · 2 h 55 min");
+    // escala nocturna larga: llega a las 22:00 y sigue a las 08:00 → +1 y «noche de escala» (hotel permitido)
+    click($('[data-act="edit"]'));
+    set("#f-h0-t2", "22:00"); set("#f-h1-t1", "08:00"); set("#f-h1-t2", "09:30");
+    expect($("#f-lay0").textContent).toContain("10 h");
+    expect($("#f-lay0").textContent).toContain("nocturna");
+    expect($("#f-arr").textContent).toContain("+1");
+    await save();
+    expect($("#sheet-body").textContent).toContain("Escala nocturna de 10 h en Zaragoza");
+    click($('[data-act="close"]'));
+    location.hash = "#inicio";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect($("#d-" + JAN15).textContent).toContain("Noche de escala en Zaragoza");
+    openNew(JAN15, "hotel");
+    expect($('.ty[data-type="hotel"]').getAttribute("aria-disabled")).toBe("false");
+    click($('[data-act="close"]'));
+  });
+
+  it("32) quitar la parada de un billete con escala lo deja como billete de un tramo, sin perder la cobertura", async () => {
+    const JAN15 = "2027-01-15";
+    openNew(JAN15, "tren");
+    const del = $('[data-act="leg-via-del"][data-k="0"]');
+    click(del); click(del);
+    for (let i = 0; i < 5; i++) await tick();
+    click($('[data-act="close"]'));
+    location.hash = "#documentos";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const tk = [...document.querySelectorAll("#v-docs .ticket")].find((t) => t.textContent.includes("Renfe · Pamplona → Madrid"));
+    expect(tk.textContent).not.toContain("escala");
+    expect(tk.textContent).toContain("ALV1");                       // conserva el primer número
+    click($('[data-act="dtab"][data-v="pend"]'));
+    expect($("#v-docs").textContent).not.toContain("Pamplona → Madrid");
+    click($('[data-act="dtab"][data-v="docs"]'));
+    location.hash = "#inicio";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect($("#d-" + JAN15).textContent).toContain("Noche en el avión"); // sigue llegando +1, ya sin escala
+  });
+
+  it("33) «Quitar archivo»: se quita al guardar; Cancelar lo deshace", async () => {
+    URL.createObjectURL = URL.createObjectURL || (() => "blob:x");
+    URL.revokeObjectURL = URL.revokeObjectURL || (() => {});
+    openNew(DEC31, "entrada");
+    expect($("#f-filedel").hidden).toBe(true);                      // sin archivo, sin botón
+    $("#f-title").value = "Con archivo";
+    const input = $("#f-file");
+    const f = new File([new Uint8Array(10)], "entrada.pdf", { type: "application/pdf" });
+    Object.defineProperty(input, "files", { value: [f], configurable: true });
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    expect($("#f-filedel").hidden).toBe(false);
+    await save();
+    savedLinks();
+    const find = () => [...document.querySelectorAll("#v-docs .ticket")].find((t) => t.textContent.includes("Con archivo"));
+    expect(find().textContent).toContain("entrada.pdf");
+    // quitar y cancelar: sigue el archivo
+    click(find().querySelector('[data-act="view"]'));
+    click($('[data-act="edit"]'));
+    Object.defineProperty($("#f-file"), "files", { value: [], configurable: true });
+    click($('[data-act="file-del"]'));
+    expect($("#f-name").textContent).toBe("Elegir archivoPDF del billete, la reserva o una captura"); // vacío, como uno nuevo
+    click($(".sh-head .x"));                                        // Cancelar
+    expect($("#sheet-body").textContent).toContain("entrada.pdf");
+    // quitar y guardar: ya no tiene archivo
+    click($('[data-act="edit"]'));
+    Object.defineProperty($("#f-file"), "files", { value: [], configurable: true });
+    click($('[data-act="file-del"]'));
+    await save();
+    expect($("#sheet-body").textContent).not.toContain("entrada.pdf");
+    click($('[data-act="close"]'));
+    savedLinks();
+    expect(find().textContent).not.toContain("entrada.pdf");
   });
 });

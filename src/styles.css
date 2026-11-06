@@ -223,6 +223,23 @@ button.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-co
 .vleg small{font:650 12.5px var(--f);color:var(--muted)}
 .vleg b{font:750 22px/1.2 var(--f);font-variant-numeric:tabular-nums}
 .vleg span{font-size:15px;line-height:1.3;overflow-wrap:anywhere}
+.vleg small.vsub{font-weight:500}
+.vlay{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);padding-left:14px}
+.vlay svg{flex:none}.vlay b{color:var(--ink);font-weight:650}
+/* Traslados en el formulario */
+.row2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:10px}
+.hops{display:flex;flex-direction:column;gap:8px}
+.hop{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);border-radius:16px;padding:10px}
+.hophead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.hophead b{font:650 14.5px var(--f);min-width:0;overflow-wrap:anywhere}
+.field .hophead input[type=text]{width:118px;flex:none;min-height:40px;padding:8px 12px}
+.layline{display:flex;align-items:center;gap:7px;font-size:13.5px;color:var(--muted);padding-left:12px}
+.layline svg{flex:none}.layline b{color:var(--ink);font-weight:650}
+.arrline{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:14px;min-height:40px}
+.arrt b{font-weight:750}.arrt.muted{color:var(--muted)}
+.arrbtns{display:flex;gap:8px}
+.stp{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font:600 20px/1 var(--f);color:var(--ink);display:inline-flex;align-items:center;justify-content:center}
+.stp:disabled{opacity:.35}
 #f-loc{display:flex;flex-direction:column;gap:16px}
 .locstat{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;font-size:13px;color:var(--muted);min-height:20px}
 .locstat .ok{display:inline-flex;align-items:center;gap:5px;color:var(--ok);font-weight:650}
@@ -301,6 +318,10 @@ button.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-co
 .tbox input[type=time]{padding-right:40px}
 .tclr{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:32px;height:32px;border:0;border-radius:50%;background:transparent;color:var(--muted);display:inline-flex;align-items:center;justify-content:center}
 .tclr[hidden]{display:none}
+/* × para quitar el archivo, dentro del recuadro (no suma altura) */
+.dropwrap{position:relative}
+.dropwrap .drop{padding-right:52px}
+.tclr.fdel{right:10px;width:36px;height:36px}
 /* Interruptor (Ocultar del calendario) */
 .swrow{display:flex;align-items:center;justify-content:space-between;gap:14px;cursor:pointer}
 .swrow b{display:block;font:650 15px var(--f)}.swrow small{display:block;font-size:13px;color:var(--muted);line-height:1.35;margin-top:2px}

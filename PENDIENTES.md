@@ -8,17 +8,6 @@ El viaje empieza el **27 de diciembre de 2026**.
 Antes de seguir con las fases 2 y 3, Nicolas quiere pulir la app.
 
 
-## Mejoras acordadas
-
-- [ ] Vuelo / tren / bus: campos "Aerolínea" (o "Compañía") y "N.º de vuelo
-      / tren". Sin campo Título: se genera solo, p. ej. "Iberia · Madrid →
-      Pamplona". Hoteles, entradas y otros conservan el Título.
-- [ ] Llegada con "Mismo día / Día siguiente" (horas locales, como "15:00
-      +1"); se pone sola en "Día siguiente" si la llegada es antes que la
-      salida. Si el vuelo cruza la noche, esa noche es en el avión y no se
-      pide hotel; si llega el mismo día, se pide hotel (hoy el 27 dic está
-      fijo como noche en el avión).
-
 ## Fase 3 · Compartir con Supabase (en pausa; idea original: 20 nov – 15 dic)
 
 - [ ] Esquema aparte dentro del proyecto de Supabase actual (ver cómo está

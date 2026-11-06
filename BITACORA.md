@@ -14,6 +14,37 @@ Reglas:
 
 ## 2026-11-06
 
+- Quitar el archivo de un documento: una × dentro del recuadro del archivo
+  (como la de las horas, sin sumar altura; primero se probó un botón debajo
+  y se descartó por eso). Antes había que borrar el documento entero. Se
+  aplica al guardar (sin doble toque: Cancelar lo deshace). Al tocarla, el
+  recuadro queda vacío como en uno nuevo, sin "se quitará al guardar" (era
+  confuso; el formulario entero ya es un borrador hasta Guardar).
+
+- Traslados con Compañía y número en vez de Título. Vuelo/tren/bus:
+  Aerolínea (o Compañía) + N.º, título automático "Iberia · Medellín →
+  Madrid"; el número va debajo del título. Coche: solo Compañía ("Hertz ·
+  Málaga"). Pasajero: en la Nota (para no sumar campos). Los billetes viejos
+  con título escrito a mano lo conservan hasta que se les pone compañía.
+- Llegada "+1": línea "Llega el jue 28 dic · +1" con − / + bajo las horas.
+  Se pone sola si la llegada es antes que la salida; lo puesto a mano (p. ej.
+  +2) se respeta. Se ve como "11:00 +1" en Calendario, ficha y tarjeta.
+- Escalas con el mismo billete (opción B: un solo concepto, la parada). Con
+  paradas, el Trayecto ofrece primero el viaje entero ("Medellín → Madrid ·
+  vía Bogotá", por defecto) y luego cada tramo. Un billete del viaje entero
+  cubre todos los tramos en Pendientes y lleva horario y número por tramo;
+  la escala se calcula sola ("Escala en Bogotá · 2 h 55 min"). Ubicaciones:
+  solo origen y destino final. Una sola Aerolínea por billete. Los días de
+  los tramos intermedios se deducen por orden (sin − / + en cada hora). Al
+  quitar o añadir paradas, los horarios por tramo se juntan o parten.
+- La noche en el avión se calcula: un vuelo/tren/bus con llegada +1 (o +2)
+  hace que esas noches no pidan hotel ni lo dejen poner ("Noche en el
+  avión"). Si es una escala nocturna de 8 h o más, es "Noche de escala en
+  Bogotá": no se pide hotel, pero se puede añadir. Se quitó el 27 fijo:
+  sin billete con llegada +1, el 27 pide hotel en Madrid.
+- Formato: campos nuevos opcionales en los documentos (company, no, hops,
+  segTo, arr). Nada cambia en la base ni en las copias viejas.
+
 - Copias grandes: se decidió avisar en vez de cambiar el formato (opción A),
   porque solo se cargan documentos del viaje (billetes y reservas de pocos
   MB). Aviso amarillo al elegir un archivo de más de 20 MB y en Exportar si
