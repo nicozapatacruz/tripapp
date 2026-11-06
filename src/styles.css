@@ -186,7 +186,7 @@ button.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-co
 .addrow{display:flex;flex-direction:column;gap:14px}
 .addrow .btn{width:100%}
 .tickets{display:flex;flex-direction:column;gap:12px}
-.ticket{position:relative;display:flex;background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+.ticket{position:relative;display:flex;cursor:pointer;-webkit-tap-highlight-color:transparent;background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
 .ticket::before,.ticket::after{content:"";position:absolute;left:70px;width:16px;height:16px;border-radius:50%;background:var(--bg);z-index:2}
 .ticket::before{top:-9px}
 .ticket::after{bottom:-9px}
@@ -383,7 +383,7 @@ button.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-co
 .kv{display:flex;flex-direction:column;gap:14px}
 .kv p{font-size:14.5px;color:var(--muted)}
 @media (max-width:380px){.top h1{font-size:26px}.dh h1{font-size:29px}.banner h2{font-size:25px}}
-@media (prefers-reduced-motion:no-preference){.dcard,.btn,.chip,.sc{transition:transform .12s ease}.day:active .dcard,.btn:active,.sc:active{transform:scale(.985)}}
+@media (prefers-reduced-motion:no-preference){.dcard,.btn,.chip,.sc,.ticket{transition:transform .12s ease}.day:active .dcard,.btn:active,.sc:active,.ticket:active{transform:scale(.985)}}
 .tl .lg{flex-wrap:wrap;row-gap:2px}
 .via{font-size:13px;color:var(--muted)}
 .pdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--amber);flex:none}

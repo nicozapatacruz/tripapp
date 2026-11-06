@@ -760,4 +760,20 @@ describe("formulario: ubicaciones", () => {
     click($(".sh-head .x"));
     click($('[data-act="close"]'));
   });
+
+  it("36) toda la tarjeta de Documentos abre la ficha, salvo copiar el código y el mapa", () => {
+    savedLinks();
+    const all = [...document.querySelectorAll("#v-docs .ticket")];
+    const tk = all.find((t) => t.querySelector(".tcode")), tm = all.find((t) => t.querySelector("a.map"));
+    click(tk.querySelector(".tstub"));                              // la franja de la izquierda
+    expect($("#sheet").hidden).toBe(false);
+    click($('[data-act="close"]'));
+    navigator.clipboard = { writeText: () => Promise.resolve() };
+    click(tk.querySelector('[data-act="copy"]'));                   // copiar: no abre
+    expect($("#sheet").hidden).toBe(true);
+    const map = tm.querySelector("a.map");
+    map.addEventListener("click", (e) => e.preventDefault(), { once: true });   // jsdom no navega
+    click(map);                                                     // mapa: no abre
+    expect($("#sheet").hidden).toBe(true);
+  });
 });

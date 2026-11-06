@@ -14,6 +14,11 @@ Reglas:
 
 ## 2026-11-06
 
+- Tarjetas de Documentos: ahora toda la tarjeta abre la ficha (antes solo
+  el título y la línea de debajo, por eso a veces había que tocar 2 o 3
+  veces). Copiar el código y el mapa siguen haciendo lo suyo. Pequeña
+  animación al tocar, como las tarjetas de Ruta.
+
 - Decidido para más adelante: pases de Wallet como archivo (Fase 5) y
   notificaciones solo cuando sea app nativa (nueva sección en PENDIENTES).
   Abrir un pase concreto de Wallet con un enlace no es posible.

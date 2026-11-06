@@ -807,7 +807,7 @@ function ticketHTML(d){
  if(d.type==="hotel"){var nt0=nightsText(d);if(nt0)sub.push(nt0)}
  if(d.t1)sub.push(d.t1+(d.t2?"–"+d.t2+arrSuffix(d):""));
  if(d.fileName)sub.push(d.fileName+(d.size?" · "+fmtSize(d.size):""));
- return '<article class="ticket" style="--t:'+T.t+'"><div class="tstub">'+svg(TYPE_ICON[d.type]||"file",24)+'<span>'+T.l+'</span></div><div class="tbody"><button type="button" class="tmain" data-act="view" data-id="'+d.id+'"><h4>'+esc(d.title||T.l)+'</h4>'+(sub.length||d.note?'<p>'+esc(sub.join(" · "))+(d.note?(sub.length?'<br>':"")+esc(d.note):"")+'</p>':"")+'</button>'+
+ return '<article class="ticket" data-act="view" data-id="'+d.id+'" style="--t:'+T.t+'"><div class="tstub">'+svg(TYPE_ICON[d.type]||"file",24)+'<span>'+T.l+'</span></div><div class="tbody"><button type="button" class="tmain" data-act="view" data-id="'+d.id+'"><h4>'+esc(d.title||T.l)+'</h4>'+(sub.length||d.note?'<p>'+esc(sub.join(" · "))+(d.note?(sub.length?'<br>':"")+esc(d.note):"")+'</p>':"")+'</button>'+
  (d.code?'<div class="tcode"><code>'+esc(d.code)+'</code><button type="button" class="cp" data-act="copy" data-code="'+esc(d.code)+'" aria-label="Copiar código">'+svg("copy",18)+'</button></div>':"")+priceHTML(d)+locsHTML(d)+'</div></article>';
 }
 function docsPanel(day){
@@ -1529,6 +1529,8 @@ function refresh(){applyTransit();var y=window.scrollY;var h=location.hash.repla
 document.addEventListener("click",function(e){
  var b=e.target.closest("[data-act]");
  if(!b){if(e.target===sheet)closeSheet();return}
+ // un enlace dentro de un elemento con acción (p. ej. "Mapa" en una tarjeta) hace lo suyo, sin abrir la tarjeta
+ var lk=e.target.closest("a");if(lk&&lk!==b&&b.contains(lk))return;
  var a=b.dataset.act;
  if(a==="tab"){tab=b.dataset.tab;refresh()}
  else if(a==="add"){openDocSheet({day:b.dataset.day,type:b.dataset.type,title:b.dataset.title,leg:b.dataset.leg,to:b.dataset.to})}
