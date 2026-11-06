@@ -274,7 +274,10 @@ describe("formulario: ubicaciones", () => {
     await save();
     savedLinks();
     const tk = [...document.querySelectorAll("#v-docs .ticket")].find((x) => x.textContent.includes("Test"));
-    click(tk.querySelector('[data-act="edit"]') || tk);
+    click(tk.querySelector('[data-act="view"]'));
+    expect($("#sh-title").textContent).toBe("Test");          // ficha de solo lectura
+    expect($("#f-title")).toBeNull();
+    click($('#sheet-foot [data-act="edit"]'));
     expect($("#f-title").value).toBe("Test");
     $("#f-title").value = "";
     await save();
@@ -286,7 +289,8 @@ describe("formulario: ubicaciones", () => {
   it("18b) eliminar un documento: Eliminar → Confirmar → eliminado", async () => {
     savedLinks();
     const tk = [...document.querySelectorAll("#v-docs .ticket")].find((x) => x.textContent.includes("Otro"));
-    click(tk.querySelector('[data-act="edit"]') || tk);
+    click(tk.querySelector('[data-act="view"]'));
+    click($('[data-act="edit"]'));
     const del = $('[data-act="delete"]');
     click(del);
     expect(del.textContent).toBe("Confirmar");
@@ -333,5 +337,74 @@ describe("formulario: ubicaciones", () => {
     const t = $("#v-docs").textContent;
     expect(t).toContain("Casa (Madrid)");
     expect(t).toContain("Casa (Pamplona)");
+  });
+
+  it("20) ficha de lectura: Editar → Cancelar vuelve a la ficha; Guardar también", async () => {
+    openNew(TENERIFE, "entrada");
+    $("#f-title").value = "Teide";
+    $("#f-code").value = "ABC123";
+    await save();
+    savedLinks();
+    const tk = [...document.querySelectorAll("#v-docs .ticket")].find((x) => x.textContent.includes("Teide"));
+    click(tk.querySelector('[data-act="view"]'));
+    expect($("#sheet-foot").hidden).toBe(false);
+    expect($("#sheet-foot").textContent).toBe("Editar");
+    expect($("#sheet-body").textContent).toContain("ABC123");
+    click($('[data-act="edit"]'));
+    const btns = [...document.querySelectorAll("#sheet-foot .btn")].map((b) => b.textContent);
+    expect(btns).toEqual(["Eliminar", "Guardar"]);                   // uno al lado del otro, Eliminar primero
+    expect($(".sh-head .x").textContent).toBe("Cancelar");
+    click($(".sh-head .x"));
+    expect($("#sh-title").textContent).toBe("Teide");                // volvió a la ficha
+    click($('[data-act="edit"]'));
+    $("#f-title").value = "Teide 2";
+    await save();
+    expect($("#sheet").hidden).toBe(false);
+    expect($("#sh-title").textContent).toBe("Teide 2");
+    click($('[data-act="close"]'));
+    expect($("#sheet-foot").hidden).toBe(true);
+  });
+
+  it("21) calendario: hotel sin hora arriba (check-in y check-out); con hora en la línea de tiempo", async () => {
+    openNew(PAMPLONA, "hotel");
+    $("#f-title").value = "Hotel Pamplona";
+    await save();
+    location.hash = "#calendario";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const day = (d) => document.getElementById("c-" + d);
+    const inTop = day(PAMPLONA).querySelector(".agtop");
+    expect(inTop && inTop.textContent).toContain("Check-in · Hotel Pamplona");
+    const outDay = [...document.querySelectorAll("#v-cal .day")].find((el) => el.textContent.includes("Check-out · Hotel Pamplona"));
+    expect(outDay.id).not.toBe("c-" + PAMPLONA);
+    expect(outDay.querySelector(".agtop").textContent).toContain("Check-out");
+    // con hora de check-in: pasa a la línea de tiempo
+    click(inTop.querySelector(".ag"));
+    expect($("#sh-title").textContent).toBe("Hotel Pamplona");
+    click($('[data-act="edit"]'));
+    $("#f-t1").value = "15:00";
+    await save();
+    click($('[data-act="close"]'));
+    const ag = [...day(PAMPLONA).querySelectorAll(".ag")].find((x) => x.textContent.includes("Check-in"));
+    expect(ag.classList.contains("top")).toBe(false);
+    expect(ag.textContent).toContain("15:00");
+  });
+
+  it("22) evento: ficha de lectura y edición con Cancelar", async () => {
+    const b = document.createElement("button");
+    b.dataset.act = "ev-add"; b.dataset.day = MADRID;
+    document.body.appendChild(b); click(b); b.remove();
+    $("#e-title").value = "Museo del Prado";
+    $("#e-t1").value = "10:00";
+    click($('[data-act="ev-save"]')); await tick();
+    expect($("#sheet").hidden).toBe(true);
+    const ag = [...document.querySelectorAll("#c-" + MADRID + " .ag")].find((x) => x.textContent.includes("Prado"));
+    click(ag);
+    expect($("#sh-title").textContent).toBe("Museo del Prado");
+    expect($("#sheet-body").textContent).toContain("10:00");
+    click($('[data-act="ev-edit"]'));
+    expect($("#e-title").value).toBe("Museo del Prado");
+    click($(".sh-head .x"));
+    expect($("#sh-title").textContent).toBe("Museo del Prado");
+    click($('[data-act="close"]'));
   });
 });

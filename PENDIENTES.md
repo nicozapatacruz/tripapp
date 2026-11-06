@@ -17,8 +17,6 @@ Antes de seguir con las fases 2 y 3, Nicolas quiere pulir la app.
       salida. Si el vuelo cruza la noche, esa noche es en el avión y no se
       pide hotel; si llega el mismo día, se pide hotel (hoy el 27 dic está
       fijo como noche en el avión).
-- [ ] Calendario: al tocar algo, abrir una ficha de solo lectura con botón
-      "Editar".
 
 ## Fase 2 · Copia protegida (en pausa)
 

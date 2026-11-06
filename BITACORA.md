@@ -12,6 +12,25 @@ Reglas:
 
 ---
 
+## 2026-11-06
+
+- Ficha de solo lectura para documentos y eventos (desde Calendario, Días y
+  Documentos): arriba Cerrar, abajo Editar a todo el ancho. Muestra tipo,
+  día o noches, trayecto, horas, código para copiar, precio, Maps, el
+  archivo para abrirlo y la nota. Al tocar Editar: arriba Cancelar (vuelve a
+  la ficha), abajo Eliminar | Guardar uno al lado del otro (Nicolas prefirió
+  esto a Eliminar al final del formulario, para ahorrar altura). Al guardar
+  vuelve a la ficha. Uno nuevo va directo al formulario (Cancelar / Guardar).
+- Los botones de abajo de esas hojas quedan fijos (pie de la hoja), así no
+  hay que bajar hasta el final del formulario para guardar. El error de
+  validación sale justo encima de los botones.
+- Calendario: el hotel sale como dos entradas separadas, check-in el día de
+  llegada y check-out el de salida (antes el check-out solo salía si tenía
+  hora). Con hora van en la línea de tiempo; sin hora, arriba del todo y sin
+  la columna de la hora (como "todo el día"). Las noches del medio no salen.
+- Sin zoom con dos dedos ni con doble toque: es una app. Ojo, esto también
+  quita el zoom de accesibilidad de Safari (el zoom del sistema de iOS sigue).
+
 ## 2026-11-05
 
 - Fase 1 terminada: probado en el iPhone que la app abre sin internet (con
