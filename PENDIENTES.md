@@ -7,6 +7,12 @@ El viaje empieza el **27 de diciembre de 2026**.
 
 Antes de seguir con las fases 2 y 3, Nicolas quiere pulir la app.
 
+- [ ] Probar en el iPad la copia de 252 MB con los arreglos de memoria
+      (exportar 2 veces + importar, y cerrar la pantalla de Descargar).
+      Si sigue cerrándose: decidir si vale la pena un formato de copia
+      binario (archivos sin base64, cifrado por trozos), que importe
+      también las copias JSON de ahora.
+
 ## Mejoras acordadas
 
 - [ ] Vuelo / tren / bus: campos "Aerolínea" (o "Compañía") y "N.º de vuelo

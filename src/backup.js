@@ -39,10 +39,12 @@ export function buildBackup(kind, kv, docs) {
 
 /* ---------- base64 sin depender de FileReader (también corre en los tests) ---------- */
 export function bytesToB64(bytes) {
-  let s = "";
-  const CH = 0x8000;
-  for (let i = 0; i < bytes.length; i += CH) s += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
-  return btoa(s);
+  // Por trozos de tamaño múltiplo de 3 (así el base64 de cada trozo se puede pegar tal cual):
+  // evita armar un texto binario del tamaño de toda la copia antes de convertirlo.
+  const CH = 0x7ffe; // 32766 = 3 × 10922
+  const parts = [];
+  for (let i = 0; i < bytes.length; i += CH) parts.push(btoa(String.fromCharCode.apply(null, bytes.subarray(i, i + CH))));
+  return parts.join("");
 }
 export function b64ToBytes(b64) {
   const bin = atob(b64);
@@ -71,14 +73,17 @@ export async function encryptBackup(backup, password) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await deriveKey(password, salt, PBKDF2_ITER);
-  const plain = new TextEncoder().encode(JSON.stringify(backup));
-  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plain));
+  let plain = new TextEncoder().encode(JSON.stringify(backup));
+  let ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plain));
+  plain = null; // soltarlo antes de armar el base64 (copias grandes)
+  const data = bytesToB64(ct);
+  ct = null;
   return {
     app: APP_ID,
     v: 2,
     kind: backup.kind,
     enc: { alg: "AES-GCM", kdf: "PBKDF2-SHA256", iter: PBKDF2_ITER, salt: bytesToB64(salt), iv: bytesToB64(iv) },
-    data: bytesToB64(ct),
+    data,
   };
 }
 

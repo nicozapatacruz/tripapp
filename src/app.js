@@ -735,7 +735,7 @@ function renderDocsView(){
 var sheet=$("#sheet"),sheetBody=$("#sheet-body"),sheetFoot=$("#sheet-foot"),selType="hotel",editing=null;
 /* foot: botones fijos abajo (Editar, o Eliminar | Guardar), siempre a mano aunque el formulario sea largo */
 function openSheet(html,foot){sheetBody.innerHTML=html;sheetFoot.innerHTML=foot||"";sheetFoot.hidden=!foot;sheetBody.scrollTop=0;sheet.hidden=false;document.documentElement.style.overflow="hidden";var f=sheetBody.querySelector("input,select,button");if(f&&f.type!=="file")try{f.focus({preventScroll:true})}catch(e){}}
-function closeSheet(){evEditing=null;sheet.hidden=true;sheetBody.innerHTML="";sheetFoot.innerHTML="";sheetFoot.hidden=true;document.documentElement.style.overflow="";editing=null}
+function closeSheet(){evEditing=null;expFile=null;impWrapper=null;impBackup=null;sheet.hidden=true;sheetBody.innerHTML="";sheetFoot.innerHTML="";sheetFoot.hidden=true;document.documentElement.style.overflow="";editing=null}
 function dayOptions(sel){return DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===sel?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'<option value="trip"'+(sel==="trip"?" selected":"")+'>Todo el viaje (sin día)</option>'}
 /* Campo de hora con una × para borrarla (el selector de hora del iPhone no tiene cómo dejarla vacía) */
 function timeBox(id,v,l){return '<span class="tbox"><input id="'+id+'" type="time" value="'+esc(v||"")+'" aria-label="'+l+'"><button type="button" class="tclr" data-act="t-clr" data-for="'+id+'" aria-label="Quitar '+l.toLowerCase()+'"'+(v?"":" hidden")+'>'+svg("xmark",16)+'</button></span>'}
@@ -981,7 +981,7 @@ function openExportSheet(){
  '<p id="e-desc">'+expDesc()+'</p>'+
  '<div class="field"><label for="e-pass" id="e-plab"></label><input id="e-pass" type="password" autocomplete="new-password"></div>'+
  '<div class="field"><label for="e-pass2" id="e-plab2"></label><input id="e-pass2" type="password" autocomplete="new-password"></div>'+
- '<p id="e-phint"></p><p class="err" id="x-err" role="alert"></p><p class="busyline" id="x-prog" role="status" hidden></p>'+
+ '<p id="e-phint"></p><p class="err" id="x-err" role="alert"></p>'+
  '<div class="actions" id="e-make"><button type="button" class="btn primary" data-act="exp-make" id="e-btn">Preparar copia</button></div>'+
  '<div id="e-out"></div></div>');
  expUI();
@@ -1028,18 +1028,24 @@ async function makeExport(btn){
  var label=btn.textContent;busy(btn,"Preparando…");
  try{
   var kind=expKind;
-  var backup=buildBackup(kind,kv,kind==="full"?await serializeDocs(function(i,n){if(n>1)progress("Preparando documentos · "+i+" de "+n)}):[]);
-  if(p1){busy(btn,"Cifrando…");progress("Cifrando la copia…")}
+  var backup=buildBackup(kind,kv,kind==="full"?await serializeDocs():[]);
+  if(p1)busy(btn,"Cifrando…");
   var out=p1?await encryptBackup(backup,p1):backup;
   var name="journest-"+(kind==="full"?"copia":"itinerario")+(p1?"-cifrada":"")+"-"+todayStr()+".json";
-  expFile=new File([JSON.stringify(out)],name,{type:"application/json"});
+  // Copia cifrada: el campo data (enorme) va último; se arma el archivo por partes para no
+  // duplicarlo en memoria con otro JSON.stringify (con copias de cientos de MB, iOS cerraba la app).
+  var parts;
+  if(p1){var head=JSON.stringify(Object.assign({},out,{data:""}));parts=[head.slice(0,-2),out.data,'"}'];out=null}
+  else parts=[JSON.stringify(out)];
+  backup.docs=backup.docs.length;   // solo hace falta el número para el aviso; suelta los archivos
+  expFile=new File(parts,name,{type:"application/json"});parts=null;
   var canShare=!!(navigator.canShare&&navigator.share&&navigator.canShare({files:[expFile]}));
   var o=$("#e-out");
-  if(o)o.innerHTML='<div class="note ok">'+svg("check",20)+'<p><b>Copia lista</b> · '+fmtSize(expFile.size)+(p1?" · cifrada":" · sin cifrar")+(kind==="full"?" · "+backup.docs.length+(backup.docs.length===1?" documento":" documentos"):"")+'</p></div>'+
+  if(o)o.innerHTML='<div class="note ok">'+svg("check",20)+'<p><b>Copia lista</b> · '+fmtSize(expFile.size)+(p1?" · cifrada":" · sin cifrar")+(kind==="full"?" · "+backup.docs+(backup.docs===1?" documento":" documentos"):"")+'</p></div>'+
    '<div class="actions"><button type="button" class="btn'+(canShare?"":" primary")+'" data-act="exp-dl">Descargar</button>'+(canShare?'<button type="button" class="btn primary" data-act="exp-share">Compartir</button>':"")+'</div>';
   var mk=$("#e-make");if(mk)mk.hidden=true;
  }catch(e){toast("No se pudo generar la copia")}
- progress("");idle(btn,label);
+ idle(btn,label);
 }
 function downloadFile(f){
  if(!f)return;
@@ -1101,7 +1107,7 @@ async function applyImport(mode,btn){
  all.forEach(function(x){x.disabled=true});busy(btn,"Importando…");
  try{
   var plan=importPlan(impBackup,mode);
-  for(var i=0;i<plan.docs.length;i++){if(plan.docs.length>1)progress("Importando documentos · "+(i+1)+" de "+plan.docs.length);var d=Object.assign({},plan.docs[i]);if(d.data){d.blob=dataURLtoBlob(d.data);delete d.data}await saveDoc(d)}
+  for(var i=0;i<plan.docs.length;i++){if(plan.docs.length>1)progress("Importando documentos · "+(i+1)+" de "+plan.docs.length);var d=Object.assign({},plan.docs[i]);plan.docs[i].data=null;if(d.data){d.blob=dataURLtoBlob(d.data);delete d.data}await saveDoc(d);d=null}
   var ks=Object.keys(plan.kv);for(var k=0;k<ks.length;k++)await setKV(ks[k],plan.kv[ks[k]]);
   impBackup=null;closeSheet();applyTheme();refresh();
   toast(plan.docs.length?"Importados "+plan.docs.length+(plan.docs.length===1?" documento":" documentos"):"Itinerario importado");

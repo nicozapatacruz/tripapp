@@ -14,6 +14,19 @@ Reglas:
 
 ## 2026-11-06
 
+- Exportar: sin la línea de progreso ("Preparando…" y "Cifrando…" caben en
+  el botón); la línea queda solo al importar.
+- Copias grandes en el iPad (252 MB): tras exportar 2 veces e importar 1, iOS
+  cerró la app; y al cerrar la pantalla de Descargar, la app se recargaba
+  (la hoja "se cerraba"). Causa probable: memoria. Cada archivo va en base64
+  dentro del JSON y, cifrado, otra vez en base64; en el pico había varias
+  copias enteras en memoria, y la copia preparada seguía en memoria después
+  de cerrar la hoja. Arreglos sin cambiar el formato: se suelta la copia al
+  cerrar la hoja, el archivo cifrado se arma por partes (sin otro
+  JSON.stringify gigante), el base64 se hace por trozos y al importar cada
+  archivo se suelta apenas se guarda. No hay riesgo de perder datos: los
+  documentos se guardan de a uno y reimportar reemplaza los mismos.
+
 - El 27 (noche en el avión) el Hotel sale deshabilitado, como vuelo/tren/
   bus en días sin traslado; al tocarlo explica "La noche del 27 es en el
   avión: no hace falta hotel…". Antes, "Añadir documento" en el 27 abría en

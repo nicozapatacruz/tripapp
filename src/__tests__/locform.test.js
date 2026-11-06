@@ -530,4 +530,31 @@ describe("formulario: ubicaciones", () => {
     click($('[data-act="exp-kind"][data-v="full"]'));               // dejarlo como estaba
     click($('[data-act="close"]'));
   });
+
+  it("28) copia completa cifrada: el archivo armado por partes se vuelve a abrir con la contraseña", async () => {
+    const { parseBackupText, decryptBackup } = await import("../backup.js");
+    let saved = null;
+    const origCreate = URL.createObjectURL;
+    URL.createObjectURL = (f) => { saved = f; return "blob:x"; };
+    URL.revokeObjectURL = () => {};
+    const origClick = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = () => {};                  // jsdom no navega a descargas
+    const b = document.createElement("button");
+    b.dataset.act = "export"; document.body.appendChild(b); click(b); b.remove();
+    $("#e-pass").value = "clave-larga-1"; $("#e-pass2").value = "clave-larga-1";
+    click($('[data-act="exp-make"]'));
+    for (let i = 0; i < 200 && $("#e-btn").disabled !== false; i++) await new Promise((r) => setTimeout(r, 20));
+    for (let i = 0; i < 200 && !$('[data-act="exp-dl"]'); i++) await new Promise((r) => setTimeout(r, 20));
+    expect($("#e-out .note.ok").textContent).toMatch(/cifrada · \d+ documentos?$/);
+    click($('[data-act="exp-dl"]'));
+    URL.createObjectURL = origCreate;
+    HTMLAnchorElement.prototype.click = origClick;
+    const text = await new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsText(saved); });
+    const parsed = parseBackupText(text);
+    expect(parsed.encrypted).toBe(true);
+    const bk = await decryptBackup(parsed.wrapper, "clave-larga-1");
+    expect(bk.kind).toBe("full");
+    expect(bk.docs.length).toBeGreaterThan(0);
+    click($('[data-act="close"]'));
+  }, 20000);
 });
