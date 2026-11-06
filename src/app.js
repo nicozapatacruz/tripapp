@@ -28,6 +28,7 @@ var ICON={
  file:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>',
  hotel:'<path d="M3 18V7M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="1.6"/>',
  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+ xmark:'<path d="M7 7l10 10M17 7L7 17"/>',
  bus:'<rect x="4" y="3" width="16" height="14" rx="3"/><path d="M4 11h16M7 21v-4M17 21v-4"/><circle cx="8" cy="14" r=".8"/><circle cx="16" cy="14" r=".8"/>',
  tren:'<rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 11h14M9 21l2-4M15 21l-2-4"/><circle cx="9" cy="14" r=".8"/><circle cx="15" cy="14" r=".8"/>',
  vuelo:'<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.2.4c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.4-.2c.4-.3.6-.7.5-1.2z"/>',
@@ -750,6 +751,9 @@ var sheet=$("#sheet"),sheetBody=$("#sheet-body"),sheetFoot=$("#sheet-foot"),selT
 function openSheet(html,foot){sheetBody.innerHTML=html;sheetFoot.innerHTML=foot||"";sheetFoot.hidden=!foot;sheetBody.scrollTop=0;sheet.hidden=false;document.documentElement.style.overflow="hidden";var f=sheetBody.querySelector("input,select,button");if(f&&f.type!=="file")try{f.focus({preventScroll:true})}catch(e){}}
 function closeSheet(){evEditing=null;sheet.hidden=true;sheetBody.innerHTML="";sheetFoot.innerHTML="";sheetFoot.hidden=true;document.documentElement.style.overflow="";editing=null}
 function dayOptions(sel){return DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===sel?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'<option value="trip"'+(sel==="trip"?" selected":"")+'>Todo el viaje (sin día)</option>'}
+/* Campo de hora con una × para borrarla (el selector de hora del iPhone no tiene cómo dejarla vacía) */
+function timeBox(id,v,l){return '<span class="tbox"><input id="'+id+'" type="time" value="'+esc(v||"")+'" aria-label="'+l+'"><button type="button" class="tclr" data-act="t-clr" data-for="'+id+'" aria-label="Quitar '+l.toLowerCase()+'"'+(v?"":" hidden")+'>'+svg("xmark",16)+'</button></span>'}
+function syncTimeClr(el){var b=el.parentNode&&el.parentNode.querySelector(".tclr");if(b)b.hidden=!el.value}
 function timeLabel(t){return t==="hotel"?"Check-in y check-out":TRIPT[t]?"Salida y llegada":"Hora de inicio y fin"}
 function openDocSheet(o){
  var d=o.id?docs.filter(function(x){return x.id===o.id})[0]:null;editing=d||null;
@@ -773,7 +777,8 @@ function openDocSheet(o){
  '<div class="field"><label for="f-code">Código de reserva</label><input id="f-code" class="code" type="text" placeholder="Localizador o número" value="'+esc(d?d.code:"")+'" autocomplete="off" autocapitalize="characters"></div>'+
  priceField(d)+
  '<div id="f-loc">'+locFields(selType)+'</div>'+
- '<div class="field"><span class="fl" id="f-tlab">'+timeLabel(selType)+'</span><div class="timerow"><input id="f-t1" type="time" value="'+esc(d&&d.t1||"")+'" aria-label="Hora de inicio"><span>–</span><input id="f-t2" type="time" value="'+esc(d&&d.t2||"")+'" aria-label="Hora de fin"></div></div>'+
+ '<div class="field"><span class="fl" id="f-tlab">'+timeLabel(selType)+'</span><div class="timerow">'+timeBox("f-t1",d&&d.t1,"Hora de inicio")+'<span>–</span>'+timeBox("f-t2",d&&d.t2,"Hora de fin")+'</div></div>'+
+ '<label class="swrow"><span><b>Ocultar del calendario</b><small>Sigue en Documentos y en el día. Útil si no hay check-in ni horario, como en casa de un amigo.</small></span><input id="f-calhide" type="checkbox" class="sw" role="switch"'+(d&&d.calHide?" checked":"")+'></label>'+
  '<div class="field"><label for="f-note">Nota</label><textarea id="f-note" placeholder="Hora, dirección, andén...">'+esc(d?d.note:"")+'</textarea></div>'+
  '',
  '<p class="err" id="f-err" role="alert"></p><div class="actions">'+(d?'<button type="button" class="btn danger" data-act="delete">Eliminar</button>':"")+'<button type="button" class="btn primary" style="--c1:var(--accent)" data-act="save">Guardar</button></div>');
@@ -808,6 +813,7 @@ function openDocView(id){
  if(!tr)h+=locsHTML(d);
  if(d.blob){var u=objUrl(d);h+=vField("Archivo",(d.mime||"").indexOf("image/")===0?'<a href="'+u+'" target="_blank" rel="noopener"><img class="prev" src="'+u+'" alt="'+esc(d.fileName||"Imagen")+'"></a>':'<a class="btn" href="'+u+'" target="_blank" rel="noopener">'+svg("file",18)+'Abrir '+esc(d.fileName||"archivo")+'</a>')}
  if(d.note)h+=vField("Nota",'<p class="vtxt">'+esc(d.note)+'</p>');
+ if(d.calHide)h+='<p class="vhide">'+svg("cal",16)+'Oculto del calendario</p>';
  openSheet('<div class="sh-head"><h2 id="sh-title">'+esc(d.title||T.l)+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+h,
   '<div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="edit" data-id="'+d.id+'">Editar</button></div>');
 }
@@ -856,6 +862,7 @@ async function saveFromSheet(){
    formErr("Ya existe «"+locS[qn].t.trim()+"» en "+citiesText(wc)+" con otra ubicación. Usa la existente o cambia el nombre.","conflict");return}
  }
  d.type=selType;d.dayId=day;d.code=code;d.note=note;d.price=pr;d.cur=cur;d.t1=t1;d.t2=t2;
+ var ch=$("#f-calhide");if(ch&&ch.checked)d.calHide=true;else delete d.calHide;   // campo nuevo opcional: las copias viejas siguen valiendo
  if(pr!=null)setKV("lastCur",cur);
  d.loc1=locS[1].t.trim();d.loc1u=locS[1].u;d.loc2=tr?locS[2].t.trim():"";d.loc2u=tr?locS[2].u:"";
  // ciudad elegida a mano: solo se guarda si ese día hay varias ciudades posibles
@@ -1087,6 +1094,7 @@ function colOf(t){return TYPES[t]?TYPES[t].t:"var(--accent)"}
 function agendaOf(day){
  var items=[];
  docs.forEach(function(d){
+  if(d.calHide)return;                                 // "Ocultar del calendario"
   var T=TYPES[d.type]||TYPES.otro,sub=[];
   if(d.type==="hotel"){
    var a=dayById(d.dayId);if(!a)return;
@@ -1162,7 +1170,7 @@ function openEventSheet(o){
  openSheet('<div class="sh-head"><h2 id="sh-title">'+(e?"Editar evento":"Nuevo evento")+'</h2>'+(e?'<button type="button" class="x" data-act="ev-view" data-id="'+esc(e.id)+'">Cancelar</button>':'<button type="button" class="x" data-act="close">Cancelar</button>')+'</div>'+
  '<div class="field"><label for="e-title">Nombre'+REQ+'</label><input id="e-title" type="text" placeholder="Ej. Visita a Plaza de España" value="'+esc(e?e.title:(o.title||""))+'" autocomplete="off"></div>'+
  '<div class="field"><label for="e-day">Día'+REQ+'</label><select id="e-day">'+DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===day?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'</select></div>'+
- '<div class="field"><span class="fl">Hora de inicio y fin</span><div class="timerow"><input id="e-t1" type="time" value="'+esc(e&&e.t1||"")+'" aria-label="Hora de inicio"><span>–</span><input id="e-t2" type="time" value="'+esc(e&&e.t2||"")+'" aria-label="Hora de fin"></div></div>'+
+ '<div class="field"><span class="fl">Hora de inicio y fin</span><div class="timerow">'+timeBox("e-t1",e&&e.t1,"Hora de inicio")+'<span>–</span>'+timeBox("e-t2",e&&e.t2,"Hora de fin")+'</div></div>'+
  '<div class="field"><label for="e-note">Nota o lugar</label><input id="e-note" type="text" placeholder="Ej. Entrada por la puerta principal" value="'+esc(e&&e.note||"")+'" autocomplete="off"></div>'+
  '',
  '<p class="err" id="e-err" role="alert"></p><div class="actions">'+(e?'<button type="button" class="btn danger" data-act="ev-del">Eliminar</button>':"")+'<button type="button" class="btn primary" style="--c1:var(--accent)" data-act="ev-save">Guardar</button></div>');
@@ -1248,6 +1256,7 @@ document.addEventListener("click",function(e){
  else if(a==="edit"){openDocSheet({id:b.dataset.id})}
  else if(a==="copy"){copyText(b.dataset.code)}
  else if(a==="close"){closeSheet()}
+ else if(a==="t-clr"){var ti=document.getElementById(b.dataset.for);if(ti){ti.value="";syncTimeClr(ti);ti.dispatchEvent(new Event("change",{bubbles:true}))}}
  else if(a==="type"){
   if(b.getAttribute("aria-disabled")==="true"){refreshTypes(true);return}
   selType=b.dataset.type;sheetBody.querySelectorAll(".ty").forEach(function(x){x.setAttribute("aria-checked",x===b?"true":"false")});
@@ -1314,6 +1323,7 @@ document.addEventListener("click",function(e){
  else if(a==="persist"){if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().then(function(ok){toast(ok?"Datos protegidos":"El navegador no lo ha concedido")})}else toast("No disponible en este navegador")}
 });
 document.addEventListener("change",function(e){
+ if(e.target.type==="time")syncTimeClr(e.target);
  if(e.target.classList&&e.target.classList.contains("statsel")){var sv=+e.target.value;e.target.className="stat statsel s"+sv;setKV(e.target.dataset.k,sv);return}
  if(e.target.id==="f-file"){var f=e.target.files[0];if(f){$("#f-name").innerHTML=esc(f.name)+"<small>"+fmtSize(f.size)+"</small>";if(!$("#f-title").value)$("#f-title").value=f.name.replace(/\.[^.]+$/,"")}}
  else if(e.target.id==="f-day"){
@@ -1326,6 +1336,7 @@ document.addEventListener("change",function(e){
  else if(e.target.id==="s-import"){var f2=e.target.files[0];if(f2)importBackup(f2)}
 });
 document.addEventListener("input",function(e){
+ if(e.target.type==="time"){syncTimeClr(e.target);return}
  var el=e.target,n=el.dataset&&el.dataset.loc;if(!n)return;n=+n;
  var s=locS[n],v=el.value,ex=extractMapsUrl(v),pick=sugLabels[n][v];
  if(ex.url){

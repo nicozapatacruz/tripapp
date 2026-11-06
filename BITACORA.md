@@ -14,6 +14,14 @@ Reglas:
 
 ## 2026-11-06
 
+- Las horas (documentos y eventos) tienen una × para borrarlas: el selector
+  de hora del iPhone no permite dejarla vacía una vez puesta.
+- Interruptor "Ocultar del calendario" en el formulario de documento (todos
+  los tipos). Pensado para cuando se duerme en casa de un amigo: sin
+  check-in ni check-out que ver. Sigue en Documentos y en el día, y un hotel
+  oculto sigue contando como hotel para esas noches en Pendientes. Es un
+  campo opcional nuevo (`calHide`): las copias viejas se importan igual.
+
 - Ajustes tras probar la ficha en el iPhone: el contenido de la hoja vuelve
   a ocupar todo el ancho (con el pie fijo se encogía al contenido). Guardar
   ocupa 2/3 y Eliminar 1/3. En vuelo/tren/bus, Salida y Llegada juntan hora

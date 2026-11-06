@@ -437,4 +437,51 @@ describe("formulario: ubicaciones", () => {
     expect(t).toMatch(/Noche del \w{3} \d+ \w{3}/);
     expect(t).toMatch(/→ \w{3} \d+ \w{3} · \d+ noches/);
   });
+
+  it("25) la × borra una hora ya puesta y el documento queda sin hora", async () => {
+    openNew(DEC31, "entrada");
+    $("#f-title").value = "Museo con hora";
+    $("#f-t1").value = "10:00";
+    $("#f-t1").dispatchEvent(new Event("input", { bubbles: true }));
+    const x = $('[data-act="t-clr"][data-for="f-t1"]');
+    expect(x.hidden).toBe(false);
+    expect($('[data-act="t-clr"][data-for="f-t2"]').hidden).toBe(true);  // sin hora, sin ×
+    await save();
+    savedLinks();
+    let tk = [...document.querySelectorAll("#v-docs .ticket")].find((t) => t.textContent.includes("Museo con hora"));
+    click(tk.querySelector('[data-act="view"]'));
+    click($('[data-act="edit"]'));
+    click($('[data-act="t-clr"][data-for="f-t1"]'));
+    expect($("#f-t1").value).toBe("");
+    expect($('[data-act="t-clr"][data-for="f-t1"]').hidden).toBe(true);
+    await save();
+    expect($("#sheet-body").textContent).not.toContain("10:00");
+    click($('[data-act="close"]'));
+  });
+
+  it("26) «Ocultar del calendario»: no sale en el calendario pero sigue contando como hotel", async () => {
+    const JAN3 = "2027-01-03";
+    location.hash = "#documentos";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    openNew(JAN3, "hotel");
+    $("#f-title").value = "Casa de un amigo";
+    $("#f-calhide").checked = true;
+    await save();
+    location.hash = "#calendario";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect($("#v-cal").textContent).not.toContain("Casa de un amigo");
+    savedLinks();
+    const tk = [...document.querySelectorAll("#v-docs .ticket")].find((t) => t.textContent.includes("Casa de un amigo"));
+    expect(tk).toBeTruthy();                                    // sigue en Documentos
+    click(tk.querySelector('[data-act="view"]'));
+    expect($("#sheet-body").textContent).toContain("Oculto del calendario");
+    click($('[data-act="edit"]'));
+    expect($("#f-calhide").checked).toBe(true);
+    $("#f-calhide").checked = false;
+    await save();
+    click($('[data-act="close"]'));
+    location.hash = "#calendario";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect($("#v-cal").textContent).toContain("Check-in · Casa de un amigo");
+  });
 });
