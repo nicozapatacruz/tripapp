@@ -14,6 +14,13 @@ Reglas:
 
 ## 2026-11-06
 
+- Copias grandes: se decidió avisar en vez de cambiar el formato (opción A),
+  porque solo se cargan documentos del viaje (billetes y reservas de pocos
+  MB). Aviso amarillo al elegir un archivo de más de 20 MB y en Exportar si
+  los documentos suman más de 100 MB; al importar una copia de más de 100 MB,
+  el texto de "Leyendo la copia" dice qué hacer si la app se cierra. Si algún
+  día hace falta, el arreglo de verdad es un formato binario (en PENDIENTES).
+
 - Texto de la contraseña al exportar: en dos líneas y con "Tendrás que
   exportarla de nuevo." al final.
 

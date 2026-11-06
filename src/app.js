@@ -755,7 +755,7 @@ function openDocSheet(o){
  var prev="";
  if(d&&d.blob){var u=objUrl(d);prev=(d.mime||"").indexOf("image/")===0?'<img class="prev" src="'+u+'" alt="Vista previa de '+esc(d.fileName)+'">':'<a class="btn" href="'+u+'" target="_blank" rel="noopener">'+svg("file",18)+'Abrir '+esc(d.fileName||"archivo")+'</a>'}
  openSheet('<div class="sh-head"><h2 id="sh-title">'+(d?"Editar documento":"Nuevo documento")+'</h2>'+(d?'<button type="button" class="x" data-act="view" data-id="'+d.id+'">Cancelar</button>':'<button type="button" class="x" data-act="close">Cancelar</button>')+'</div>'+
- '<div class="field"><span class="fl">Archivo (PDF o foto)</span><label class="drop" for="f-file">'+svg("clip",22)+'<span id="f-name">'+(d&&d.fileName?esc(d.fileName):"Elegir archivo")+'<small>'+(d&&d.fileName?"Toca para reemplazarlo":"PDF del billete, la reserva o una captura")+'</small></span></label><input id="f-file" type="file" accept="application/pdf,image/*" hidden></div>'+prev+
+ '<div class="field"><span class="fl">Archivo (PDF o foto)</span><label class="drop" for="f-file">'+svg("clip",22)+'<span id="f-name">'+(d&&d.fileName?esc(d.fileName):"Elegir archivo")+'<small>'+(d&&d.fileName?"Toca para reemplazarlo":"PDF del billete, la reserva o una captura")+'</small></span></label><input id="f-file" type="file" accept="application/pdf,image/*" hidden><p class="tynote" id="f-bignote" hidden></p></div>'+prev+
  '<div class="field"><span class="fl">Tipo'+REQ+'</span><div class="types" role="radiogroup" aria-label="Tipo de documento">'+types+'</div></div>'+
  '<div class="field"><label for="f-title">Título</label><input id="f-title" type="text" placeholder="'+esc(TITLEPH[selType]||"")+'" value="'+esc(d?(d.titleAuto?"":d.title):(o.title||""))+'" autocomplete="off"></div>'+
  '<div class="field"><label for="f-day" id="f-daylb">'+(selType==="hotel"?"Primera noche":"Día")+REQ+'</label><select id="f-day">'+dayOptions(dayId)+'</select></div>'+
@@ -971,6 +971,11 @@ function dataURLtoBlob(u){var p=u.split(","),mime=(p[0].match(/:(.*?);/)||[])[1]
 /* ---- Exportar (formatos y cifrado en backup.js) ---- */
 var expKind="full",expFile=null,impWrapper=null,impBackup=null;
 var MIN_PASS=8;
+/* Avisos de tamaño (no bloquean): con copias de cientos de MB, iOS puede cerrar la app por falta
+   de memoria al exportar o importar. Para billetes y reservas normales no hace falta. */
+var BIG_FILE=20*1024*1024,BIG_COPY=100*1024*1024;
+function docsBytes(){return docs.reduce(function(a,d){return a+(d.size||0)},0)}
+function expBigHTML(){var n=docsBytes();return expKind==="full"&&n>BIG_COPY?"<b>Tus documentos suman "+esc(fmtSize(n))+".</b> La copia puede tardar varios minutos y, en iPhone o iPad, fallar. Cierra las otras apps antes de exportar.":""}
 function expDesc(){return expKind==="full"
  ?"Documentos con sus archivos, códigos y precios, más el itinerario (eventos, listas y estados)."
  :"Solo el itinerario: eventos, listas y estados. Sin documentos, archivos, códigos ni precios. Sirve para compartirlo."}
@@ -978,7 +983,7 @@ function openExportSheet(){
  expFile=null;
  openSheet('<div class="sh-head"><h2 id="sh-title">Exportar copia</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
  '<div class="kv"><div class="chips">'+[["full","Copia completa"],["itinerary","Solo itinerario"]].map(function(t){return '<button type="button" class="chip" data-act="exp-kind" data-v="'+t[0]+'" aria-pressed="'+(expKind===t[0])+'">'+t[1]+'</button>'}).join("")+'</div>'+
- '<p id="e-desc">'+expDesc()+'</p>'+
+ '<p id="e-desc">'+expDesc()+'</p><p class="warnline" id="e-big"'+(expBigHTML()?"":" hidden")+'>'+expBigHTML()+'</p>'+
  '<div class="field"><label for="e-pass" id="e-plab"></label><input id="e-pass" type="password" autocomplete="new-password"></div>'+
  '<div class="field"><label for="e-pass2" id="e-plab2"></label><input id="e-pass2" type="password" autocomplete="new-password"></div>'+
  '<p id="e-phint"></p><p class="err" id="x-err" role="alert"></p>'+
@@ -1004,7 +1009,7 @@ function expUI(){
 function expKindChanged(b){
  expKind=b.dataset.v;expFile=null;
  sheetBody.querySelectorAll("[data-act=exp-kind]").forEach(function(x){x.setAttribute("aria-pressed",x===b?"true":"false")});
- var d=$("#e-desc");if(d)d.textContent=expDesc();expReset();expUI();
+ var d=$("#e-desc");if(d)d.textContent=expDesc();var bg=$("#e-big");if(bg){bg.innerHTML=expBigHTML();bg.hidden=!bg.innerHTML}expReset();expUI();
 }
 /* Si cambia el tipo o la contraseña, la copia preparada ya no vale: se vuelve a "Preparar copia" */
 function expReset(){expFile=null;var o=$("#e-out");if(o)o.innerHTML="";var m=$("#e-make");if(m)m.hidden=false}
@@ -1067,7 +1072,7 @@ function shareExport(){
 /* ---- Importar ---- */
 async function importBackup(file){
  openSheet('<div class="sh-head"><h2 id="sh-title">Importar copia</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
-  '<div class="kv"><p class="busyline"><span class="spin" aria-hidden="true"></span>Leyendo la copia'+(file.size>20e6?" ("+fmtSize(file.size)+"). Puede tardar un poco.":"…")+'</p></div>');
+  '<div class="kv"><p class="busyline"><span class="spin" aria-hidden="true"></span>Leyendo la copia'+(file.size>BIG_COPY?" ("+fmtSize(file.size)+"). Puede tardar varios minutos; si la app se cierra, ciérrala del todo, cierra las otras apps y vuelve a intentarlo.":file.size>20e6?" ("+fmtSize(file.size)+"). Puede tardar un poco.":"…")+'</p></div>');
  var parsed;
  try{parsed=parseBackupText(await file.text())}catch(e){closeSheet();toast("El archivo no es una copia válida");return}
  if(parsed.encrypted)openPassSheet(parsed.wrapper);else openImportChoice(parsed.backup);
@@ -1362,7 +1367,8 @@ document.addEventListener("click",function(e){
 document.addEventListener("change",function(e){
  if(e.target.type==="time")syncTimeClr(e.target);
  if(e.target.classList&&e.target.classList.contains("statsel")){var sv=+e.target.value;e.target.className="stat statsel s"+sv;setKV(e.target.dataset.k,sv);return}
- if(e.target.id==="f-file"){var f=e.target.files[0];if(f){$("#f-name").innerHTML=esc(f.name)+"<small>"+fmtSize(f.size)+"</small>";if(!$("#f-title").value)$("#f-title").value=f.name.replace(/\.[^.]+$/,"")}}
+ if(e.target.id==="f-file"){var f=e.target.files[0];if(f){$("#f-name").innerHTML=esc(f.name)+"<small>"+fmtSize(f.size)+"</small>";if(!$("#f-title").value)$("#f-title").value=f.name.replace(/\.[^.]+$/,"");
+  var bn=$("#f-bignote");if(bn){bn.hidden=f.size<=BIG_FILE;bn.textContent=f.size>BIG_FILE?"Este archivo pesa "+fmtSize(f.size)+". Las copias de seguridad tardarán y pueden fallar en iPhone o iPad. Si puedes, usa un PDF más liviano o una captura.":""}}}
  else if(e.target.id==="f-day"){
   formDay=e.target.value;toSel="";viaOpen=false;
   legSel=onlyLeg(formDay);legManual=!!legSel;refreshLegField();autoLeg();

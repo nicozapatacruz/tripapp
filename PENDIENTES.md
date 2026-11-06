@@ -7,11 +7,6 @@ El viaje empieza el **27 de diciembre de 2026**.
 
 Antes de seguir con las fases 2 y 3, Nicolas quiere pulir la app.
 
-- [ ] Probar en el iPad la copia de 252 MB con los arreglos de memoria
-      (exportar 2 veces + importar, y cerrar la pantalla de Descargar).
-      Si sigue cerrándose: decidir si vale la pena un formato de copia
-      binario (archivos sin base64, cifrado por trozos), que importe
-      también las copias JSON de ahora.
 
 ## Mejoras acordadas
 
@@ -56,6 +51,11 @@ Antes de seguir con las fases 2 y 3, Nicolas quiere pulir la app.
 - Tipo de cambio, y "pagado/pendiente".
 - Consejos, platos y horas de traslado editables.
 - Mapa dentro de la app.
+- Formato de copia binario (archivos sin base64, cifrado por trozos) si
+  alguna vez se cargan archivos grandes: con 250 MB, iOS cierra la app por
+  memoria al exportar/importar. Hoy solo se avisa (ver bitácora 6 nov).
+  Retomarlo también si algún día pasa a ser app nativa: ahí se puede leer
+  y escribir por trozos desde el almacenamiento.
 - Editar la ruta: excursiones de un día (Madrid → Toledo → Madrid), cambiar
   cuántas noches se queda en cada ciudad, etc. Hasta entonces, vuelo/tren/
   bus solo se pueden poner en días con traslado. Cuando exista, el aviso

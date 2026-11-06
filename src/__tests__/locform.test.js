@@ -557,4 +557,20 @@ describe("formulario: ubicaciones", () => {
     expect(bk.docs.length).toBeGreaterThan(0);
     click($('[data-act="close"]'));
   }, 20000);
+
+  it("29) archivo de más de 20 MB: aviso (no bloquea)", () => {
+    openNew(DEC31, "entrada");
+    const input = $("#f-file");
+    const big = new File([new Uint8Array(1)], "escaneo.pdf", { type: "application/pdf" });
+    Object.defineProperty(big, "size", { value: 150 * 1024 * 1024 });
+    Object.defineProperty(input, "files", { value: [big], configurable: true });
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    expect($("#f-bignote").hidden).toBe(false);
+    expect($("#f-bignote").textContent).toContain("150");
+    const small = new File([new Uint8Array(10)], "billete.pdf", { type: "application/pdf" });
+    Object.defineProperty(input, "files", { value: [small], configurable: true });
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    expect($("#f-bignote").hidden).toBe(true);
+    click($('[data-act="close"]'));
+  });
 });

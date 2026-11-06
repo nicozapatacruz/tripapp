@@ -127,6 +127,7 @@ ul,ol{padding:0;list-style:none}
 .kv p.busyline[hidden]{display:none}  /* .kv p lo dejaba gris */
 .kv p.warnline{background:var(--warn-bg);color:var(--warn-ink);padding:11px 14px;border-radius:14px}
 .kv p.warnline b{color:inherit}
+.kv p.warnline[hidden]{display:none}
 .lab{font:700 19px/1.2 var(--f);letter-spacing:-.02em;color:var(--ink);margin-bottom:12px}
 .tl{display:flex;flex-direction:column}
 .tl .st{display:flex;gap:14px;align-items:center;min-height:34px}
