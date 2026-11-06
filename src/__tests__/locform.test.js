@@ -385,7 +385,7 @@ describe("formulario: ubicaciones", () => {
     await save();
     click($('[data-act="close"]'));
     const ag = [...day(PAMPLONA).querySelectorAll(".ag")].find((x) => x.textContent.includes("Check-in"));
-    expect(ag.classList.contains("top")).toBe(false);
+    expect(ag.classList.contains("nt")).toBe(false);
     expect(ag.textContent).toContain("15:00");
   });
 
@@ -406,5 +406,35 @@ describe("formulario: ubicaciones", () => {
     click($(".sh-head .x"));
     expect($("#sh-title").textContent).toBe("Museo del Prado");
     click($('[data-act="close"]'));
+  });
+
+  it("23) hotel: check-out con hora y check-in sin hora el mismo día → el check-in va de primero en «Sin hora»", async () => {
+    openNew(TENERIFE, "hotel");
+    $("#f-title").value = "Hotel Teide";
+    $("#f-t2").value = "11:00";
+    await save();
+    location.hash = "#calendario";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const outDay = [...document.querySelectorAll("#v-cal .day")].find((el) => el.textContent.includes("Check-out · Hotel Teide"));
+    const dayId = outDay.id.slice(2);
+    openNew(dayId, "hotel");
+    $("#f-title").value = "Hotel Siguiente";
+    await save();
+    const el = document.getElementById("c-" + dayId);
+    expect(el.querySelector(".agtop")).toBeNull();                    // nada arriba
+    const lists = el.querySelectorAll(".aglist");
+    expect(lists[0].textContent).toContain("Check-out · Hotel Teide");  // en su hora
+    expect(lists[0].textContent).toContain("11:00");
+    const sinHora = lists[lists.length - 1].querySelector(".ag");
+    expect(sinHora.textContent).toContain("Check-in · Hotel Siguiente"); // primero en «Sin hora»
+    expect(sinHora.classList.contains("nt")).toBe(true);
+    expect(sinHora.querySelector(".agt")).toBeNull();                    // sin columna de hora
+  });
+
+  it("24) noches: «Noche del …» o fechas de entrada → salida", async () => {
+    savedLinks();
+    const t = $("#v-docs").textContent;
+    expect(t).toMatch(/Noche del \w{3} \d+ \w{3}/);
+    expect(t).toMatch(/→ \w{3} \d+ \w{3} · \d+ noches/);
   });
 });

@@ -204,7 +204,12 @@ button.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-co
 .loc{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13.5px;line-height:1.3;padding:8px 10px;border-radius:12px;background:var(--surface2)}
 .loc span{min-width:0;overflow-wrap:anywhere}
 .loc small{display:block;font-size:12px;font-weight:600;color:var(--muted)}
-.loc .map{min-height:32px;padding:0 11px;background:var(--surface)}
+.loc .map,.vleg .map{flex:none;width:38px;height:38px;min-height:0;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--surface)}
+.vleg{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface2);border-radius:14px;padding:10px 12px 10px 14px}
+.vleg>div{display:flex;flex-direction:column;min-width:0}
+.vleg small{font:650 12.5px var(--f);color:var(--muted)}
+.vleg b{font:750 22px/1.2 var(--f);font-variant-numeric:tabular-nums}
+.vleg span{font-size:15px;line-height:1.3;overflow-wrap:anywhere}
 #f-loc{display:flex;flex-direction:column;gap:16px}
 .locstat{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;font-size:13px;color:var(--muted);min-height:20px}
 .locstat .ok{display:inline-flex;align-items:center;gap:5px;color:var(--ok);font-weight:650}
@@ -252,14 +257,13 @@ button.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-co
 /* Calendario */
 .ag{display:grid;grid-template-columns:46px 28px minmax(0,1fr);gap:10px;align-items:start;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:10px 0;font-family:var(--f);color:var(--ink)}
 .aglist .ag:first-child{border-top:0}
-.agt{display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums}
+.agt{display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums;padding-top:5px}
 .agt b{font:750 15px/1.15 var(--f)}.agt small{font-size:12.5px;color:var(--muted)}.agt .nt{color:var(--muted);font-weight:500}
 .agi{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--t) 16%,var(--surface));color:var(--t)}
-.agb{display:flex;flex-direction:column;gap:2px;min-width:0}.agb b{font:700 15.5px/1.25 var(--f)}.agb small{font-size:13px;color:var(--muted)}
+.agb{display:flex;flex-direction:column;gap:2px;min-width:0;padding-top:4px}.agb b{font:700 15.5px/1.25 var(--f)}.agb small{font-size:13px;color:var(--muted)}
 /* hotel sin hora: arriba del todo, sin la columna de la hora */
-.ag.top{grid-template-columns:28px minmax(0,1fr)}.ag.top .agt{display:none}
-.agtop+.aglist .ag:first-child,.agtop+.aglab{border-top:1px solid var(--line)}
-.agtop+.aglab{padding-top:8px}
+.ag.nt{grid-template-columns:28px minmax(0,1fr)}
+.agtop+.aglist .ag:first-child{border-top:1px solid var(--line)}
 .ag.clash .agi{box-shadow:0 0 0 2px #e0a62b}.cl{font-style:normal;font-size:12.5px;font-weight:650;color:#b7791f}
 .aglab{font:650 12px var(--f);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:8px 0 0}
 .agempty{color:var(--muted);font-size:14px}
@@ -287,6 +291,7 @@ button.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-co
 .bnav [aria-current="page"]{background:var(--ink);color:var(--bg)}
 .backdrop{position:fixed;inset:0;z-index:60;background:rgba(10,14,22,.5);display:flex;align-items:flex-end}
 .sheet{width:100%;max-height:92%;display:flex;flex-direction:column;overflow:hidden;background:var(--surface);border-radius:28px 28px 0 0;padding-bottom:env(safe-area-inset-bottom,0px);margin-inline:auto;max-width:640px}
+.sheet>.in{width:100%}
 .sheet>#sheet-body{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain}
 .sheet>.grab{flex:none}
 /* Pie fijo de la hoja: Editar, o Eliminar | Guardar */
@@ -295,6 +300,7 @@ button.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-co
 .sh-foot .err:empty{display:none}
 .sh-foot .actions{flex-wrap:nowrap}
 .sh-foot .actions .btn{flex:1 1 0;min-width:0}
+.sh-foot .actions .btn.danger+.btn.primary{flex-grow:2}  /* Guardar ocupa 2/3, Eliminar 1/3 */
 .sheet .in{padding-block:8px 24px;display:flex;flex-direction:column;gap:16px}
 .grab{width:42px;height:5px;border-radius:9px;background:var(--line);margin:9px auto 0}
 .sh-head{display:flex;align-items:center;justify-content:space-between;gap:10px}

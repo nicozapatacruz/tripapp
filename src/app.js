@@ -241,9 +241,10 @@ function placeIndex(){
  PLACES.forEach(function(p){var c=detectCity(p,"");out.push({name:p,url:gmap(p),cities:c?[c]:null,docId:"_places"})});
  return out;
 }
+function mapBtn(u){return '<a class="map" href="'+esc(u)+'" target="_blank" rel="noopener" aria-label="Abrir en Google Maps">'+svg("pin",18)+'</a>'}
 function locRow(l,t,u){
  if(!t&&!u)return "";
- return '<div class="loc"><span><small>'+l+'</small>'+esc(t||"Ubicación en Google Maps")+'</span>'+(u?'<a class="map" href="'+esc(u)+'" target="_blank" rel="noopener" aria-label="Abrir en Google Maps">'+svg("pin",16)+'Mapa</a>':"")+'</div>';
+ return '<div class="loc"><span><small>'+l+'</small>'+esc(t||"Ver en el mapa")+'</span>'+(u?mapBtn(u):"")+'</div>';
 }
 /* Nombre visible: si hay otro lugar con el mismo nombre y otro enlace, se añade la ciudad: "Casa (Madrid)" */
 function locLabel(d,n,idx){
@@ -254,7 +255,9 @@ function locLabel(d,n,idx){
  return cs&&cs.length===1?t+" ("+nm(cs[0])+")":t;
 }
 function locsHTML(d){
- var t=TRIPT[d.type],idx=placeIndex(),a=[locRow(t?"Salida":"Ubicación",locLabel(d,1,idx),d.loc1u)];
+ var t=TRIPT[d.type],idx=placeIndex(),l1=locLabel(d,1,idx);
+ if(!t&&l1&&normName(l1)===normName(d.title||""))l1="";
+ var a=[locRow(t?"Salida":"Ubicación",l1,d.loc1u)];
  if(t)a.push(locRow("Llegada",locLabel(d,2,idx),d.loc2u));
  a=a.filter(Boolean);
  return a.length?'<div class="locs">'+a.join("")+'</div>':"";
@@ -456,9 +459,12 @@ function toField(dayId,type,sel){
  return planeNoteHTML()+'<div class="field"><label for="f-to">Última noche</label><select id="f-to">'+nights.map(function(n,k){return '<option value="'+n.d+'"'+(n.d===cur?" selected":"")+'>'+esc(cap(shortDay(n)))+' · '+(k+1)+(k?" noches":" noche")+'</option>'}).join("")+'</select></div>';
 }
 function nightsText(d){
- var a=dayById(d.dayId),b=d.nightTo&&dayById(d.nightTo);
- if(!a||!b||b.i<=a.i)return "";
- var n=b.i-a.i+1;return "Noches "+rangeText(a,b)+" · "+n+" noches";
+ // 1 noche: "Noche del jue 31 dic". Varias: "Lun 28 dic → jue 31 dic · 3 noches" (entrada → día del check-out)
+ var a=dayById(d.dayId);if(!a)return "";
+ var b=(d.nightTo&&dayById(d.nightTo))||a;if(b.i<a.i)b=a;
+ var n=b.i-a.i+1,out=DAYS[b.i+1];
+ if(n===1)return "Noche del "+shortDay(a);
+ return cap(shortDay(a))+" → "+(out?shortDay(out):shortDay(b))+" · "+n+" noches";
 }
 function legModes(day,idx){var s=[];docsOf(day.d).forEach(function(d){if(TRIPT[d.type]&&d.leg===idx&&s.indexOf(d.type)<0)s.push(d.type)});return s}
 function dayModes(day){
@@ -662,14 +668,17 @@ function legsHTML(day){
  });
  return h+'</ol></section>';
 }
+/* Trayecto de un billete ("Málaga → Tenerife") y si el título ya lo dice */
+function docSeg(d){var dy=dayById(d.dayId);if(!TRIPT[d.type]||d.leg==null||!dy||!dy.legs||!dy.legs[d.leg])return "";var sg=legSegs(dy,d.leg);return segText(sg[Math.min(d.seg||0,sg.length-1)])}
+function titleHas(d,txt){return normName(d.title||"").indexOf(normName(txt))>=0}
 function ticketHTML(d){
  var T=TYPES[d.type]||TYPES.otro;
- var sub=[T.l],dy0=dayById(d.dayId);
- if(TRIPT[d.type]&&d.leg!=null&&dy0&&dy0.legs&&dy0.legs[d.leg]){var sg0=legSegs(dy0,d.leg);sub.push(segText(sg0[Math.min(d.seg||0,sg0.length-1)]))}
+ var sub=[],dy0=dayById(d.dayId),st0=docSeg(d);
+ if(st0&&!titleHas(d,st0))sub.push(st0);
  if(d.type==="hotel"){var nt0=nightsText(d);if(nt0)sub.push(nt0)}
  if(d.t1)sub.push(d.t1+(d.t2?"–"+d.t2:""));
  if(d.fileName)sub.push(d.fileName+(d.size?" · "+fmtSize(d.size):""));
- return '<article class="ticket" style="--t:'+T.t+'"><div class="tstub">'+svg(TYPE_ICON[d.type]||"file",24)+'<span>'+T.l+'</span></div><div class="tbody"><button type="button" class="tmain" data-act="view" data-id="'+d.id+'"><h4>'+esc(d.title||T.l)+'</h4><p>'+esc(sub.join(" · "))+(d.note?'<br>'+esc(d.note):"")+'</p></button>'+
+ return '<article class="ticket" style="--t:'+T.t+'"><div class="tstub">'+svg(TYPE_ICON[d.type]||"file",24)+'<span>'+T.l+'</span></div><div class="tbody"><button type="button" class="tmain" data-act="view" data-id="'+d.id+'"><h4>'+esc(d.title||T.l)+'</h4>'+(sub.length||d.note?'<p>'+esc(sub.join(" · "))+(d.note?(sub.length?'<br>':"")+esc(d.note):"")+'</p>':"")+'</button>'+
  (d.code?'<div class="tcode"><code>'+esc(d.code)+'</code><button type="button" class="cp" data-act="copy" data-code="'+esc(d.code)+'" aria-label="Copiar código">'+svg("copy",18)+'</button></div>':"")+priceHTML(d)+locsHTML(d)+'</div></article>';
 }
 function docsPanel(day){
@@ -777,21 +786,26 @@ function vTimes(t,a,b){
  if(b)c.push('<div><small>'+L[1]+'</small><b>'+esc(b)+'</b></div>');
  return c.length?'<div class="vtimes">'+c.join("")+'</div>':"";
 }
+function vLeg(l,t,name,u){
+ if(!t&&!name&&!u)return "";
+ return '<div class="vleg"><div><small>'+l+'</small>'+(t?'<b>'+esc(t)+'</b>':"")+(name?'<span>'+esc(name)+'</span>':"")+'</div>'+(u?mapBtn(u):"")+'</div>';
+}
 function vType(icon,col,label,sub){return '<div class="vtype" style="--t:'+col+'"><span class="agi">'+svg(icon,18)+'</span><div><b>'+esc(label)+'</b>'+(sub?'<small>'+esc(sub)+'</small>':"")+'</div></div>'}
 function docWhen(d){
  var dy=dayById(d.dayId);if(!dy)return "Todo el viaje";
- if(d.type==="hotel")return nightsText(d)||cap(shortDay(dy))+" · 1 noche";
+ if(d.type==="hotel")return nightsText(d);
  return cap(shortDay(dy))+" · "+routeText(dy);
 }
 function openDocView(id){
  var d=docs.filter(function(x){return x.id===id})[0];if(!d){closeSheet();return}
  editing=null;
  var T=TYPES[d.type]||TYPES.otro,dy=dayById(d.dayId),h=vType(TYPE_ICON[d.type]||"file",T.t,T.l,docWhen(d));
- if(TRIPT[d.type]&&d.leg!=null&&dy&&dy.legs&&dy.legs[d.leg]){var sg=legSegs(dy,d.leg);h+=vField("Trayecto",'<p class="vtxt"><b>'+esc(segText(sg[Math.min(d.seg||0,sg.length-1)]))+'</b></p>')}
- h+=vTimes(d.type,d.t1,d.t2);
+ var tr=!!TRIPT[d.type];
+ if(tr){var ix=placeIndex();h+=vLeg("Salida",d.t1,locLabel(d,1,ix),d.loc1u)+vLeg("Llegada",d.t2,locLabel(d,2,ix),d.loc2u)}
+ else h+=vTimes(d.type,d.t1,d.t2);
  if(d.code)h+=vField("Código de reserva",'<div class="tcode big"><code>'+esc(d.code)+'</code><button type="button" class="cp" data-act="copy" data-code="'+esc(d.code)+'" aria-label="Copiar código">'+svg("copy",18)+'</button></div>');
  if(d.price!=null)h+=vField("Precio",priceHTML(d));
- h+=locsHTML(d);
+ if(!tr)h+=locsHTML(d);
  if(d.blob){var u=objUrl(d);h+=vField("Archivo",(d.mime||"").indexOf("image/")===0?'<a href="'+u+'" target="_blank" rel="noopener"><img class="prev" src="'+u+'" alt="'+esc(d.fileName||"Imagen")+'"></a>':'<a class="btn" href="'+u+'" target="_blank" rel="noopener">'+svg("file",18)+'Abrir '+esc(d.fileName||"archivo")+'</a>')}
  if(d.note)h+=vField("Nota",'<p class="vtxt">'+esc(d.note)+'</p>');
  openSheet('<div class="sh-head"><h2 id="sh-title">'+esc(d.title||T.l)+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+h,
@@ -1073,21 +1087,25 @@ function colOf(t){return TYPES[t]?TYPES[t].t:"var(--accent)"}
 function agendaOf(day){
  var items=[];
  docs.forEach(function(d){
-  var T=TYPES[d.type]||TYPES.otro,sub=[T.l];
+  var T=TYPES[d.type]||TYPES.otro,sub=[];
   if(d.type==="hotel"){
    var a=dayById(d.dayId);if(!a)return;
    // check-in el primer día y check-out el día de salida, por separado. Sin hora van arriba del todo (top).
    var last=(d.nightTo&&dayById(d.nightTo))||a,out=DAYS[last.i+1],hn=d.titleAuto?(d.loc1||T.l):(d.title||T.l);
-   if(d.dayId===day.d)items.push({k:"doc",id:d.id,t1:d.t1||"",t2:"",title:"Check-in · "+hn,sub:nm(a.sleep||a.base),type:"hotel",top:tmin(d.t1)==null});
-   if(out&&out.d===day.d)items.push({k:"doc",id:d.id,t1:d.t2||"",t2:"",title:"Check-out · "+hn,sub:nm(last.sleep||last.base),type:"hotel",top:tmin(d.t2)==null});
+   if(d.dayId===day.d)items.push({k:"doc",id:d.id,t1:d.t1||"",t2:"",title:"Check-in · "+hn,sub:nm(a.sleep||a.base),type:"hotel",hin:true});
+   if(out&&out.d===day.d)items.push({k:"doc",id:d.id,t1:d.t2||"",t2:"",title:"Check-out · "+hn,sub:nm(last.sleep||last.base),type:"hotel",hout:true});
    return;
   }
   if(d.dayId!==day.d)return;
-  if(TRIPT[d.type]&&d.leg!=null&&day.legs&&day.legs[d.leg]){var sg=legSegs(day,d.leg);sub.push(segText(sg[Math.min(d.seg||0,sg.length-1)]))}
+  var st=docSeg(d);if(st&&!titleHas(d,st))sub.push(st);   // el tipo ya lo dice el ícono
   items.push({k:"doc",id:d.id,t1:d.t1||"",t2:d.t2||"",title:d.title||T.l,sub:sub.join(" · "),type:d.type});
  });
  evList().forEach(function(e){if(e.day===day.d)items.push({k:"ev",id:e.id,t1:e.t1||"",t2:e.t2||"",title:e.title,sub:e.note||"",type:"evento"})});
- var top=items.filter(function(x){return x.top}),timed=items.filter(function(x){return !x.top&&tmin(x.t1)!=null}),un=items.filter(function(x){return !x.top&&tmin(x.t1)==null});
+ /* Hotel sin hora: el check-out va arriba del todo; el check-in también, salvo que ese día
+    haya un check-out con hora (entonces va de primero en "Sin hora", porque se llega después). */
+ var outTimed=items.some(function(x){return x.hout&&tmin(x.t1)!=null});
+ items.forEach(function(x){if(tmin(x.t1)!=null)return;if(x.hout)x.top=true;else if(x.hin)x.top=!outTimed});
+ var top=items.filter(function(x){return x.top}).sort(function(a,b){return (b.hout?1:0)-(a.hout?1:0)}),timed=items.filter(function(x){return !x.top&&tmin(x.t1)!=null}),un=items.filter(function(x){return !x.top&&tmin(x.t1)==null}).sort(function(a,b){return (b.hin?1:0)-(a.hin?1:0)});
  timed.sort(function(a,b){var d=tmin(a.t1)-tmin(b.t1);if(d)return d;var x=tmin(a.t2),y=tmin(b.t2);return (x==null?1e4:x)-(y==null?1e4:y)});
  function rng(x){var s=tmin(x.t1),e=tmin(x.t2);return {s:s,e:(e!=null&&e>s)?e:s}}
  for(var i=0;i<timed.length;i++)for(var j=i+1;j<timed.length;j++){
@@ -1100,8 +1118,8 @@ function agendaOf(day){
  return {top:top,timed:timed,un:un,all:items};
 }
 function agItem(it){
- var has=tmin(it.t1)!=null,tm=has?'<b>'+esc(it.t1)+'</b>'+(it.t2?'<small>'+esc(it.t2)+'</small>':""):'<b class="nt">–</b>';
- return '<button type="button" class="ag'+(it.top?" top":"")+(it.clash?" clash":"")+'" style="--t:'+colOf(it.type)+'" data-act="'+(it.k==="doc"?"view":"ev-view")+'" data-id="'+esc(it.id)+'"><span class="agt">'+(it.top?"":tm)+'</span><span class="agi">'+svg(it.type==="evento"?"cal":(TYPE_ICON[it.type]||"file"),16)+'</span><span class="agb"><b>'+esc(it.title)+'</b>'+(it.sub?'<small>'+esc(it.sub)+'</small>':"")+(it.clash?'<em class="cl">Se cruza con otra actividad</em>':"")+'</span></button>';
+ var has=tmin(it.t1)!=null,tm=has?'<b>'+esc(it.t1)+'</b>'+(it.t2?'<small>'+esc(it.t2)+'</small>':""):"";   // sin hora: sin columna de hora
+ return '<button type="button" class="ag'+(has?"":" nt")+(it.clash?" clash":"")+'" style="--t:'+colOf(it.type)+'" data-act="'+(it.k==="doc"?"view":"ev-view")+'" data-id="'+esc(it.id)+'">'+(has?'<span class="agt">'+tm+'</span>':"")+'<span class="agi">'+svg(it.type==="evento"?"cal":(TYPE_ICON[it.type]||"file"),16)+'</span><span class="agb"><b>'+esc(it.title)+'</b>'+(it.sub?'<small>'+esc(it.sub)+'</small>':"")+(it.clash?'<em class="cl">Se cruza con otra actividad</em>':"")+'</span></button>';
 }
 function dayAgenda(day){
  var a=agendaOf(day),h="";

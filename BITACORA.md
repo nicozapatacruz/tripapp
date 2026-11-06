@@ -14,6 +14,23 @@ Reglas:
 
 ## 2026-11-06
 
+- Ajustes tras probar la ficha en el iPhone: el contenido de la hoja vuelve
+  a ocupar todo el ancho (con el pie fijo se encogía al contenido). Guardar
+  ocupa 2/3 y Eliminar 1/3. En vuelo/tren/bus, Salida y Llegada juntan hora
+  y lugar (uno debajo del otro) y se quitó el campo "Trayecto", que repetía
+  el subtítulo. El botón del mapa es solo el ícono. Si el lugar se llama
+  igual que el título, no se repite el nombre.
+- Noches del hotel con fechas de entrada y salida, como en la reserva:
+  "Noche del jue 31 dic" o "Lun 28 dic → jue 31 dic · 3 noches" (antes
+  ponía la última noche en vez del día del check-out).
+- Calendario: sin el tipo en el subtítulo (ya lo dice el ícono; en las
+  tarjetas de Documentos, la franja de la izquierda). Lo que no tiene hora
+  va sin la columna de la hora. Hora, ícono y título alineados en la misma
+  línea. Hotel sin hora: el check-out arriba del todo; el check-in también,
+  salvo que ese día haya un check-out con hora, y entonces va de primero en
+  "Sin hora" (se llega después de salir del otro). Las dos líneas entre
+  elementos venían de reutilizar sin querer la clase `.top` de la cabecera.
+
 - Ficha de solo lectura para documentos y eventos (desde Calendario, Días y
   Documentos): arriba Cerrar, abajo Editar a todo el ancho. Muestra tipo,
   día o noches, trayecto, horas, código para copiar, precio, Maps, el
