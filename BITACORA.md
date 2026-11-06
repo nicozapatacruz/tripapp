@@ -14,6 +14,10 @@ Reglas:
 
 ## 2026-11-06
 
+- Decidido para más adelante: pases de Wallet como archivo (Fase 5) y
+  notificaciones solo cuando sea app nativa (nueva sección en PENDIENTES).
+  Abrir un pase concreto de Wallet con un enlace no es posible.
+
 - Visor de imágenes propio: las imágenes adjuntas (desde la miniatura de la
   ficha o "Abrir" en edición) se abren a pantalla completa sobre negro,
   ajustadas a la pantalla, con pellizcar para zoom, arrastrar, doble toque

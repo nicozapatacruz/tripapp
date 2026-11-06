@@ -49,6 +49,24 @@ Antes de seguir con las fases 2 y 3, Nicolas quiere pulir la app.
   cuántas noches se queda en cada ciudad, etc. Hasta entonces, vuelo/tren/
   bus solo se pueden poner en días con traslado. Cuando exista, el aviso
   "Este día no tiene traslados" llevará al final un enlace "Editar ruta".
+- Pases de Wallet (.pkpass) como archivo de un documento, de respaldo. Al
+  tocarlo, iOS muestra su vista de Wallet con "Agregar" (como al abrirlo en
+  WhatsApp). Tres cambios: aceptar .pkpass en el selector; guardarlo con el
+  tipo `application/vnd.apple.pkpass` (iOS a veces no lo trae desde
+  Archivos y sin él no sale la vista de Wallet); textos "Abrir pase" y "PDF,
+  foto o pase de Wallet". Primero probar en el iPhone que esa vista sale
+  desde la app web. No se puede abrir un pase concreto de Wallet con un
+  enlace (Apple no lo permite).
 - V2: crear lugares y sugerencias con IA.
 - Más tests a medida que la lógica salga de `src/app.js` (hoy un solo IIFE)
   a módulos como `src/backup.js`.
+
+## Si algún día es app nativa
+
+- Notificaciones antes de un vuelo o evento, que al tocarlas abran la ficha
+  con el documento. (En la app web también se podría, pero necesita un
+  servidor que las mande; se decidió esperar a la app nativa.) Las
+  "Actividades en vivo" de la pantalla bloqueada, como las de las
+  aerolíneas, solo existen en apps nativas.
+- Copias de seguridad por trozos desde el almacenamiento (ver "Formato de
+  copia binario" en la Fase 5).
