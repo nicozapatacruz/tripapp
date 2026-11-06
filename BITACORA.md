@@ -14,6 +14,21 @@ Reglas:
 
 ## 2026-11-06
 
+- Los errores de la hoja de exportar salen en rojo (un estilo de `.kv p` los
+  dejaba grises). La × de las horas, sin fondo.
+
+- Contraseña obligatoria en la copia completa (lleva códigos, precios y
+  PDFs). En "Solo itinerario" sigue opcional, pero si se deja vacía sale un
+  aviso amarillo ("Sin contraseña, la copia sale sin cifrar…") y el botón
+  dice "Preparar copia sin cifrar". Los errores salen en la hoja, no en un
+  toast. "Este teléfono" pasó a "este dispositivo" (también se usa el iPad).
+  Importar no cambia: las copias sin cifrar viejas se siguen abriendo.
+
+- Exportar copia: al prepararla se oculta "Preparar copia" (vuelve si se
+  cambia el tipo o la contraseña, porque la copia ya no vale). Aviso verde de
+  éxito separado de los botones, sin la línea de iCloud. Botones: Descargar a
+  la izquierda y Compartir (negro) a la derecha.
+
 - Las horas (documentos y eventos) tienen una × para borrarlas: el selector
   de hora del iPhone no permite dejarla vacía una vez puesta.
 - Interruptor "Ocultar del calendario" en el formulario de documento (todos

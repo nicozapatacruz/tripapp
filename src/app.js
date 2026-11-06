@@ -981,27 +981,47 @@ function openExportSheet(){
  openSheet('<div class="sh-head"><h2 id="sh-title">Exportar copia</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
  '<div class="kv"><div class="chips">'+[["full","Copia completa"],["itinerary","Solo itinerario"]].map(function(t){return '<button type="button" class="chip" data-act="exp-kind" data-v="'+t[0]+'" aria-pressed="'+(expKind===t[0])+'">'+t[1]+'</button>'}).join("")+'</div>'+
  '<p id="e-desc">'+expDesc()+'</p>'+
- '<div class="field"><label for="e-pass">Contraseña</label><input id="e-pass" type="password" autocomplete="new-password" placeholder="Opcional · mínimo '+MIN_PASS+' caracteres"></div>'+
- '<div class="field"><label for="e-pass2">Repite la contraseña</label><input id="e-pass2" type="password" autocomplete="new-password"></div>'+
- '<p>Con contraseña, la copia queda cifrada en este teléfono antes de salir de él. Si la olvidas, no se puede abrir: nadie puede recuperarla.</p>'+
- '<div class="actions"><button type="button" class="btn primary" data-act="exp-make">Preparar copia</button></div>'+
+ '<div class="field"><label for="e-pass" id="e-plab"></label><input id="e-pass" type="password" autocomplete="new-password"></div>'+
+ '<div class="field"><label for="e-pass2" id="e-plab2"></label><input id="e-pass2" type="password" autocomplete="new-password"></div>'+
+ '<p id="e-phint"></p><p class="err" id="x-err" role="alert"></p>'+
+ '<div class="actions" id="e-make"><button type="button" class="btn primary" data-act="exp-make" id="e-btn">Preparar copia</button></div>'+
  '<div id="e-out"></div></div>');
+ expUI();
+}
+/* Copia completa: contraseña obligatoria (lleva códigos, precios y PDFs).
+   Solo itinerario: opcional, pero se deja claro que sin ella sale sin cifrar. */
+function expUI(){
+ var full=expKind==="full",p=$("#e-pass"),empty=!p||!p.value;
+ var l=$("#e-plab");if(l)l.innerHTML="Contraseña"+(full?REQ:"");
+ var l2=$("#e-plab2");if(l2)l2.innerHTML="Repite la contraseña"+(full?REQ:"");
+ if(p)p.placeholder=full?"Mínimo "+MIN_PASS+" caracteres":"Opcional · mínimo "+MIN_PASS+" caracteres";
+ var h=$("#e-phint");
+ if(h){h.className=full||!empty?"":"warnline";h.innerHTML=full
+  ?"La copia se cifra en este dispositivo antes de salir de él. Si olvidas la contraseña, no se puede abrir: nadie puede recuperarla."
+  :empty?"<b>Sin contraseña, la copia sale sin cifrar:</b> cualquiera que tenga el archivo puede leerla. Con contraseña se cifra, igual que la copia completa."
+  :"La copia se cifra en este dispositivo. Si olvidas la contraseña, no se puede abrir: nadie puede recuperarla."}
+ var b=$("#e-btn");if(b&&!b.disabled)b.textContent=!full&&empty?"Preparar copia sin cifrar":"Preparar copia";
+ var e=$("#x-err");if(e)e.textContent="";
 }
 function expKindChanged(b){
  expKind=b.dataset.v;expFile=null;
  sheetBody.querySelectorAll("[data-act=exp-kind]").forEach(function(x){x.setAttribute("aria-pressed",x===b?"true":"false")});
- var d=$("#e-desc");if(d)d.textContent=expDesc();var o=$("#e-out");if(o)o.innerHTML="";
+ var d=$("#e-desc");if(d)d.textContent=expDesc();expReset();expUI();
 }
+/* Si cambia el tipo o la contraseña, la copia preparada ya no vale: se vuelve a "Preparar copia" */
+function expReset(){expFile=null;var o=$("#e-out");if(o)o.innerHTML="";var m=$("#e-make");if(m)m.hidden=false}
 async function serializeDocs(){
  var out=[];
  for(var i=0;i<docs.length;i++){var d=Object.assign({},docs[i]);if(d.blob){d.data=await blobToDataURL(d.blob)}delete d.blob;out.push(d)}
  return out;
 }
 async function makeExport(btn){
- var p1=$("#e-pass").value,p2=$("#e-pass2").value;
- if(p1!==p2){toast("Las contraseñas no coinciden");return}
- if(p1&&p1.length<MIN_PASS){toast("Usa al menos "+MIN_PASS+" caracteres");return}
- if(p1&&!cryptoAvailable()){toast("Este navegador no permite cifrar");return}
+ var p1=$("#e-pass").value,p2=$("#e-pass2").value,xe=$("#x-err");
+ function err(m){if(xe)xe.textContent=m;else toast(m)}
+ if(expKind==="full"&&!p1){err("La copia completa lleva códigos, precios y archivos: ponle una contraseña.");return}
+ if(p1&&p1.length<MIN_PASS){err("Usa al menos "+MIN_PASS+" caracteres.");return}
+ if(p1!==p2){err("Las contraseñas no coinciden.");return}
+ if(p1&&!cryptoAvailable()){err("Este navegador no permite cifrar.");return}
  var label=btn.textContent;btn.disabled=true;btn.textContent=p1?"Cifrando...":"Preparando...";
  try{
   var kind=expKind;
@@ -1011,8 +1031,9 @@ async function makeExport(btn){
   expFile=new File([JSON.stringify(out)],name,{type:"application/json"});
   var canShare=!!(navigator.canShare&&navigator.share&&navigator.canShare({files:[expFile]}));
   var o=$("#e-out");
-  if(o)o.innerHTML='<div class="note">'+svg("flag",20)+'<p><b>Copia lista</b> · '+fmtSize(expFile.size)+(p1?" · cifrada":" · sin cifrar")+(kind==="full"?" · "+backup.docs.length+(backup.docs.length===1?" documento":" documentos"):"")+'<br>'+(canShare?"Elige “Guardar en Archivos” para dejarla en iCloud Drive.":"Guárdala en un lugar privado.")+'</p></div>'+
-   '<div class="actions">'+(canShare?'<button type="button" class="btn primary" data-act="exp-share">Guardar o compartir</button>':"")+'<button type="button" class="btn" data-act="exp-dl">Descargar</button></div>';
+  if(o)o.innerHTML='<div class="note ok">'+svg("check",20)+'<p><b>Copia lista</b> · '+fmtSize(expFile.size)+(p1?" · cifrada":" · sin cifrar")+(kind==="full"?" · "+backup.docs.length+(backup.docs.length===1?" documento":" documentos"):"")+'</p></div>'+
+   '<div class="actions"><button type="button" class="btn'+(canShare?"":" primary")+'" data-act="exp-dl">Descargar</button>'+(canShare?'<button type="button" class="btn primary" data-act="exp-share">Compartir</button>':"")+'</div>';
+  var mk=$("#e-make");if(mk)mk.hidden=true;
  }catch(e){toast("No se pudo generar la copia")}
  btn.disabled=false;btn.textContent=label;
 }
@@ -1337,6 +1358,7 @@ document.addEventListener("change",function(e){
 });
 document.addEventListener("input",function(e){
  if(e.target.type==="time"){syncTimeClr(e.target);return}
+ if(e.target.id==="e-pass"||e.target.id==="e-pass2"){if(expFile)expReset();expUI();return}
  var el=e.target,n=el.dataset&&el.dataset.loc;if(!n)return;n=+n;
  var s=locS[n],v=el.value,ex=extractMapsUrl(v),pick=sugLabels[n][v];
  if(ex.url){

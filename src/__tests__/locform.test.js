@@ -484,4 +484,32 @@ describe("formulario: ubicaciones", () => {
     window.dispatchEvent(new HashChangeEvent("hashchange"));
     expect($("#v-cal").textContent).toContain("Check-in · Casa de un amigo");
   });
+
+  it("27) exportar: al preparar la copia se oculta «Preparar copia»; cambiar la contraseña la descarta", async () => {
+    const b = document.createElement("button");
+    b.dataset.act = "export"; document.body.appendChild(b); click(b); b.remove();
+    // copia completa: sin contraseña no deja
+    click($('[data-act="exp-make"]'));
+    for (let i = 0; i < 5; i++) await tick();
+    expect($("#x-err").textContent).toContain("ponle una contraseña");
+    expect($("#e-make").hidden).toBe(false);
+    // solo itinerario: deja, pero avisa que sale sin cifrar
+    click($('[data-act="exp-kind"][data-v="itinerary"]'));
+    expect($("#x-err").textContent).toBe("");
+    expect($("#e-phint").textContent).toContain("sin cifrar");
+    expect($("#e-btn").textContent).toBe("Preparar copia sin cifrar");
+    click($('[data-act="exp-make"]'));
+    for (let i = 0; i < 10; i++) await tick();
+    expect($("#e-make").hidden).toBe(true);
+    expect($("#e-out .note.ok").textContent).toMatch(/^Copia lista · .+ · sin cifrar$/);   // itinerario: sin número de documentos
+    const btns = [...document.querySelectorAll("#e-out .btn")].map((x) => x.textContent);
+    expect(btns[0]).toBe("Descargar");                           // Compartir (si el navegador puede) va a la derecha
+    $("#e-pass").value = "x";
+    $("#e-pass").dispatchEvent(new Event("input", { bubbles: true }));
+    expect($("#e-make").hidden).toBe(false);
+    expect($("#e-out").innerHTML).toBe("");
+    expect($("#e-btn").textContent).toBe("Preparar copia");      // con contraseña ya no dice «sin cifrar»
+    click($('[data-act="exp-kind"][data-v="full"]'));               // dejarlo como estaba
+    click($('[data-act="close"]'));
+  });
 });
