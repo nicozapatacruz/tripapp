@@ -186,13 +186,31 @@ describe("formulario: ubicaciones", () => {
     click($('[data-act="close"]'));
   });
 
-  it("11) hotel el 27 (noche en el avión): empieza el 28 y sugiere las noches de Madrid", () => {
+  it("11) el 27 (noche en el avión) no deja hotel: sale deshabilitado y se elige el primer tipo disponible", () => {
     openNew("2026-12-27", "hotel");
-    expect($("#f-day").value).toBe("2026-12-28");
-    expect($("#sheet-body").textContent).toContain("es en el avión");
+    expect($("#f-day").value).toBe("2026-12-27");                 // no se cambia el día
+    expect($('.ty[data-type="hotel"]').getAttribute("aria-disabled")).toBe("true");
+    expect($('.ty[aria-checked="true"]').dataset.type).not.toBe("hotel");
+    expect($("#f-tynote").hidden).toBe(true);
+    click($('.ty[data-type="hotel"]'));                            // tocarlo explica por qué
+    expect($("#f-tynote").hidden).toBe(false);
+    expect($("#f-tynote").textContent).toContain("es en el avión");
+    click($('[data-act="close"]'));
+    // «Añadir documento» del día 27 (sin tipo): no abre en Hotel ni cambia el día
+    const ad = document.createElement("button");
+    ad.dataset.act = "add"; ad.dataset.day = "2026-12-27";
+    document.body.appendChild(ad); click(ad); ad.remove();
+    expect($("#f-day").value).toBe("2026-12-27");
+    expect($('.ty[aria-checked="true"]').getAttribute("aria-disabled")).toBe("false");
+    expect($('.ty[aria-checked="true"]').dataset.type).not.toBe("hotel");
+    click($('[data-act="close"]'));
+    // en Madrid (28) sí: el hotel sigue siendo el tipo por defecto y sugiere las noches de Madrid
+    openNew("2026-12-28", "hotel");
+    expect($('.ty[aria-checked="true"]').dataset.type).toBe("hotel");
     expect($("#f-to").options.length).toBe(3);
     click($('[data-act="close"]'));
   });
+
 
   it("12) el ejemplo del título cambia con el tipo", () => {
     openNew(DEC31, "hotel");

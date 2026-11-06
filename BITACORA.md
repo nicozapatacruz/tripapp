@@ -14,6 +14,12 @@ Reglas:
 
 ## 2026-11-06
 
+- El 27 (noche en el avión) el Hotel sale deshabilitado, como vuelo/tren/
+  bus en días sin traslado; al tocarlo explica "La noche del 27 es en el
+  avión: no hace falta hotel…". Antes, "Añadir documento" en el 27 abría en
+  Hotel y cambiaba la fecha sola al 28, lo que confundía. Si el tipo pedido
+  no se puede ese día, se elige el primero disponible.
+
 - Fase 2 probada (iPhone → iPad): copia completa cifrada (contraseña
   incorrecta avisa, la correcta abre), "Solo documentos" no toca eventos ni
   estados, "Solo itinerario" los reemplaza, y una copia de 252 MB (con un PDF
