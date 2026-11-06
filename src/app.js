@@ -995,9 +995,9 @@ function expUI(){
  if(p)p.placeholder=full?"Mínimo "+MIN_PASS+" caracteres":"Opcional · mínimo "+MIN_PASS+" caracteres";
  var h=$("#e-phint");
  if(h){h.className=full||!empty?"":"warnline";h.innerHTML=full
-  ?"La copia se cifra en este dispositivo antes de salir de él. Si olvidas la contraseña, no se puede abrir: nadie puede recuperarla."
+  ?"La copia se cifra en este dispositivo antes de salir de él.<br>Si olvidas la contraseña, no se puede abrir: nadie puede recuperarla. Tendrás que exportarla de nuevo."
   :empty?"<b>Sin contraseña, la copia sale sin cifrar:</b> cualquiera que tenga el archivo puede leerla. Con contraseña se cifra, igual que la copia completa."
-  :"La copia se cifra en este dispositivo. Si olvidas la contraseña, no se puede abrir: nadie puede recuperarla."}
+  :"La copia se cifra en este dispositivo antes de salir de él.<br>Si olvidas la contraseña, no se puede abrir: nadie puede recuperarla. Tendrás que exportarla de nuevo."}
  var b=$("#e-btn");if(b&&!b.disabled)b.textContent=!full&&empty?"Preparar copia sin cifrar":"Preparar copia";
  var e=$("#x-err");if(e)e.textContent="";
 }

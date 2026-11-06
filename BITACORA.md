@@ -14,6 +14,9 @@ Reglas:
 
 ## 2026-11-06
 
+- Texto de la contraseña al exportar: en dos líneas y con "Tendrás que
+  exportarla de nuevo." al final.
+
 - Exportar: sin la línea de progreso ("Preparando…" y "Cifrando…" caben en
   el botón); la línea queda solo al importar.
 - Copias grandes en el iPad (252 MB): tras exportar 2 veces e importar 1, iOS
