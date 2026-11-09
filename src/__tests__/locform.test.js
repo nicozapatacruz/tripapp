@@ -722,7 +722,7 @@ describe("formulario: ubicaciones", () => {
     expect($('[data-act="arr-dn"]').getAttribute("aria-disabled")).toBe("true");
     click($('[data-act="arr-dn"]'));
     expect($("#f-arr").textContent).toContain("+1");                // sigue en +1
-    expect($("#f-arrerr").textContent).toContain("tiene que ser al día siguiente");
+    expect($("#f-arrerr").textContent).toBe("La llegada (11:00) es antes que la salida (18:00), así que es al día siguiente. Si llega el mismo día, revisa las horas.");
     click($('[data-act="arr-up"]'));                                 // +2 sí se puede…
     expect($("#f-arr").textContent).toContain("+2");
     expect($("#f-arrerr").textContent).toBe("");
@@ -775,5 +775,44 @@ describe("formulario: ubicaciones", () => {
     map.addEventListener("click", (e) => e.preventDefault(), { once: true });   // jsdom no navega
     click(map);                                                     // mapa: no abre
     expect($("#sheet").hidden).toBe(true);
+  });
+
+  it("37) billete guardado antes del +1 (sin día de llegada): se deduce de las horas", async () => {
+    const DEC17b = "2027-01-17";
+    const backup = { app: "journest", v: 2, kind: "full", kv: {}, docs: [
+      { id: "old-flight", type: "vuelo", dayId: DEC17b, leg: 0, seg: 0, title: "Vuelo viejo", t1: "22:20", t2: "13:55", created: 1 } ] };
+    const b = document.createElement("button");
+    b.dataset.act = "settings"; document.body.appendChild(b); click(b); b.remove();
+    const inp = $("#s-import");
+    const f = new File([JSON.stringify(backup)], "copia.json", { type: "application/json" });
+    f.text = () => Promise.resolve(JSON.stringify(backup));
+    Object.defineProperty(inp, "files", { value: [f], configurable: true });
+    inp.dispatchEvent(new Event("change", { bubbles: true }));
+    for (let i = 0; i < 10; i++) await tick();
+    click($('[data-act="imp-apply"]'));
+    for (let i = 0; i < 10; i++) await tick();
+    savedLinks();
+    const tk = [...document.querySelectorAll("#v-docs .ticket")].find((t) => t.textContent.includes("Vuelo viejo"));
+    expect(tk.textContent).toContain("22:20–13:55 +1");
+    click(tk.querySelector('[data-act="view"]'));
+    click($('[data-act="edit"]'));
+    expect($("#f-arr").textContent).toContain("+1");               // no «mismo día»
+    expect($('[data-act="arr-dn"]').getAttribute("aria-disabled")).toBe("true");
+    click($(".sh-head .x"));
+    click($('[data-act="close"]'));
+  });
+
+  it("38) error al guardar: un solo mensaje encima de los botones, lleva al campo y lo marca hasta corregirlo", async () => {
+    openNew(DEC31, "entrada");
+    $("#f-price").value = ",";
+    await save();
+    expect($("#f-err").textContent).toContain("El precio no es válido");
+    expect($("#f-price").classList.contains("bad")).toBe(true);
+    expect(document.querySelectorAll("#sheet .err:not(:empty)").length).toBe(1);   // no duplicado
+    $("#f-price").value = "12";
+    $("#f-price").dispatchEvent(new Event("input", { bubbles: true }));
+    expect($("#f-price").classList.contains("bad")).toBe(false);
+    expect($("#f-err").textContent).toBe("");
+    click($('[data-act="close"]'));
   });
 });

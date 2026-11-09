@@ -12,6 +12,20 @@ Reglas:
 
 ---
 
+## 2026-11-09
+
+- Billetes guardados antes del +1 (sin día de llegada): ahora se deduce de
+  las horas (22:20 → 13:55 = +1). Antes salían como "mismo día" al
+  editarlos, daban error al guardar y no contaban para "Noche en el avión".
+- Errores al guardar: uno a la vez, solo encima de los botones (el de la
+  llegada salía dos veces). El formulario se desplaza hasta el campo y lo
+  marca en rojo hasta que se corrige. Se descartó mostrarlos todos juntos:
+  ocuparía altura y casi nunca hay dos.
+- Texto al tocar el − atenuado, con las horas: "La llegada (13:55) es antes
+  que la salida (22:20), así que es al día siguiente. Si llega el mismo
+  día, revisa las horas." Con escalas: "Por las horas de los tramos, llega
+  al menos +1…".
+
 ## 2026-11-06
 
 - Tarjetas de Documentos: ahora toda la tarjeta abre la ficha (antes solo

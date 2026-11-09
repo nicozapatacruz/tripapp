@@ -316,7 +316,12 @@ function locStat(n){
 }
 function refreshLocStat(n){var e=$("#ls-"+n);if(e)e.innerHTML=locStat(n);clearConflictErr()}
 /* Mensajes de error del formulario; el de nombre repetido se borra solo al resolverlo */
-function formErr(msg,kind){var e=$("#f-err");if(!e)return;e.textContent=msg||"";if(kind)e.dataset.k=kind;else delete e.dataset.k}
+function formErr(msg,kind,el){
+ var e=$("#f-err");if(!e)return;e.textContent=msg||"";if(kind)e.dataset.k=kind;else delete e.dataset.k;
+ sheetBody.querySelectorAll(".bad").forEach(function(x){x.classList.remove("bad")});
+ // el error sale encima de Guardar; el formulario se desplaza hasta el campo y lo marca en rojo hasta corregirlo
+ if(msg&&el){el.classList.add("bad");try{el.scrollIntoView({block:"center",behavior:"smooth"})}catch(_){}}
+}
 function clearConflictErr(){
  var e=$("#f-err");if(!e||e.dataset.k!=="conflict")return;
  var slots=TRIPT[selType]?[1,2]:[1],idx=placeIndex();
@@ -418,6 +423,9 @@ var ARRT={vuelo:1,tren:1,bus:1};
 /* Horas en orden: si una es anterior a la anterior, ya es del día siguiente. Día (+0, +1…) de cada una. */
 function chronoOffs(ts){var off=0,prev=null;return ts.map(function(t){var m=tmin(t);if(m==null)return null;if(prev!=null&&m<prev)off++;prev=m;return off})}
 function hopTimes(d){var h=d.hops;if(!h||!h.length)return [d.t1||"",d.t2||""];var o=[];h.forEach(function(x){o.push(x.t1||"",x.t2||"")});return o}
+/* Día de llegada de un billete: el guardado, pero nunca menos de lo que dicen las horas
+   (los guardados antes de que existiera el +1 no lo tienen) */
+function docArr(d){return ARRT[d.type]?Math.max(d.arr||0,autoArr(d)):0}
 function autoArr(d){var o=chronoOffs(hopTimes(d)),a=o[0],b=o[o.length-1];return a!=null&&b!=null?b-a:0}
 /* Escalas de un billete con varios tramos (null si faltan horas). night: cruza la medianoche en
    tierra y dura 8 h o más (se puede dormir en un hotel). off: noche (desde el día de salida). */
@@ -441,9 +449,9 @@ function fmtDt(dt){return WD3[dt.getDay()].toLowerCase()+" "+dt.getDate()+" "+MO
 function applyTransit(){
  DAYS.forEach(function(d){d.sleep=d.sleep0;d.plane=false;d.layover=null});
  docs.forEach(function(d){
-  if(!ARRT[d.type]||!(d.arr>0))return;var a=dayById(d.dayId);if(!a)return;
+  var na=docArr(d);if(!(na>0))return;var a=dayById(d.dayId);if(!a)return;
   var lay={};layoversOf(d,docSegs(d)).forEach(function(l){if(l&&l.night)lay[l.off]=l.city});
-  for(var k=0;k<d.arr;k++){var n=DAYS[a.i+k];if(!n)break;n.sleep=null;if(lay[k]!=null&&!n.plane)n.layover=lay[k];else{n.plane=true;n.layover=null}}
+  for(var k=0;k<na;k++){var n=DAYS[a.i+k];if(!n)break;n.sleep=null;if(lay[k]!=null&&!n.plane)n.layover=lay[k];else{n.plane=true;n.layover=null}}
  });
 }
 function nightLabel(d){return d.plane?"Noche en el avión":d.layover?"Noche de escala en "+d.layover:""}
@@ -608,7 +616,11 @@ function timeArea(){
  });
  return h+'</div>'+arrLine()+'<p class="err" id="f-arrerr" role="alert"></p></div>';
 }
-var ARRERR="La llegada es antes que la salida: tiene que ser al día siguiente o después.";
+/* Por qué no se puede bajar el día de llegada (con las horas reales) */
+function arrMsg(){
+ if(isMulti())return "Por las horas de los tramos, llega al menos +"+minArr()+". Si no es así, revisa las horas.";
+ return "La llegada ("+fx.t2+") es antes que la salida ("+fx.t1+"), así que es al día siguiente. Si llega el mismo día, revisa las horas.";
+}
 function arrErr(m){var e=$("#f-arrerr");if(e)e.textContent=m||""}
 /* Texto de cada escala: "Escala en Bogotá · 2 h 55 min" (se calcula al escribir las horas) */
 function refreshLays(){
@@ -789,7 +801,7 @@ function legsHTML(day){
 /* Trayecto de un billete ("Málaga → Tenerife") y si el título ya lo dice */
 function docSeg(d){if(!TRIPT[d.type])return "";return segsText(docSegs(d))}
 function docSegs(d){return rangeSegs(dayById(d.dayId),parseLeg(docLegVal(d)))}
-function arrSuffix(d){return ARRT[d.type]&&d.arr>0?" +"+d.arr:""}
+function arrSuffix(d){var n=docArr(d);return n>0?" +"+n:""}
 /* Debajo del título: números ("AV9301 · IB6800") y escalas ("escala 2 h 55 min en Bogotá") */
 function tripSub(d){
  if(!TRIPT[d.type])return [];
@@ -893,8 +905,8 @@ function openDocSheet(o){
  // tipo por defecto: el pedido si ese día se puede; si no, el primero disponible (el 27 no hay hotel: es en el avión)
  if(!d&&!typeOk(selType,dayId))selType=Object.keys(TYPES).filter(function(k){return typeOk(k,dayId)})[0]||"otro";
  if(!legSel&&!d){legSel=onlyLeg(dayId);if(legSel)legManual=true}
- fx={co:d&&d.company||"",no:d&&d.no||"",t1:d&&d.t1||"",t2:d&&d.t2||"",hops:d&&d.hops?d.hops.map(function(h){return Object.assign({},h)}):[],arr:d&&d.arr||0,arrManual:false,title:d?(d.titleAuto?"":d.title||""):(o.title||"")};
- if(d&&ARRT[d.type])fx.arrManual=(d.arr||0)!==autoArr(d);   // lo ajustó a mano (p. ej. +2): se respeta
+ fx={co:d&&d.company||"",no:d&&d.no||"",t1:d&&d.t1||"",t2:d&&d.t2||"",hops:d&&d.hops?d.hops.map(function(h){return Object.assign({},h)}):[],arr:d?docArr(d):0,arrManual:false,title:d?(d.titleAuto?"":d.title||""):(o.title||"")};
+ if(d&&ARRT[d.type])fx.arrManual=fx.arr!==autoArr(d);   // lo ajustó a mano (p. ej. +2): se respeta
  syncFxShape();
  var types=Object.keys(TYPES).map(function(k){return '<button type="button" class="ty" role="radio" data-act="type" data-type="'+k+'" aria-checked="'+(k===selType)+'" aria-disabled="'+!typeOk(k,dayId)+'" style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],22)+TYPES[k].l+'</button>'}).join("")+'<p class="tynote" id="f-tynote"'+(typeOk(selType,dayId)?" hidden":"")+'>'+esc(typeNote(selType,dayId))+'</p><p class="dupnote" id="f-dupnote"'+(dupTicketText(selType,dayId)?"":" hidden")+'>'+esc(dupTicketText(selType,dayId))+'</p>';
  var prev="";fileDel=false;
@@ -996,7 +1008,7 @@ function openDocView(id){
  var T=TYPES[d.type]||TYPES.otro,dy=dayById(d.dayId),h=vType(TYPE_ICON[d.type]||"file",T.t,T.l,docWhen(d));
  var tr=!!TRIPT[d.type];
  if(tr){
-  var ix=placeIndex(),ss=docSegs(d),hp=d.hops,arrDt=ARRT[d.type]&&d.arr>0?dayPlus(d.dayId,d.arr):null;
+  var ix=placeIndex(),ss=docSegs(d),hp=d.hops,arrDt=docArr(d)>0?dayPlus(d.dayId,docArr(d)):null;
   h+=vLeg("Salida",d.t1,locLabel(d,1,ix),d.loc1u,hp?hp[0].no:d.no);
   if(ss.length>1){var ls=layoversOf(d,ss);
    for(var k=0;k<ss.length-1;k++){var l=ls[k];
@@ -1057,21 +1069,21 @@ function autoTitle(d,dy){
 async function saveFromSheet(){
  captureFx();
  var tEl=$("#f-title"),title=tEl?tEl.value.trim():"",code=$("#f-code").value.trim(),note=$("#f-note").value.trim(),day=$("#f-day").value,file=$("#f-file").files[0];
- if(!typeOk(selType,day)){formErr(typeNote(selType,day));return}
+ if(!typeOk(selType,day)){formErr(typeNote(selType,day),"type",$('.ty[aria-checked="true"]'));return}
  var pr=parsePrice($("#f-price").value);
- if(pr===undefined){formErr("El precio no es válido. Usa solo números, por ejemplo 125,50.");return}
+ if(pr===undefined){formErr("El precio no es válido. Usa solo números, por ejemplo 125,50.","",$("#f-price"));return}
  var cur=$("#f-cur").value;
  var d=editing?Object.assign({},editing):{id:uid(),created:Date.now()};
  var t1=fx.t1||"",t2=fx.t2||"";
- if(t1&&t2&&selType!=="hotel"&&!TRIPT[selType]&&t2<=t1){formErr("La hora de fin debe ser posterior a la de inicio.");return}
- if(ARRT[selType]&&fx.arr<minArr()){formErr(ARRERR);arrErr(ARRERR);return}
+ if(t1&&t2&&selType!=="hotel"&&!TRIPT[selType]&&t2<=t1){formErr("La hora de fin debe ser posterior a la de inicio.","",$("#f-t2"));return}
+ if(ARRT[selType]&&fx.arr<minArr()){formErr(arrMsg(),"",$("#f-t2")||$("#f-h"+(fx.hops.length-1)+"-t2"));return}
  var tr=!!TRIPT[selType],dy=dayById(day),ls=$("#f-leg"),idx=placeIndex(),slots=tr?[1,2]:[1];
  // No puede haber dos lugares con el mismo nombre y distinto enlace en la misma ciudad
  for(var si=0;si<slots.length;si++){
   var qn=slots[si],rq=queryLoc(qn,idx);
   if(rq.kind==="conflict"){
    var wc=rq.options.reduce(function(a,o){return a.concat(o.cities||[])},[]).filter(function(x,i,a){return a.indexOf(x)===i});
-   formErr("Ya existe «"+locS[qn].t.trim()+"» en "+citiesText(wc)+" con otra ubicación. Usa la existente o cambia el nombre.","conflict");return}
+   formErr("Ya existe «"+locS[qn].t.trim()+"» en "+citiesText(wc)+" con otra ubicación. Usa la existente o cambia el nombre.","conflict",$("#f-loc"+qn));return}
  }
  d.type=selType;d.dayId=day;d.code=code;d.note=note;d.price=pr;d.cur=cur;d.t1=t1;d.t2=t2;
  var ch=$("#f-calhide");if(ch&&ch.checked)d.calHide=true;else delete d.calHide;   // campo nuevo opcional: las copias viejas siguen valiendo
@@ -1396,7 +1408,7 @@ function agendaOf(day){
   if(d.dayId!==day.d)return;
   var st=docSeg(d);if(st&&!titleHas(d,st))sub.push(st);   // el tipo ya lo dice el ícono
   sub=sub.concat(tripSub(d));
-  items.push({k:"doc",id:d.id,t1:d.t1||"",t2:d.t2||"",arr:ARRT[d.type]&&d.arr>0?d.arr:0,title:d.title||T.l,sub:sub.join(" · "),type:d.type});
+  items.push({k:"doc",id:d.id,t1:d.t1||"",t2:d.t2||"",arr:docArr(d),title:d.title||T.l,sub:sub.join(" · "),type:d.type});
  });
  evList().forEach(function(e){if(e.day===day.d)items.push({k:"ev",id:e.id,t1:e.t1||"",t2:e.t2||"",title:e.title,sub:e.note||"",type:"evento"})});
  /* Hotel sin hora: el check-out va arriba del todo; el check-in también, salvo que ese día
@@ -1554,7 +1566,7 @@ document.addEventListener("click",function(e){
  else if(a==="vw-share"){shareImage(b.dataset.id)}
  else if(a==="file-del"){removeFormFile()}
  else if(a==="arr-up"||a==="arr-dn"){captureFx();
-  if(a==="arr-dn"&&fx.arr<=minArr()){arrErr(fx.arr>0?ARRERR:"");return}   // atenuado: explica por qué
+  if(a==="arr-dn"&&fx.arr<=minArr()){arrErr(fx.arr>0?arrMsg():"");return}   // atenuado: explica por qué
   fx.arr=Math.max(0,Math.min(3,fx.arr+(a==="arr-up"?1:-1)));fx.arrManual=true;arrErr("");refreshArr()}
  else if(a==="t-clr"){var ti=document.getElementById(b.dataset.for);if(ti){ti.value="";ti.dispatchEvent(new Event("input",{bubbles:true}));ti.dispatchEvent(new Event("change",{bubbles:true}))}}
  else if(a==="type"){
@@ -1621,6 +1633,8 @@ document.addEventListener("click",function(e){
  else if(a==="persist"){if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().then(function(ok){toast(ok?"Datos protegidos":"El navegador no lo ha concedido")})}else toast("No disponible en este navegador")}
 });
 document.addEventListener("change",function(e){
+ clearBad(e.target);
+ if(e.target.id==="f-day"){var fe0=$("#f-err");if(fe0&&fe0.dataset.k==="type")formErr("")}
  if(e.target.type==="time")syncTimeClr(e.target);
  if(e.target.classList&&e.target.classList.contains("statsel")){var sv=+e.target.value;e.target.className="stat statsel s"+sv;setKV(e.target.dataset.k,sv);return}
  if(e.target.id==="f-file"){var f=e.target.files[0];if(f){var fd=$("#f-filedel");if(fd)fd.hidden=false;$("#f-name").innerHTML=esc(f.name)+"<small>"+fmtSize(f.size)+"</small>";var ft=$("#f-title");if(ft&&!ft.value)ft.value=f.name.replace(/\.[^.]+$/,"");
@@ -1634,7 +1648,9 @@ document.addEventListener("change",function(e){
  else if(e.target.id==="f-leg"){legSel=e.target.value;legManual=true;dayChanged();refreshLocFields();refreshTransport()}
  else if(e.target.id==="s-import"){var f2=e.target.files[0];if(f2)importBackup(f2)}
 });
+function clearBad(t){if(!t||!t.classList||!t.classList.contains("bad"))return;t.classList.remove("bad");var fe=$("#f-err");if(fe&&fe.dataset.k!=="conflict")formErr("")}
 document.addEventListener("input",function(e){
+ clearBad(e.target);
  if(e.target.type==="time"){syncTimeClr(e.target);
   // traslado: la llegada pasa sola a +1 si es antes que la salida, y se recalculan las escalas
   if(ARRT[selType]&&$("#f-timewrap")&&$("#f-timewrap").contains(e.target)){captureFx();if(!fx.arrManual)fx.arr=autoArr(fxDoc());else fx.arr=Math.max(fx.arr,minArr());arrErr("");refreshArr();refreshLays()}

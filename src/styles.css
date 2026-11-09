@@ -241,6 +241,8 @@ button.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-co
 .stp{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font:600 20px/1 var(--f);color:var(--ink);display:inline-flex;align-items:center;justify-content:center}
 .stp:disabled,.stp[aria-disabled="true"]{opacity:.35}
 .field .err:empty{display:none}
+/* Campo con error (al tocar Guardar): borde rojo hasta corregirlo */
+.field input.bad,.field select.bad,.ty.bad{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger)}
 #f-loc{display:flex;flex-direction:column;gap:16px}
 .locstat{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;font-size:13px;color:var(--muted);min-height:20px}
 .locstat .ok{display:inline-flex;align-items:center;gap:5px;color:var(--ok);font-weight:650}
