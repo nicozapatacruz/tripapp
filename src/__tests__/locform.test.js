@@ -815,4 +815,47 @@ describe("formulario: ubicaciones", () => {
     expect($("#f-err").textContent).toBe("");
     click($('[data-act="close"]'));
   });
+
+  it("39) lista «Qué ver»: toda la fila abre la edición; Añadir y Eliminar | Guardar en el pie fijo", () => {
+    const b = document.createElement("button");
+    b.dataset.act = "list"; b.dataset.city = "madrid"; b.dataset.kind = "see";
+    document.body.appendChild(b); click(b); b.remove();
+    expect($("#sheet-foot").textContent).toBe("ReordenarAñadir");
+    expect($('#sheet-body [data-act="item-edit"].x')).toBeNull();     // ya no hay botón «Editar»
+    const row = $('#sheet-body .pl[data-act="item-edit"]');
+    click(row.querySelector("b"));
+    expect($("#i-n").value).toBe(row.querySelector("b").textContent);
+    expect([...document.querySelectorAll("#sheet-foot .btn")].map((x) => x.textContent)).toEqual(["Eliminar", "Guardar"]);
+    click($(".sh-head .x"));                                          // Cancelar: vuelve a la lista
+    expect($("#sh-title").textContent).toContain("Qué ver");
+    click($('[data-act="close"]'));
+  });
+
+  it("40) Reordenar: Cancelar no cambia nada; Listo guarda el orden y se ve también en el día", async () => {
+    const open = () => { const b = document.createElement("button"); b.dataset.act = "list"; b.dataset.city = "madrid"; b.dataset.kind = "see"; document.body.appendChild(b); click(b); b.remove(); };
+    const names = () => [...document.querySelectorAll("#pl-rows li b")].map((x) => x.textContent);
+    open();
+    const before = names();
+    click($('[data-act="ord-start"]'));
+    expect([...document.querySelectorAll("#sheet-foot .btn")].map((x) => x.textContent)).toEqual(["Cancelar", "Listo"]);
+    expect(document.querySelectorAll("#pl-rows .hdl").length).toBe(before.length);
+    expect($('[data-act="list-reset"]')).toBeNull();                 // en este modo no se puede restaurar
+    const ul = $("#pl-rows");
+    ul.insertBefore(ul.lastElementChild, ul.children[2]);             // como si se arrastrara el último al 3.er lugar
+    click($('[data-act="ord-cancel"]'));
+    expect(names()).toEqual(before);                                  // Cancelar: igual que antes
+    click($('[data-act="ord-start"]'));
+    const ul2 = $("#pl-rows");
+    ul2.insertBefore(ul2.lastElementChild, ul2.children[2]);
+    click($('[data-act="ord-done"]'));
+    for (let i = 0; i < 5; i++) await tick();
+    const after = names();
+    expect(after[2]).toBe(before[before.length - 1]);
+    expect($('[data-act="list-reset"]')).not.toBeNull();             // ahora hay cambios: se puede restaurar
+    click($('[data-act="close"]'));
+    location.hash = "#dia-" + MADRID;
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const dayText = $("#v-day").textContent;
+    expect(dayText.indexOf(after[2])).toBeLessThan(dayText.indexOf(after[3]));
+  });
 });

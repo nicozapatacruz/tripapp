@@ -14,6 +14,27 @@ Reglas:
 
 ## 2026-11-09
 
+- Reordenar las listas de sitios (Qué ver / Dónde comer): sirve para
+  planear el recorrido (p. ej. Palacio Real justo después de Gran Vía), algo
+  que los estados no expresan. Botón "Reordenar" junto a Añadir; en ese modo
+  cada fila tiene una agarradera ≡ para arrastrar (el resto de la fila sigue
+  desplazando la lista, así no se confunden) y el pie es Cancelar | Listo.
+  El orden se guarda en la lista, así que también se ve en el día;
+  "Restaurar lista original" (al final de la lista, solo si hay cambios)
+  deshace también el orden.
+
+- Hojas: la lista de "Qué ver / Dónde comer" se cortaba sin poder
+  desplazarse. Desde que los botones de abajo son fijos (6 nov), el
+  contenido de la hoja es lo que se desplaza, y una lista con bordes
+  recortados se encogía para caber en vez de dejar desplazar. Arreglado para
+  todas las hojas (afectaba también, sin notarse, a la de paradas). El resto
+  de la app no se desplaza así y no le afectaba.
+- Lista de sitios: toda la fila abre la edición, con un lápiz gris como
+  pista (antes un botón "Editar" que quitaba ancho al texto). Añadir va en
+  el pie fijo; "Restaurar lista original" al final de la lista. El
+  formulario de un sitio, como el de documentos: Cancelar arriba, Eliminar |
+  Guardar en el pie.
+
 - Billetes guardados antes del +1 (sin día de llegada): ahora se deduce de
   las horas (22:20 → 13:55 = +1). Antes salían como "mismo día" al
   editarlos, daban error al guardar y no contaban para "Noche en el avión".

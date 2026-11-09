@@ -37,6 +37,7 @@ var ICON={
  coche:'<path d="M5 16v-5l2-5h10l2 5v5M3 16h18M7 16v3M17 16v3"/><circle cx="8" cy="13" r=".8"/><circle cx="16" cy="13" r=".8"/>',
  seguro:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
  comida:'<path d="M7 3v8M4 3v5a3 3 0 0 0 6 0V3M7 11v10M17 3c-2 2-3 5-3 8h3v10"/>',
+ grip:'<path d="M5 9h14M5 15h14"/>',
  pencil:'<path d="M4 20l1-4L16.5 4.5a2 2 0 0 1 3 3L8 19z"/><path d="M14 7l3 3"/>'
 };
 function svg(n,s){s=s||20;return '<svg class="i" width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ICON[n]+'</svg>'}
@@ -1173,22 +1174,68 @@ async function delVia(k){
 /* ================= Hoja: editar listas de lugares y restaurantes ================= */
 var listCtx=null,itemEd=null;
 function listTitle(kind){return kind==="see"?"Qué ver":"Dónde comer"}
-function openListSheet(cid,kind){
+function openListSheet(cid,kind,reorder){
  listCtx={cid:cid,kind:kind};itemEd=null;
- var l=listOf(cid,kind),custom=Array.isArray(kv["pl:"+cid+":"+kind]);
- openSheet('<div class="sh-head"><h2 id="sh-title">'+listTitle(kind)+' · '+esc(nm(cid))+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
- (l.length?'<ul class="rows">'+l.map(function(p){return '<li class="pl"><div><b>'+esc(p.n)+'</b>'+(p.d?'<p>'+esc(p.d)+'</p>':"")+'</div><button type="button" class="x" data-act="item-edit" data-id="'+esc(p.id)+'">Editar</button></li>'}).join("")+'</ul>':'<p class="foot">Lista vacía.</p>')+
- '<div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="item-add">'+svg("plus",20)+'Añadir</button>'+(custom?'<button type="button" class="btn" data-act="list-reset">Restaurar lista original</button>':"")+'</div>');
+ var l=listOf(cid,kind),custom=Array.isArray(kv["pl:"+cid+":"+kind]),ro=!!reorder&&l.length>1;
+ var rows=l.map(function(p){
+  var txt='<div><b>'+esc(p.n)+'</b>'+(p.d?'<p>'+esc(p.d)+'</p>':"")+'</div>';
+  // modo Reordenar: se arrastra desde la agarradera (el resto de la fila sigue desplazando la lista)
+  if(ro)return '<li class="pl ord" data-id="'+esc(p.id)+'">'+txt+'<span class="hdl" role="button" aria-label="Mover '+esc(p.n)+'">'+svg("grip",20)+'</span></li>';
+  // normal: toda la fila abre la edición (el lápiz es solo una pista)
+  return '<li class="pl tap" data-act="item-edit" data-id="'+esc(p.id)+'">'+txt+'<span class="pen" aria-hidden="true">'+svg("pencil",17)+'</span></li>';
+ }).join("");
+ openSheet('<div class="sh-head"><h2 id="sh-title">'+listTitle(kind)+' · '+esc(nm(cid))+'</h2>'+(ro?"":'<button type="button" class="x" data-act="close">Cerrar</button>')+'</div>'+
+  (ro?'<p class="foot" style="margin:0">Arrastra desde ≡ para cambiar el orden. También se verá así en el día.</p>':"")+
+  (l.length?'<ul class="rows" id="pl-rows">'+rows+'</ul>':'<p class="foot">Lista vacía.</p>')+
+  (custom&&!ro?'<div><button type="button" class="mini" data-act="list-reset">Restaurar lista original</button></div>':""),
+  ro?'<div class="actions"><button type="button" class="btn" data-act="ord-cancel">Cancelar</button><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="ord-done">Listo</button></div>'
+   :'<div class="actions">'+(l.length>1?'<button type="button" class="btn" data-act="ord-start">Reordenar</button>':"")+'<button type="button" class="btn primary" style="--c1:var(--accent)" data-act="item-add">'+svg("plus",20)+'Añadir</button></div>');
+ if(ro)bindReorder($("#pl-rows"));
+}
+/* Arrastrar filas desde la agarradera (puntero: dedo o ratón). La fila sigue al dedo y las demás
+   se reacomodan; cerca de los bordes, la hoja se desplaza sola. */
+function bindReorder(ul){
+ if(!ul)return;var drag=null;
+ function rowsExcept(el){return [].slice.call(ul.children).filter(function(r){return r!==el})}
+ ul.addEventListener("pointerdown",function(e){
+  var h=e.target.closest(".hdl");if(!h)return;e.preventDefault();
+  var li=h.closest("li");drag={li:li,y0:e.clientY+sheetBody.scrollTop,off0:li.offsetTop,id:e.pointerId};
+  li.classList.add("drag");try{h.setPointerCapture(e.pointerId)}catch(_){}
+ });
+ ul.addEventListener("pointermove",function(e){
+  if(!drag||e.pointerId!==drag.id)return;e.preventDefault();
+  var y=e.clientY,li=drag.li;
+  // cambiar de lugar cuando el dedo pasa la mitad de otra fila
+  var others=rowsExcept(li),before=null;
+  for(var k=0;k<others.length;k++){var r=others[k].getBoundingClientRect();if(y<r.top+r.height/2){before=others[k];break}}
+  if(before!==li.nextElementSibling)ul.insertBefore(li,before);
+  // la fila sigue al dedo (en coordenadas del contenido, por si la hoja se desplaza) desde su nuevo lugar
+  li.style.transform="translateY("+((y+sheetBody.scrollTop-drag.y0)-(li.offsetTop-drag.off0))+"px)";
+  var sb=sheetBody.getBoundingClientRect();
+  if(y<sb.top+50)sheetBody.scrollTop-=8;else if(y>sb.bottom-50)sheetBody.scrollTop+=8;
+ });
+ function end(e){if(!drag||(e&&e.pointerId!==drag.id))return;drag.li.classList.remove("drag");drag.li.style.transform="";drag=null}
+ ul.addEventListener("pointerup",end);ul.addEventListener("pointercancel",end);
+}
+async function saveOrder(){
+ var c=listCtx,ul=$("#pl-rows");if(!c||!ul)return;
+ var l=listOf(c.cid,c.kind),by={};l.forEach(function(p){by[p.id]=p});
+ var ids=[].slice.call(ul.children).map(function(li){return li.dataset.id});
+ var nl=ids.map(function(id){return by[id]}).filter(Boolean);
+ if(nl.length!==l.length){openListSheet(c.cid,c.kind);return}
+ var same=nl.every(function(p,i){return p===l[i]});
+ if(!same){await setKV("pl:"+c.cid+":"+c.kind,nl.map(function(p){return Object.assign({},p)}));refresh();toast("Orden guardado")}
+ openListSheet(c.cid,c.kind);
 }
 function openItemForm(id){
  var c=listCtx,p=id==null?null:listOf(c.cid,c.kind).filter(function(x){return x.id===id})[0]||null;
  itemEd=p;
- openSheet('<div class="sh-head"><h2 id="sh-title">'+(p?"Editar":"Añadir")+' · '+esc(listTitle(c.kind))+'</h2><button type="button" class="x" data-act="item-back">Volver</button></div>'+
+ openSheet('<div class="sh-head"><h2 id="sh-title">'+(p?"Editar":"Añadir")+' · '+esc(listTitle(c.kind))+'</h2><button type="button" class="x" data-act="item-back">Cancelar</button></div>'+
  '<div class="field"><label for="i-n">Nombre'+REQ+'</label><input id="i-n" type="text" placeholder="'+(c.kind==="see"?"Ej. Museo del Prado":"Ej. Casa Lucio")+'" value="'+esc(p?p.n:"")+'" autocomplete="off"></div>'+
  '<div class="field"><label for="i-d">Descripción</label><textarea id="i-d" placeholder="Qué es, qué pedir, horarios...">'+esc(p?p.d:"")+'</textarea></div>'+
  '<div class="field"><label for="i-u">Enlace de Google Maps</label><input id="i-u" type="text" placeholder="Si lo dejas vacío, el mapa busca por nombre" value="'+esc(p?p.u:"")+'" autocomplete="off"></div>'+
- '<p class="err" id="i-err" role="alert"></p>'+
- '<div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="item-save">Guardar</button>'+(p?'<button type="button" class="btn danger" data-act="item-del">Eliminar</button>':"")+'</div>');
+ '',
+ '<p class="err" id="i-err" role="alert"></p><div class="actions">'+(p?'<button type="button" class="btn danger" data-act="item-del">Eliminar</button>':"")+'<button type="button" class="btn primary" style="--c1:var(--accent)" data-act="item-save">Guardar</button></div>');
 }
 async function saveItem(){
  var c=listCtx,n=$("#i-n").value.trim(),d=$("#i-d").value.trim(),u=$("#i-u").value.trim();
@@ -1614,6 +1661,9 @@ document.addEventListener("click",function(e){
  else if(a==="list"){openListSheet(b.dataset.city,b.dataset.kind)}
  else if(a==="item-edit"){openItemForm(b.dataset.id)}
  else if(a==="item-add"){openItemForm(null)}
+ else if(a==="ord-start"){openListSheet(listCtx.cid,listCtx.kind,true)}
+ else if(a==="ord-cancel"){openListSheet(listCtx.cid,listCtx.kind)}
+ else if(a==="ord-done"){saveOrder()}
  else if(a==="item-back"){openListSheet(listCtx.cid,listCtx.kind)}
  else if(a==="item-save"){saveItem()}
  else if(a==="item-del"){confirmTap(b,"Confirmar",deleteItem)}

@@ -161,6 +161,13 @@ ul,ol{padding:0;list-style:none}
 .pl>div{flex:1;min-width:0}
 .pl b{font-weight:650;font-size:16px;letter-spacing:-.01em}
 .pl p{font-size:14px;color:var(--muted);margin-top:2px}
+.pl.tap{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pl.tap:active{background:var(--surface2)}
+.pl .pen{flex:none;color:var(--muted);display:inline-flex}
+/* Reordenar: agarradera y fila arrastrada */
+.pl.ord{position:relative;background:var(--surface)}
+.pl .hdl{flex:none;width:44px;height:44px;margin:-8px -8px -8px 0;display:inline-flex;align-items:center;justify-content:center;color:var(--muted);touch-action:none;cursor:grab}
+.pl.drag{z-index:3;box-shadow:0 10px 28px -8px rgba(16,24,40,.35);border-radius:14px;opacity:.97}
 .pact{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:11px}
 .map,.stat{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 13px;border-radius:99px;background:var(--surface2);border:0;font:600 13px var(--f);color:var(--ink)}
 .stat.s1{background:var(--st1-bg);color:var(--st1-ink)}
@@ -342,6 +349,9 @@ button.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-co
 .sheet{width:100%;max-height:92%;display:flex;flex-direction:column;overflow:hidden;background:var(--surface);border-radius:28px 28px 0 0;padding-bottom:env(safe-area-inset-bottom,0px);margin-inline:auto;max-width:640px}
 .sheet>.in{width:100%}
 .sheet>#sheet-body{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain}
+/* Lo de dentro de la hoja nunca se encoge: si no, una lista con bordes recortados (.rows) se achicaba
+   y cortaba sus últimas filas en vez de dejar que la hoja se desplace (pasó al fijar los botones abajo) */
+.sheet>#sheet-body>*,.sheet>#sheet-body>[style*="contents"]>*{flex-shrink:0}
 .sheet>.grab{flex:none}
 /* Pie fijo de la hoja: Editar, o Eliminar | Guardar */
 .sheet .in.sh-foot{flex:none;padding-block:12px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);background:var(--surface)}
