@@ -14,6 +14,22 @@ Reglas:
 
 ## 2026-11-09
 
+- Día: al desplazarse, aparece arriba una barra compacta fija (‹ · ciudad ·
+  Día X de Y) sobre las pestañas, como los títulos grandes de iOS. Antes el
+  ‹ se iba y había que subir hasta arriba. Se descartó mostrar el menú de
+  abajo en el día: resta altura y "Ruta" no es "volver" si se llegó desde
+  el Calendario o Documentos. El ‹ ahora vuelve a donde se estaba (antes
+  siempre a Ruta).
+- Hojas: la cabecera (título y Cerrar/Cancelar) queda fija al desplazar,
+  con una línea debajo cuando hay contenido detrás. Revisado el resto: las
+  acciones importantes ya estaban fijas (pie de las hojas, botón + de
+  Documentos, menú de abajo).
+- Filas de sitios en el día: estado a la izquierda; agendar (calendario con
+  +, para que se lea "añadir") y mapa solo con ícono a la derecha, los tres
+  de 38 px. Sin el borde negro al elegir un estado.
+- Pestañas que dejaron de quedar fijas una vez: no se encontró la causa ni
+  se pudo repetir. Si vuelve a pasar, anotar qué se acababa de hacer.
+
 - Reordenar las listas de sitios (Qué ver / Dónde comer): sirve para
   planear el recorrido (p. ej. Palacio Real justo después de Gran Vía), algo
   que los estados no expresan. Botón "Reordenar" junto a Añadir; en ese modo

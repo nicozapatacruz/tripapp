@@ -18,6 +18,7 @@ var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){r
 var ICON={
  chev:'<path d="M9 6l6 6-6 6"/>',back:'<path d="M15 6l-6 6 6 6"/>',arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',plus:'<path d="M12 5v14M5 12h14"/>',
  cal:'<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+ calplus:'<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4M12 12.5v5M9.5 15h5"/>',
  copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>',
  pin:'<path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
  route:'<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>',
@@ -759,7 +760,7 @@ function listOf(id,kind){
 function itemKey(kind,cid,p){return (kind==="see"?"s:":"r:")+cid+":"+p.id}
 function itemRow(cid,kind,p,idx){
  var href=p.u&&/^https?:\/\//i.test(p.u)?p.u:mapUrl(p.n,cid);
- return '<li class="pl pin"><span class="pinn" style="--c:'+CITIES[cid].c1+'">'+(idx+1)+'</span><div><b>'+esc(p.n)+'</b>'+(p.d?'<p>'+esc(p.d)+'</p>':"")+'<div class="pact">'+statSel(itemKey(kind,cid,p))+'<button type="button" class="agb2" data-act="ev-add" data-title="'+esc(p.n)+'" data-day="'+esc(curDayId||"")+'" aria-label="Agendar '+esc(p.n)+'">'+svg("cal",17)+'</button><a class="map" href="'+esc(href)+'" target="_blank" rel="noopener" aria-label="Abrir '+esc(p.n)+' en el mapa">'+svg("pin",15)+'Mapa</a></div></div></li>';
+ return '<li class="pl pin"><span class="pinn" style="--c:'+CITIES[cid].c1+'">'+(idx+1)+'</span><div><b>'+esc(p.n)+'</b>'+(p.d?'<p>'+esc(p.d)+'</p>':"")+'<div class="pact">'+statSel(itemKey(kind,cid,p))+'<span class="pgap"></span><button type="button" class="agb2" data-act="ev-add" data-title="'+esc(p.n)+'" data-day="'+esc(curDayId||"")+'" aria-label="Añadir '+esc(p.n)+' al calendario">'+svg("calplus",18)+'</button><a class="map ico" href="'+esc(href)+'" target="_blank" rel="noopener" aria-label="Abrir '+esc(p.n)+' en el mapa">'+svg("pin",18)+'</a></div></div></li>';
 }
 function listHead(title,cid,kind){
  return '<div class="lh"><h3 class="lab">'+title+'</h3><button type="button" class="pen" data-act="list" data-city="'+cid+'" data-kind="'+kind+'" aria-label="Editar lista: '+title+'">'+svg("pencil",18)+'</button></div>';
@@ -836,6 +837,7 @@ function docsPanel(day){
 }
 function renderDay(day){
  curDayId=day.d;
+ var dayBack=dayFrom||"#inicio";
  var c=colors(day),n=docsShown(day).length,i=day.i,prev=DAYS[i-1],next=DAYS[i+1],isToday=day.d===todayStr();
  var tabList=day.start?[["docs","Documentos"]]:[["general","General"],["comer","Comer"],["docs","Documentos"]];
  if(day.start)tab="docs";
@@ -845,7 +847,8 @@ function renderDay(day){
  var panels={general:general,comer:eat,docs:(day.start?legsHTML(day):"")+docsPanel(day)};
  V.day.style.setProperty("--c1",c[0]);V.day.style.setProperty("--c2",c[1]);
  var rbar=day.stops.map(function(s){return '<i style="background:'+CITIES[s].c1+'"></i>'}).join("");
- V.day.innerHTML='<header class="dh"><div class="in"><div class="dtop"><a class="back" href="#inicio" aria-label="Volver a la ruta">'+svg("back",20)+'</a><span class="dnum">'+(isToday?"Hoy · ":"")+'Día '+(i+1)+' de '+DAYS.length+'</span></div><p class="dwd">'+esc(longDate(day))+'</p><h1>'+titleHTML(day)+'</h1><div class="rbar">'+rbar+'</div>'+(day.sleep?'<p class="sleep">'+svg("bed",17)+'Dormimos en '+esc(nm(day.sleep))+'</p>':nightLabel(day)?'<p class="sleep">'+svg("vuelo",17)+(day.start?"Inicio del viaje · ":day.last?"Fin del viaje · ":"")+esc(nightLabel(day))+'</p>':'<p class="sleep">'+(day.start?"Inicio del viaje":"Fin del viaje")+'</p>')+'</div></header>'+
+ V.day.innerHTML='<header class="dh"><div class="in"><div class="dtop"><a class="back" href="'+dayBack+'" aria-label="Volver">'+svg("back",20)+'</a><span class="dnum">'+(isToday?"Hoy · ":"")+'Día '+(i+1)+' de '+DAYS.length+'</span></div><p class="dwd">'+esc(longDate(day))+'</p><h1>'+titleHTML(day)+'</h1><div class="rbar">'+rbar+'</div>'+(day.sleep?'<p class="sleep">'+svg("bed",17)+'Dormimos en '+esc(nm(day.sleep))+'</p>':nightLabel(day)?'<p class="sleep">'+svg("vuelo",17)+(day.start?"Inicio del viaje · ":day.last?"Fin del viaje · ":"")+esc(nightLabel(day))+'</p>':'<p class="sleep">'+(day.start?"Inicio del viaje":"Fin del viaje")+'</p>')+'</div></header>'+
+ '<div class="dmini" id="dmini" aria-hidden="true"><div class="in"><a class="back sm" href="'+dayBack+'" aria-label="Volver" tabindex="-1">'+svg("back",18)+'</a><b>'+esc(day.stops.map(nm).join(" → "))+'</b><span>Día '+(i+1)+' de '+DAYS.length+'</span></div></div>'+
  '<nav class="tabs" role="tablist" aria-label="Secciones del día"><div class="in"><div class="trk">'+tabList.map(function(t){return '<button type="button" role="tab" class="tab" data-act="tab" data-tab="'+t[0]+'" aria-selected="'+(tab===t[0])+'">'+t[1]+(t[0]==="docs"&&n?' <em>'+n+'</em>':"")+'</button>'}).join("")+'</div></div></nav>'+
  '<main class="in panel" role="tabpanel">'+panels[tab]+'</main>'+
  '<div class="in dnav">'+(prev?'<a href="#dia-'+prev.d+'"><small>← Anterior</small><b>'+esc(shortDay(prev))+' · '+esc(nm(prev.stops[prev.stops.length-1]))+'</b></a>':'<span style="flex:1"></span>')+(next?'<a class="next" href="#dia-'+next.d+'"><small>Siguiente →</small><b>'+esc(shortDay(next))+' · '+esc(nm(next.stops[0]))+'</b></a>':'<span style="flex:1"></span>')+'</div>';
@@ -889,7 +892,7 @@ function renderDocsView(){
 /* ================= Hoja: añadir / editar documento ================= */
 var sheet=$("#sheet"),sheetBody=$("#sheet-body"),sheetFoot=$("#sheet-foot"),selType="hotel",editing=null;
 /* foot: botones fijos abajo (Editar, o Eliminar | Guardar), siempre a mano aunque el formulario sea largo */
-function openSheet(html,foot){sheetBody.innerHTML=html;sheetFoot.innerHTML=foot||"";sheetFoot.hidden=!foot;sheetBody.scrollTop=0;sheet.hidden=false;document.documentElement.style.overflow="hidden";var f=sheetBody.querySelector("input,select,button");if(f&&f.type!=="file")try{f.focus({preventScroll:true})}catch(e){}}
+function openSheet(html,foot){sheetBody.innerHTML=html;sheetFoot.innerHTML=foot||"";sheetFoot.hidden=!foot;sheetBody.scrollTop=0;sheetBody.classList.remove("scrolled");sheet.hidden=false;document.documentElement.style.overflow="hidden";var f=sheetBody.querySelector("input,select,button");if(f&&f.type!=="file")try{f.focus({preventScroll:true})}catch(e){}}
 function closeSheet(){evEditing=null;expFile=null;impWrapper=null;impBackup=null;sheet.hidden=true;sheetBody.innerHTML="";sheetFoot.innerHTML="";sheetFoot.hidden=true;document.documentElement.style.overflow="";editing=null}
 function dayOptions(sel){return DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===sel?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'<option value="trip"'+(sel==="trip"?" selected":"")+'>Todo el viaje (sin día)</option>'}
 /* Campo de hora con una × para borrarla (el selector de hora del iPhone no tiene cómo dejarla vacía) */
@@ -1550,7 +1553,7 @@ async function deleteEvent(){
  await setKV("events",evList().filter(function(x){return x.id!==id}));closeSheet();refresh();toast("Evento eliminado");
 }
 
-var view="home";
+var view="home",dayFrom=null;   // dayFrom: de dónde se llegó al día (el botón ‹ vuelve ahí)
 function setBand(color){document.body.style.setProperty("--band",color)}
 function route(){
  applyTransit();
@@ -1558,6 +1561,7 @@ function route(){
  if(h.indexOf("dia-")===0){day=dayById(h.slice(4));if(day)v="day"}else if(h==="documentos")v="docs";else if(h==="calendario")v="cal";
  scrollPos[view]=window.scrollY;
  var changed=v!==view||(v==="day"&&V.day.dataset.id!==(day&&day.d));
+ if(v==="day"&&view!=="day")dayFrom={home:"#inicio",docs:"#documentos",cal:"#calendario"}[view]||"#inicio";
  view=v;
  ["home","day","docs","cal"].forEach(function(k){V[k].hidden=k!==v});
  $("#bnav").hidden=v==="day";
@@ -1569,7 +1573,15 @@ function route(){
  if(changed){window.scrollTo(0,v==="day"?0:(scrollPos[v]||0))}
  if(v==="cal"&&calTab==="dias"&&!calScrolled){calScrolled=true;var ce=document.getElementById("c-"+todayStr());if(ce)requestAnimationFrame(function(){ce.scrollIntoView({block:"start"});window.scrollBy(0,-12)})}
  if(v==="home"&&!homeScrolled){homeScrolled=true;var te=document.getElementById("d-"+todayStr());if(te)requestAnimationFrame(function(){te.scrollIntoView({block:"center"})})}
- updateFab();
+ updateFab();updateDayMini();
+}
+/* Día: al desplazarse, el título grande se va y aparece arriba una barra compacta (‹ · ciudad · Día X de Y),
+   fija junto a las pestañas. Así volver atrás no obliga a subir hasta arriba. */
+function updateDayMini(){
+ if(view!=="day"){V.day.classList.remove("mini");return}
+ var h=V.day.querySelector(".dh h1"),on=!!h&&h.getBoundingClientRect().bottom<56;
+ V.day.classList.toggle("mini",on);
+ var m=$("#dmini");if(m){m.setAttribute("aria-hidden",on?"false":"true");var bk=m.querySelector(".back");if(bk)bk.tabIndex=on?0:-1}
 }
 /* Botón flotante "+" en Documentos (lista). Al final del scroll se estira a "Añadir documento". */
 var fab=$("#fab");
@@ -1731,7 +1743,9 @@ window.addEventListener("hashchange",route);
 ["gesturestart","gesturechange"].forEach(function(t){document.addEventListener(t,function(e){e.preventDefault()},{passive:false})});
 
 if(fab)fab.innerHTML=svg("plus",24)+'<span>Añadir documento</span>';
-window.addEventListener("scroll",updateFab,{passive:true});
+window.addEventListener("scroll",function(){updateFab();updateDayMini()},{passive:true});
+// hojas: la cabecera (título y Cerrar/Cancelar) queda fija; con una línea debajo cuando hay contenido detrás
+sheetBody.addEventListener("scroll",function(){sheetBody.classList.toggle("scrolled",sheetBody.scrollTop>4)},{passive:true});
 window.addEventListener("resize",updateFab);
 $("#nav-home").innerHTML=svg("route",24)+"Ruta";
 $("#nav-cal").innerHTML=svg("cal",24)+"Calendario";

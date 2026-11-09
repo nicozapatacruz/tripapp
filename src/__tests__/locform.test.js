@@ -858,4 +858,28 @@ describe("formulario: ubicaciones", () => {
     const dayText = $("#v-day").textContent;
     expect(dayText.indexOf(after[2])).toBeLessThan(dayText.indexOf(after[3]));
   });
+
+  it("41) el ‹ del día vuelve a donde estabas (Calendario, Documentos o Ruta); también en la barra compacta", () => {
+    const go = (h) => { location.hash = h; window.dispatchEvent(new HashChangeEvent("hashchange")); };
+    go("#calendario"); go("#dia-" + MADRID);
+    expect($("#v-day .dh .back").getAttribute("href")).toBe("#calendario");
+    expect($("#dmini .back").getAttribute("href")).toBe("#calendario");
+    go("#dia-2026-12-29");                                           // pasar al día siguiente no cambia el origen
+    expect($("#v-day .dh .back").getAttribute("href")).toBe("#calendario");
+    go("#documentos"); go("#dia-" + MADRID);
+    expect($("#v-day .dh .back").getAttribute("href")).toBe("#documentos");
+    go("#inicio"); go("#dia-" + MADRID);
+    expect($("#v-day .dh .back").getAttribute("href")).toBe("#inicio");
+    expect($("#dmini").textContent).toContain("Día 2 de");
+  });
+
+  it("42) filas de sitios: estado a la izquierda; agendar y mapa solo con ícono a la derecha", () => {
+    location.hash = "#dia-" + MADRID; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const pact = $("#v-day .pact");
+    const kids = [...pact.children].map((x) => x.className || x.tagName);
+    expect(kids[0]).toContain("stat");
+    expect(kids[1]).toBe("pgap");
+    expect(pact.querySelector(".map.ico").textContent).toBe("");        // sin texto «Mapa»
+    expect(pact.querySelector(".agb2").getAttribute("aria-label")).toContain("al calendario");
+  });
 });

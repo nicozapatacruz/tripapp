@@ -108,6 +108,14 @@ ul,ol{padding:0;list-style:none}
 .rbar i{flex:1;border-radius:6px;display:block}
 .sleep{display:inline-flex;align-items:center;gap:8px;font-size:14.5px;font-weight:550;color:var(--ink);margin-top:2px}
 .tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--bg);padding-block:8px 10px}
+/* Barra compacta del día al desplazarse: ‹ · ciudad · Día X de Y, fija encima de las pestañas */
+.dmini{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);z-index:31;background:var(--bg);transform:translateY(-100%);opacity:0;pointer-events:none;transition:transform .18s ease,opacity .18s ease}
+#v-day.mini .dmini{transform:none;opacity:1;pointer-events:auto}
+.dmini .in{display:flex;align-items:center;gap:10px;height:52px}
+.dmini b{flex:1;min-width:0;font:750 17px/1.2 var(--f);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dmini span{flex:none;font-size:13px;font-weight:600;color:var(--muted)}
+.back.sm{width:38px;height:38px}
+#v-day.mini .tabs{top:calc(env(safe-area-inset-top,0px) + 52px)}
 .trk{display:flex;gap:3px;padding:4px;border-radius:99px;background:var(--surface2)}
 .tab{flex:1;min-height:42px;padding:0 6px;border:0;border-radius:99px;background:none;font:650 14px var(--f);color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
 .tab[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(16,24,40,.12)}
@@ -169,6 +177,11 @@ ul,ol{padding:0;list-style:none}
 .pl .hdl{flex:none;width:44px;height:44px;margin:-8px -8px -8px 0;display:inline-flex;align-items:center;justify-content:center;color:var(--muted);touch-action:none;cursor:grab}
 .pl.drag{z-index:3;box-shadow:0 10px 28px -8px rgba(16,24,40,.35);border-radius:14px;opacity:.97}
 .pact{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:11px}
+/* estado a la izquierda; agendar y mapa (íconos) a la derecha; los tres de la misma altura */
+.pact .pgap{flex:1}
+.pact .stat{height:38px;min-height:38px}
+.pact .agb2,.pact .map.ico{width:38px;height:38px;min-height:0;padding:0;justify-content:center;border-radius:50%}
+select.stat:focus,select.stat:focus-visible{outline:none;box-shadow:none}
 .map,.stat{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 13px;border-radius:99px;background:var(--surface2);border:0;font:600 13px var(--f);color:var(--ink)}
 .stat.s1{background:var(--st1-bg);color:var(--st1-ink)}
 .stat.s2{background:var(--st2-bg);color:var(--st2-ink)}
@@ -348,7 +361,10 @@ button.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-co
 .backdrop{position:fixed;inset:0;z-index:60;background:rgba(10,14,22,.5);display:flex;align-items:flex-end}
 .sheet{width:100%;max-height:92%;display:flex;flex-direction:column;overflow:hidden;background:var(--surface);border-radius:28px 28px 0 0;padding-bottom:env(safe-area-inset-bottom,0px);margin-inline:auto;max-width:640px}
 .sheet>.in{width:100%}
-.sheet>#sheet-body{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain}
+.sheet>#sheet-body{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;padding-top:0}
+/* Cabecera de la hoja fija (título y Cerrar/Cancelar siempre a mano) */
+#sheet-body>.sh-head{position:sticky;top:0;z-index:5;background:var(--surface);padding-block:8px;transition:box-shadow .15s}
+#sheet-body.scrolled>.sh-head{box-shadow:0 1px 0 var(--line)}
 /* Lo de dentro de la hoja nunca se encoge: si no, una lista con bordes recortados (.rows) se achicaba
    y cortaba sus últimas filas en vez de dejar que la hoja se desplace (pasó al fijar los botones abajo) */
 .sheet>#sheet-body>*,.sheet>#sheet-body>[style*="contents"]>*{flex-shrink:0}
