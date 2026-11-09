@@ -847,11 +847,12 @@ function renderDay(day){
  var panels={general:general,comer:eat,docs:(day.start?legsHTML(day):"")+docsPanel(day)};
  V.day.style.setProperty("--c1",c[0]);V.day.style.setProperty("--c2",c[1]);
  var rbar=day.stops.map(function(s){return '<i style="background:'+CITIES[s].c1+'"></i>'}).join("");
- V.day.innerHTML='<header class="dh"><div class="in"><div class="dtop"><a class="back" href="'+dayBack+'" aria-label="Volver">'+svg("back",20)+'</a><span class="dnum">'+(isToday?"Hoy · ":"")+'Día '+(i+1)+' de '+DAYS.length+'</span></div><p class="dwd">'+esc(longDate(day))+'</p><h1>'+titleHTML(day)+'</h1><div class="rbar">'+rbar+'</div>'+(day.sleep?'<p class="sleep">'+svg("bed",17)+'Dormimos en '+esc(nm(day.sleep))+'</p>':nightLabel(day)?'<p class="sleep">'+svg("vuelo",17)+(day.start?"Inicio del viaje · ":day.last?"Fin del viaje · ":"")+esc(nightLabel(day))+'</p>':'<p class="sleep">'+(day.start?"Inicio del viaje":"Fin del viaje")+'</p>')+'</div></header>'+
- '<div class="dstick"><div class="dmini" id="dmini" aria-hidden="true"><div class="in"><a class="back sm" href="'+dayBack+'" aria-label="Volver" tabindex="-1">'+svg("back",18)+'</a><b>'+esc(day.stops.map(nm).join(" → "))+'</b><span>Día '+(i+1)+' de '+DAYS.length+'</span></div></div>'+
- '<nav class="tabs" role="tablist" aria-label="Secciones del día"><div class="in"><div class="trk">'+tabList.map(function(t){return '<button type="button" role="tab" class="tab" data-act="tab" data-tab="'+t[0]+'" aria-selected="'+(tab===t[0])+'">'+t[1]+(t[0]==="docs"&&n?' <em>'+n+'</em>':"")+'</button>'}).join("")+'</div></div></nav></div>'+
+ V.day.innerHTML='<div class="dbar"><div class="in"><a class="back" href="'+dayBack+'" aria-label="Volver">'+svg("back",20)+'</a><b class="dbt" aria-hidden="true">'+esc(day.stops.map(nm).join(" → "))+'</b><span class="dnum">'+(isToday?"Hoy · ":"")+'Día '+(i+1)+' de '+DAYS.length+'</span></div></div>'+
+ '<header class="dh"><div class="in"><p class="dwd">'+esc(longDate(day))+'</p><h1>'+titleHTML(day)+'</h1><div class="rbar">'+rbar+'</div>'+(day.sleep?'<p class="sleep">'+svg("bed",17)+'Dormimos en '+esc(nm(day.sleep))+'</p>':nightLabel(day)?'<p class="sleep">'+svg("vuelo",17)+(day.start?"Inicio del viaje · ":day.last?"Fin del viaje · ":"")+esc(nightLabel(day))+'</p>':'<p class="sleep">'+(day.start?"Inicio del viaje":"Fin del viaje")+'</p>')+'</div></header>'+
+ '<nav class="tabs" role="tablist" aria-label="Secciones del día"><div class="in"><div class="trk">'+tabList.map(function(t){return '<button type="button" role="tab" class="tab" data-act="tab" data-tab="'+t[0]+'" aria-selected="'+(tab===t[0])+'">'+t[1]+(t[0]==="docs"&&n?' <em>'+n+'</em>':"")+'</button>'}).join("")+'</div></div></nav>'+
  '<main class="in panel" role="tabpanel">'+panels[tab]+'</main>'+
  '<div class="in dnav">'+(prev?'<a href="#dia-'+prev.d+'"><small>← Anterior</small><b>'+esc(shortDay(prev))+' · '+esc(nm(prev.stops[prev.stops.length-1]))+'</b></a>':'<span style="flex:1"></span>')+(next?'<a class="next" href="#dia-'+next.d+'"><small>Siguiente →</small><b>'+esc(shortDay(next))+' · '+esc(nm(next.stops[0]))+'</b></a>':'<span style="flex:1"></span>')+'</div>';
+ watchDayMini();
 }
 function segHTML(){
  var np=pendHotels().length+pendTickets().length;
@@ -890,10 +891,12 @@ function renderDocsView(){
 }
 
 /* ================= Hoja: añadir / editar documento ================= */
-var sheet=$("#sheet"),sheetBody=$("#sheet-body"),sheetFoot=$("#sheet-foot"),selType="hotel",editing=null;
+var sheet=$("#sheet"),sheetBody=$("#sheet-body"),sheetFoot=$("#sheet-foot"),sheetHead=$("#sheet-head"),selType="hotel",editing=null;
 /* foot: botones fijos abajo (Editar, o Eliminar | Guardar), siempre a mano aunque el formulario sea largo */
-function openSheet(html,foot){sheetBody.innerHTML=html;sheetFoot.innerHTML=foot||"";sheetFoot.hidden=!foot;sheetBody.scrollTop=0;sheetBody.classList.remove("scrolled");sheet.hidden=false;document.documentElement.style.overflow="hidden";var dlg=sheet.querySelector(".sheet");if(dlg)try{dlg.focus({preventScroll:true})}catch(e){}}
-function closeSheet(){evEditing=null;expFile=null;impWrapper=null;impBackup=null;sheet.hidden=true;sheetBody.innerHTML="";sheetFoot.innerHTML="";sheetFoot.hidden=true;document.documentElement.style.overflow="";editing=null}
+function openSheet(html,foot){sheetBody.innerHTML=html;sheetFoot.innerHTML=foot||"";sheetFoot.hidden=!foot;sheetBody.scrollTop=0;
+ // cabecera (título y Cerrar/Cancelar) fuera del área que se desplaza: así nada se ve pasar por encima o por detrás
+ var hd=sheetBody.querySelector(".sh-head");sheetHead.innerHTML="";if(hd&&hd.parentNode===sheetBody)sheetHead.appendChild(hd);sheetHead.hidden=!sheetHead.firstChild;sheetHead.classList.remove("scrolled");sheet.hidden=false;document.documentElement.style.overflow="hidden";var dlg=sheet.querySelector(".sheet");if(dlg)try{dlg.focus({preventScroll:true})}catch(e){}}
+function closeSheet(){evEditing=null;expFile=null;impWrapper=null;impBackup=null;sheet.hidden=true;sheetBody.innerHTML="";sheetHead.innerHTML="";sheetFoot.innerHTML="";sheetFoot.hidden=true;document.documentElement.style.overflow="";editing=null}
 function dayOptions(sel){return DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===sel?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'<option value="trip"'+(sel==="trip"?" selected":"")+'>Todo el viaje (sin día)</option>'}
 /* Campo de hora con una × para borrarla (el selector de hora del iPhone no tiene cómo dejarla vacía) */
 function timeBox(id,v,l){return '<span class="tbox"><input id="'+id+'" type="time" value="'+esc(v||"")+'" aria-label="'+l+'"><button type="button" class="tclr" data-act="t-clr" data-for="'+id+'" aria-label="Quitar '+l.toLowerCase()+'"'+(v?"":" hidden")+'>'+svg("xmark",16)+'</button></span>'}
@@ -1575,16 +1578,24 @@ function route(){
  if(v==="home"&&!homeScrolled){homeScrolled=true;var te=document.getElementById("d-"+todayStr());if(te)requestAnimationFrame(function(){te.scrollIntoView({block:"center"})})}
  updateFab();updateDayMini();
 }
-/* Día: al desplazarse, el título grande se va y aparece arriba una barra compacta (‹ · ciudad · Día X de Y),
-   fija junto a las pestañas. Así volver atrás no obliga a subir hasta arriba. */
-function updateDayMini(){
- if(view!=="day"){V.day.classList.remove("mini");return}
- // se muestra justo cuando el bloque (barra + pestañas) queda pegado arriba; solo cambia la opacidad, nada salta
- var st=V.day.querySelector(".dstick"),on=false;
- if(st){var top=parseFloat(getComputedStyle(st).top)||0;on=st.getBoundingClientRect().top<=top+0.5&&window.scrollY>0}
- V.day.classList.toggle("mini",on);
- var m=$("#dmini");if(m){m.setAttribute("aria-hidden",on?"false":"true");var bk=m.querySelector(".back");if(bk)bk.tabIndex=on?0:-1}
+/* Día: la fila de arriba (‹ y "Día X de Y") queda fija desde el principio y el resto del encabezado pasa por
+   debajo; cuando el título grande ya quedó escondido, sus ciudades aparecen en pequeño en esa fila. Así el ‹
+   está siempre a mano y nada salta. Un IntersectionObserver avisa al cruzar (sin trabajo en cada scroll). */
+var dayIO=null;
+function setDayTitle(on){
+ var b=V.day.querySelector(".dbar");if(!b||b.classList.contains("titled")===on)return;
+ b.classList.toggle("titled",on);
+ var t=b.querySelector(".dbt");if(t)t.setAttribute("aria-hidden",on?"false":"true");
 }
+function watchDayMini(){
+ if(dayIO){dayIO.disconnect();dayIO=null}
+ var bar=V.day.querySelector(".dbar"),h=V.day.querySelector(".dh h1");
+ if(!bar||!h||typeof IntersectionObserver==="undefined")return;
+ var lim=(parseFloat(getComputedStyle(bar).top)||0)+bar.offsetHeight;   // borde inferior de la fila fija
+ dayIO=new IntersectionObserver(function(es){var e=es[es.length-1];setDayTitle(!e.isIntersecting&&e.boundingClientRect.top<lim)},{rootMargin:"-"+Math.round(lim)+"px 0px 0px 0px",threshold:0});
+ dayIO.observe(h);
+}
+function updateDayMini(){if(view!=="day"&&dayIO){dayIO.disconnect();dayIO=null}}
 /* Botón flotante "+" en Documentos (lista). Al final del scroll se estira a "Añadir documento". */
 var fab=$("#fab");
 function updateFab(){
@@ -1745,9 +1756,9 @@ window.addEventListener("hashchange",route);
 ["gesturestart","gesturechange"].forEach(function(t){document.addEventListener(t,function(e){e.preventDefault()},{passive:false})});
 
 if(fab)fab.innerHTML=svg("plus",24)+'<span>Añadir documento</span>';
-window.addEventListener("scroll",function(){updateFab();updateDayMini()},{passive:true});
+window.addEventListener("scroll",updateFab,{passive:true});
 // hojas: la cabecera (título y Cerrar/Cancelar) queda fija; con una línea debajo cuando hay contenido detrás
-sheetBody.addEventListener("scroll",function(){sheetBody.classList.toggle("scrolled",sheetBody.scrollTop>4)},{passive:true});
+sheetBody.addEventListener("scroll",function(){var on=sheetBody.scrollTop>4;if(sheetHead.classList.contains("scrolled")!==on)sheetHead.classList.toggle("scrolled",on)},{passive:true});
 window.addEventListener("resize",updateFab);
 $("#nav-home").innerHTML=svg("route",24)+"Ruta";
 $("#nav-cal").innerHTML=svg("cal",24)+"Calendario";

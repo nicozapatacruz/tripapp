@@ -14,6 +14,31 @@ Reglas:
 
 ## 2026-11-09
 
+- Tercer y definitivo planteamiento del encabezado del día (patrón de títulos
+  grandes de iOS): la fila del ‹ y "Día X de Y" queda fija desde el principio
+  y el resto del encabezado (fecha, título, barras, "Dormimos en…") pasa por
+  debajo; cuando el título grande queda escondido, las ciudades aparecen en
+  pequeño en esa fila. Antes había dos ‹ (el del encabezado se iba enseguida
+  y el de la barra compacta llegaba tarde) y un tramo largo sin poder
+  volver; además la barra compacta dejaba mucho hueco sobre las pestañas.
+
+- Segundo intento con la barra compacta del día: seguía parpadeando (toda la
+  página, también en el navegador del computador). Causa real: al pegarse se
+  le ponía a toda la vista del día la clase `mini`, que ya existía para los
+  enlaces pequeños (13 px, en línea, subrayado). Toda la página cambiaba de
+  forma, eso movía el límite, se quitaba la clase, volvía... en bucle. El
+  mismo tipo de choque que el de `.top` del 6 nov. Además se recalculaba en
+  cada movimiento del scroll. Ahora un IntersectionObserver avisa
+  solo al cruzar el límite; las pestañas se pegan 52 px más abajo y la
+  barra ocupa ese hueco, cambiando solo su visibilidad (sin transiciones ni
+  márgenes negativos). Si aún así falla: plan B, un ‹ fijo dentro de la fila
+  de pestañas, sin nada que dependa del scroll.
+- Hojas: la cabecera ya no es "sticky" dentro de lo que se desplaza (dejaba
+  una rendija bajo el tirador por donde se veía pasar el contenido); ahora
+  va en su propio espacio fijo, como el pie.
+- Selector de estado dibujado por la app (sin el control nativo de iOS, que
+  mostraba un recuadro negro justo después de tocarlo), con su propia flecha.
+
 - Barra compacta del día rehecha: parpadeaba al desplazarse (la barra
   entraba deslizándose mientras las pestañas saltaban 52 px, y cerca del
   límite se encendía y apagaba). Ahora barra y pestañas son un solo bloque

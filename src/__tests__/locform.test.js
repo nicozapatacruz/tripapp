@@ -862,19 +862,17 @@ describe("formulario: ubicaciones", () => {
   it("41) el ‹ del día vuelve a donde estabas (Calendario, Documentos o Ruta); también en la barra compacta", () => {
     const go = (h) => { location.hash = h; window.dispatchEvent(new HashChangeEvent("hashchange")); };
     go("#calendario"); go("#dia-" + MADRID);
-    expect($("#v-day .dh .back").getAttribute("href")).toBe("#calendario");
-    expect($("#dmini .back").getAttribute("href")).toBe("#calendario");
+    expect($("#v-day .dbar .back").getAttribute("href")).toBe("#calendario");
     go("#dia-2026-12-29");                                           // pasar al día siguiente no cambia el origen
-    expect($("#v-day .dh .back").getAttribute("href")).toBe("#calendario");
+    expect($("#v-day .dbar .back").getAttribute("href")).toBe("#calendario");
     go("#documentos"); go("#dia-" + MADRID);
-    expect($("#v-day .dh .back").getAttribute("href")).toBe("#documentos");
+    expect($("#v-day .dbar .back").getAttribute("href")).toBe("#documentos");
     go("#inicio"); go("#dia-" + MADRID);
-    expect($("#v-day .dh .back").getAttribute("href")).toBe("#inicio");
-    expect($("#dmini").textContent).toContain("Día 2 de");
-    // barra compacta y pestañas forman un solo bloque fijo (nada cambia de posición al aparecer la barra)
-    const st = $("#v-day .dstick");
-    expect(st.querySelector(".dmini")).not.toBeNull();
-    expect(st.querySelector(".tabs")).not.toBeNull();
+    expect($("#v-day .dbar .back").getAttribute("href")).toBe("#inicio");
+    // fila fija con ‹, ciudades (aparecen al bajar) y Día X de Y; el resto del encabezado va aparte
+    expect($("#v-day .dbar").textContent).toContain("Día 2 de");
+    expect($("#v-day .dbar .dbt").textContent).toBe("Madrid");
+    expect($("#v-day .dh .back")).toBeNull();
   });
 
   it("42) filas de sitios: estado a la izquierda; agendar y mapa solo con ícono a la derecha", () => {
@@ -893,5 +891,15 @@ describe("formulario: ubicaciones", () => {
     document.body.appendChild(b); click(b); b.remove();
     expect(document.activeElement).toBe($("#sheet .sheet"));
     click($('[data-act="close"]'));
+  });
+
+  it("44) la cabecera de la hoja queda fuera de lo que se desplaza", () => {
+    const b = document.createElement("button");
+    b.dataset.act = "list"; b.dataset.city = "madrid"; b.dataset.kind = "see";
+    document.body.appendChild(b); click(b); b.remove();
+    expect($("#sheet-head .sh-head #sh-title").textContent).toContain("Qué ver");
+    expect($("#sheet-body .sh-head")).toBeNull();
+    click($('[data-act="close"]'));
+    expect($("#sheet-head").innerHTML).toBe("");
   });
 });
