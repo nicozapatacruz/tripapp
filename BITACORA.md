@@ -14,6 +14,16 @@ Reglas:
 
 ## 2026-11-09
 
+- Barra compacta del día rehecha: parpadeaba al desplazarse (la barra
+  entraba deslizándose mientras las pestañas saltaban 52 px, y cerca del
+  límite se encendía y apagaba). Ahora barra y pestañas son un solo bloque
+  fijo; la barra ocupa su sitio siempre y solo se funde al quedar pegada.
+- Al abrir una hoja, el foco va a la hoja y no al botón Cerrar (iOS a veces
+  le dibujaba el borde de foco).
+- Sin el recuadro rectangular negro que iOS pone al tocar (se veía en el
+  selector de estado); en su lugar un leve oscurecimiento que respeta las
+  esquinas redondeadas, en toda la app.
+
 - Día: al desplazarse, aparece arriba una barra compacta fija (‹ · ciudad ·
   Día X de Y) sobre las pestañas, como los títulos grandes de iOS. Antes el
   ‹ se iba y había que subir hasta arriba. Se descartó mostrar el menú de

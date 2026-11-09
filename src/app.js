@@ -848,8 +848,8 @@ function renderDay(day){
  V.day.style.setProperty("--c1",c[0]);V.day.style.setProperty("--c2",c[1]);
  var rbar=day.stops.map(function(s){return '<i style="background:'+CITIES[s].c1+'"></i>'}).join("");
  V.day.innerHTML='<header class="dh"><div class="in"><div class="dtop"><a class="back" href="'+dayBack+'" aria-label="Volver">'+svg("back",20)+'</a><span class="dnum">'+(isToday?"Hoy · ":"")+'Día '+(i+1)+' de '+DAYS.length+'</span></div><p class="dwd">'+esc(longDate(day))+'</p><h1>'+titleHTML(day)+'</h1><div class="rbar">'+rbar+'</div>'+(day.sleep?'<p class="sleep">'+svg("bed",17)+'Dormimos en '+esc(nm(day.sleep))+'</p>':nightLabel(day)?'<p class="sleep">'+svg("vuelo",17)+(day.start?"Inicio del viaje · ":day.last?"Fin del viaje · ":"")+esc(nightLabel(day))+'</p>':'<p class="sleep">'+(day.start?"Inicio del viaje":"Fin del viaje")+'</p>')+'</div></header>'+
- '<div class="dmini" id="dmini" aria-hidden="true"><div class="in"><a class="back sm" href="'+dayBack+'" aria-label="Volver" tabindex="-1">'+svg("back",18)+'</a><b>'+esc(day.stops.map(nm).join(" → "))+'</b><span>Día '+(i+1)+' de '+DAYS.length+'</span></div></div>'+
- '<nav class="tabs" role="tablist" aria-label="Secciones del día"><div class="in"><div class="trk">'+tabList.map(function(t){return '<button type="button" role="tab" class="tab" data-act="tab" data-tab="'+t[0]+'" aria-selected="'+(tab===t[0])+'">'+t[1]+(t[0]==="docs"&&n?' <em>'+n+'</em>':"")+'</button>'}).join("")+'</div></div></nav>'+
+ '<div class="dstick"><div class="dmini" id="dmini" aria-hidden="true"><div class="in"><a class="back sm" href="'+dayBack+'" aria-label="Volver" tabindex="-1">'+svg("back",18)+'</a><b>'+esc(day.stops.map(nm).join(" → "))+'</b><span>Día '+(i+1)+' de '+DAYS.length+'</span></div></div>'+
+ '<nav class="tabs" role="tablist" aria-label="Secciones del día"><div class="in"><div class="trk">'+tabList.map(function(t){return '<button type="button" role="tab" class="tab" data-act="tab" data-tab="'+t[0]+'" aria-selected="'+(tab===t[0])+'">'+t[1]+(t[0]==="docs"&&n?' <em>'+n+'</em>':"")+'</button>'}).join("")+'</div></div></nav></div>'+
  '<main class="in panel" role="tabpanel">'+panels[tab]+'</main>'+
  '<div class="in dnav">'+(prev?'<a href="#dia-'+prev.d+'"><small>← Anterior</small><b>'+esc(shortDay(prev))+' · '+esc(nm(prev.stops[prev.stops.length-1]))+'</b></a>':'<span style="flex:1"></span>')+(next?'<a class="next" href="#dia-'+next.d+'"><small>Siguiente →</small><b>'+esc(shortDay(next))+' · '+esc(nm(next.stops[0]))+'</b></a>':'<span style="flex:1"></span>')+'</div>';
 }
@@ -892,7 +892,7 @@ function renderDocsView(){
 /* ================= Hoja: añadir / editar documento ================= */
 var sheet=$("#sheet"),sheetBody=$("#sheet-body"),sheetFoot=$("#sheet-foot"),selType="hotel",editing=null;
 /* foot: botones fijos abajo (Editar, o Eliminar | Guardar), siempre a mano aunque el formulario sea largo */
-function openSheet(html,foot){sheetBody.innerHTML=html;sheetFoot.innerHTML=foot||"";sheetFoot.hidden=!foot;sheetBody.scrollTop=0;sheetBody.classList.remove("scrolled");sheet.hidden=false;document.documentElement.style.overflow="hidden";var f=sheetBody.querySelector("input,select,button");if(f&&f.type!=="file")try{f.focus({preventScroll:true})}catch(e){}}
+function openSheet(html,foot){sheetBody.innerHTML=html;sheetFoot.innerHTML=foot||"";sheetFoot.hidden=!foot;sheetBody.scrollTop=0;sheetBody.classList.remove("scrolled");sheet.hidden=false;document.documentElement.style.overflow="hidden";var dlg=sheet.querySelector(".sheet");if(dlg)try{dlg.focus({preventScroll:true})}catch(e){}}
 function closeSheet(){evEditing=null;expFile=null;impWrapper=null;impBackup=null;sheet.hidden=true;sheetBody.innerHTML="";sheetFoot.innerHTML="";sheetFoot.hidden=true;document.documentElement.style.overflow="";editing=null}
 function dayOptions(sel){return DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===sel?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'<option value="trip"'+(sel==="trip"?" selected":"")+'>Todo el viaje (sin día)</option>'}
 /* Campo de hora con una × para borrarla (el selector de hora del iPhone no tiene cómo dejarla vacía) */
@@ -1579,7 +1579,9 @@ function route(){
    fija junto a las pestañas. Así volver atrás no obliga a subir hasta arriba. */
 function updateDayMini(){
  if(view!=="day"){V.day.classList.remove("mini");return}
- var h=V.day.querySelector(".dh h1"),on=!!h&&h.getBoundingClientRect().bottom<56;
+ // se muestra justo cuando el bloque (barra + pestañas) queda pegado arriba; solo cambia la opacidad, nada salta
+ var st=V.day.querySelector(".dstick"),on=false;
+ if(st){var top=parseFloat(getComputedStyle(st).top)||0;on=st.getBoundingClientRect().top<=top+0.5&&window.scrollY>0}
  V.day.classList.toggle("mini",on);
  var m=$("#dmini");if(m){m.setAttribute("aria-hidden",on?"false":"true");var bk=m.querySelector(".back");if(bk)bk.tabIndex=on?0:-1}
 }

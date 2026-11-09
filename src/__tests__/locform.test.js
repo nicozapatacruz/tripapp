@@ -871,6 +871,10 @@ describe("formulario: ubicaciones", () => {
     go("#inicio"); go("#dia-" + MADRID);
     expect($("#v-day .dh .back").getAttribute("href")).toBe("#inicio");
     expect($("#dmini").textContent).toContain("Día 2 de");
+    // barra compacta y pestañas forman un solo bloque fijo (nada cambia de posición al aparecer la barra)
+    const st = $("#v-day .dstick");
+    expect(st.querySelector(".dmini")).not.toBeNull();
+    expect(st.querySelector(".tabs")).not.toBeNull();
   });
 
   it("42) filas de sitios: estado a la izquierda; agendar y mapa solo con ícono a la derecha", () => {
@@ -881,5 +885,13 @@ describe("formulario: ubicaciones", () => {
     expect(kids[1]).toBe("pgap");
     expect(pact.querySelector(".map.ico").textContent).toBe("");        // sin texto «Mapa»
     expect(pact.querySelector(".agb2").getAttribute("aria-label")).toContain("al calendario");
+  });
+
+  it("43) al abrir una hoja el foco va a la hoja, no al botón Cerrar", () => {
+    const b = document.createElement("button");
+    b.dataset.act = "list"; b.dataset.city = "madrid"; b.dataset.kind = "see";
+    document.body.appendChild(b); click(b); b.remove();
+    expect(document.activeElement).toBe($("#sheet .sheet"));
+    click($('[data-act="close"]'));
   });
 });
