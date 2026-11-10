@@ -568,16 +568,21 @@ function priceField(d){
  var cur=d?(d.cur||"EUR"):(kv.lastCur||"EUR");
  return '<div class="field"><label for="f-price">Precio</label><div class="pricerow"><input id="f-price" type="text" inputmode="decimal" placeholder="0,00" value="'+(d&&d.price!=null?String(d.price).replace(".",","):"")+'" autocomplete="off"><select id="f-cur" aria-label="Moneda">'+CURS.map(function(c){return '<option value="'+c+'"'+(c===cur?" selected":"")+'>'+c+'</option>'}).join("")+'</select></div></div>';
 }
+/* Barra de gastos: una línea con el total; al tocarla se despliega el desglose (se recuerda en
+   este dispositivo). El ícono de imprimir abre el resumen para imprimir. */
 function summaryHTML(shown){
  var pr=shown.filter(function(d){return d.price!=null});if(!pr.length)return "";
- var h='<section class="sumbox">'+(docFilter==="all"?'<button type="button" class="prt" data-act="spend" aria-label="Resumen de gastos para imprimir">'+svg("print",20)+'</button>':"")+'<div><span>'+(docFilter==="all"?"Gastado en el viaje":"Gastado en "+TYPES[docFilter].l.toLowerCase())+'</span><b>'+esc(sumText(sumDocs(pr)))+'</b></div>';
- if(docFilter==="all"){
+ var all=docFilter==="all",inner="";
+ if(all){
   var by={};pr.forEach(function(d){(by[d.type]=by[d.type]||[]).push(d)});
-  h+='<ul class="sumrows">'+Object.keys(TYPES).filter(function(k){return by[k]}).map(function(k){return '<li style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],18)+'<span>'+TYPES[k].l+' <small>'+by[k].length+'</small></span><b>'+esc(sumText(sumDocs(by[k])))+'</b></li>'}).join("")+'</ul>';
+  inner+='<ul class="sumrows">'+Object.keys(TYPES).filter(function(k){return by[k]}).map(function(k){return '<li style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],18)+'<span>'+TYPES[k].l+' <small>'+by[k].length+'</small></span><b>'+esc(sumText(sumDocs(by[k])))+'</b></li>'}).join("")+'</ul>';
  }
  var np=shown.length-pr.length;
- if(np>0)h+='<p class="foot">'+np+(np===1?" documento sin precio.":" documentos sin precio.")+'</p>';
- return h+'</section>';
+ if(np>0)inner+='<p class="foot">'+np+(np===1?" documento sin precio.":" documentos sin precio.")+'</p>';
+ var open=!!kv.sumOpen&&!!inner;
+ return '<section class="sumbox'+(open?" open":"")+'"><div class="sbrow"><button type="button" class="sbtog"'+(inner?' data-act="sumtog" aria-expanded="'+open+'"':' disabled')+'><span>'+(all?"Gastado en el viaje":"Gastado en "+TYPES[docFilter].l.toLowerCase())+'</span><b>'+esc(sumText(sumDocs(pr)))+'</b>'+(inner?'<i class="sbcv">'+svg("chev",18)+'</i>':"")+'</button>'+
+  (all?'<button type="button" class="prt" data-act="spend" aria-label="Resumen de gastos para imprimir">'+svg("print",20)+'</button>':"")+'</div>'+
+  (open?'<div class="sbin">'+inner+'</div>':"")+'</section>';
 }
 function refreshLegField(){var w=$("#f-legwrap"),dy=$("#f-day");if(w&&dy)w.innerHTML=legField(dy.value,selType,legSel);var t=$("#f-towrap");if(t&&dy)t.innerHTML=toField(dy.value,selType,toSel);var lb=$("#f-daylb");if(lb)lb.innerHTML=(selType==="hotel"?"Primera noche":"Día")+REQ;refreshTransport()}
 /* Quitar el archivo (se aplica al guardar; Cancelar lo deshace) */
@@ -839,16 +844,23 @@ function tripSub(d){
  return o;
 }
 function titleHas(d,txt){return normName(d.title||"").indexOf(normName(txt))>=0}
+/* Tarjeta compacta: tipo (ícono y color), título y una línea con lo esencial. Código, precio,
+   nota, ubicaciones y archivo están en la ficha (un toque); 📎 avisa que hay archivo. */
+function ticketLine(d){
+ var o=[],st0=docSeg(d);
+ if(st0&&!titleHas(d,st0))o.push(st0);
+ if(d.type==="hotel"){var nt0=nightsText(d);if(nt0)o.push(nt0)}
+ if(d.t1)o.push(d.t1+(d.t2?"–"+d.t2+arrSuffix(d):""));
+ if(TRIPT[d.type]){
+  var nos=d.hops?d.hops.map(function(h){return h.no}).filter(Boolean).join(" · "):(d.no||"");if(nos)o.push(nos);
+  var ns=docSegs(d).length-1;if(ns>0)o.push(ns+(ns===1?" escala":" escalas"));
+ }
+ return o.join(" · ");
+}
 function ticketHTML(d){
- var T=TYPES[d.type]||TYPES.otro;
- var sub=[],dy0=dayById(d.dayId),st0=docSeg(d);
- if(st0&&!titleHas(d,st0))sub.push(st0);
- sub=sub.concat(tripSub(d));
- if(d.type==="hotel"){var nt0=nightsText(d);if(nt0)sub.push(nt0)}
- if(d.t1)sub.push(d.t1+(d.t2?"–"+d.t2+arrSuffix(d):""));
- if(d.fileName)sub.push(d.fileName+(d.size?" · "+fmtSize(d.size):""));
- return '<article class="ticket" data-act="view" data-id="'+d.id+'" style="--t:'+T.t+'"><div class="tstub">'+svg(TYPE_ICON[d.type]||"file",24)+'<span>'+T.l+'</span></div><div class="tbody"><button type="button" class="tmain" data-act="view" data-id="'+d.id+'"><h4>'+esc(d.title||T.l)+'</h4>'+(sub.length||d.note?'<p>'+esc(sub.join(" · "))+(d.note?(sub.length?'<br>':"")+esc(d.note):"")+'</p>':"")+'</button>'+
- (d.code?'<div class="tcode"><code>'+esc(d.code)+'</code><button type="button" class="cp" data-act="copy" data-code="'+esc(d.code)+'" aria-label="Copiar código">'+svg("copy",18)+'</button></div>':"")+priceHTML(d)+locsHTML(d)+'</div></article>';
+ var T=TYPES[d.type]||TYPES.otro,line=ticketLine(d);
+ return '<article class="ticket" data-act="view" data-id="'+d.id+'" style="--t:'+T.t+'"><div class="tstub" title="'+T.l+'">'+svg(TYPE_ICON[d.type]||"file",22)+'</div><div class="tbody"><button type="button" class="tmain" data-act="view" data-id="'+d.id+'" aria-label="'+esc(T.l+": "+(d.title||T.l))+'"><h4>'+esc(d.title||T.l)+'</h4>'+(line?'<p>'+esc(line)+'</p>':"")+'</button>'+
+  '<span class="tend">'+(d.blob||d.fileName?'<span class="tclip" aria-label="Con archivo">'+svg("clip",15)+'</span>':"")+svg("chev",18)+'</span></div></article>';
 }
 function docsPanel(day){
  var list=docsShown(day),sug=[];
@@ -901,7 +913,7 @@ function renderPend(){
  if(ph.length)body+='<section class="psec"><h3 class="lab">Hoteles<small>'+ph.length+'</small></h3><div class="plist">'+ph.map(hotelRow).join("")+'</div></section>';
  if(pt.length)body+='<section class="psec"><h3 class="lab">Traslados<small>'+pt.length+'</small></h3><div class="plist">'+pt.map(ticketRow).join("")+'</div></section>';
  if(!body)body='<div class="empty" style="margin-top:18px"><b>Todo listo</b><span>Hay un hotel para cada noche y un billete para cada traslado.</span></div>';
- V.docs.innerHTML='<div class="in"><div class="page-h"><h1>Documentos</h1><p>Reservas, billetes y códigos, ordenados por día.</p></div>'+segHTML()+'<div class="pstats">'+stat("Noches con hotel",nt-pn,nt)+stat("Traslados con billete",nl-pt.length,nl)+'</div>'+body+'<div style="height:24px"></div></div>';
+ V.docs.innerHTML='<div class="in"><div class="page-h"><h1>Documentos</h1></div>'+segHTML()+'<div class="pstats">'+stat("Noches con hotel",nt-pn,nt)+stat("Traslados con billete",nl-pt.length,nl)+'</div>'+body+'<div style="height:24px"></div></div>';
 }
 function renderDocsView(){
  if(docsTab==="pend"){renderPend();updateFab();return}
@@ -911,8 +923,14 @@ function renderDocsView(){
  var groups={};shown.forEach(function(d){(groups[d.dayId]=groups[d.dayId]||[]).push(d)});
  var order=DAYS.map(function(d){return d.d}).concat(["trip"]).filter(function(k){return groups[k]});
  var body=order.map(function(k){var day=dayById(k);var items=groups[k].sort(function(a,b){return a.created-b.created});
-  return '<section><div class="group-h">'+(day?'<a href="#dia-'+k+'">'+esc(cap(shortDay(day)))+' · '+esc(routeText(day))+'</a>':'<a href="#documentos">Todo el viaje</a>')+'<span>'+items.length+'</span></div><div class="tickets">'+items.map(ticketHTML).join("")+'</div></section>'}).join("");
- V.docs.innerHTML='<div class="in"><div class="page-h"><h1>Documentos</h1><p>Reservas, billetes y códigos, ordenados por día.</p></div>'+segHTML()+summaryHTML(shown)+'<div class="filters">'+chips+'</div><div style="display:flex;flex-direction:column;gap:22px">'+(body||'<div class="empty"><b>Todavía no hay documentos</b><span>Añade el primero y asígnalo a un día del viaje.</span></div>')+'</div><div class="fabspace"></div></div>';
+  return '<section><div class="group-h">'+(day?'<a href="#dia-'+k+'"><small>'+esc(cap(shortDay(day)))+'</small>'+esc(routeText(day))+'</a>':'<a href="#documentos">Todo el viaje</a>')+'<span>'+items.length+'</span></div><div class="tickets">'+items.map(ticketHTML).join("")+'</div></section>'});
+ // durante el viaje, los días ya pasados se pliegan en una línea
+ var td=todayStr(),inTrip=td>=DAYS[0].d&&td<=DAYS[DAYS.length-1].d,np0=0,past=0;
+ if(inTrip)order.forEach(function(k){if(k!=="trip"&&k<td){past++;np0+=groups[k].length}});
+ if(past&&!pastOpen)body=['<button type="button" class="pastbar" data-act="pastdocs" aria-expanded="false"><span>Días anteriores</span><small>'+np0+(np0===1?" documento":" documentos")+'</small>'+svg("chev",18)+'</button>'].concat(body.slice(past));
+ else if(past)body=['<button type="button" class="pastbar open" data-act="pastdocs" aria-expanded="true"><span>Ocultar días anteriores</span>'+svg("chev",18)+'</button>'].concat(body);
+ body=body.join("");
+ V.docs.innerHTML='<div class="in"><div class="page-h"><h1>Documentos</h1><p>Reservas, billetes y códigos, ordenados por día.</p></div>'+segHTML()+summaryHTML(shown)+'<div class="filters">'+chips+'</div><div class="dgroups">'+(body||'<div class="empty"><b>Todavía no hay documentos</b><span>Añade el primero y asígnalo a un día del viaje.</span></div>')+'</div><div class="fabspace"></div></div>';
  updateFab();
 }
 
@@ -1723,7 +1741,7 @@ function route(){
 /* Día: la fila de arriba (‹ y "Día X de Y") queda fija desde el principio y el resto del encabezado pasa por
    debajo; cuando el título grande ya quedó escondido, sus ciudades aparecen en pequeño en esa fila. Así el ‹
    está siempre a mano y nada salta. Un IntersectionObserver avisa al cruzar (sin trabajo en cada scroll). */
-var dayIO=null;
+var dayIO=null,pastOpen=false;
 function setDayTitle(on){
  var b=V.day.querySelector(".dbar");if(!b||b.classList.contains("titled")===on)return;
  b.classList.toggle("titled",on);
@@ -1842,6 +1860,8 @@ document.addEventListener("click",function(e){
  else if(a==="settings"){openSettings()}
  else if(a==="places"){openPlaces()}
  else if(a==="spend"){openSpend()}
+ else if(a==="sumtog"){setKV("sumOpen",!kv.sumOpen);renderDocsView()}
+ else if(a==="pastdocs"){pastOpen=!pastOpen;renderDocsView()}
  else if(a==="spend-print"){printSpend()}
  else if(a==="export"){openExportSheet()}
  else if(a==="exp-kind"){expKindChanged(b)}

@@ -22,7 +22,7 @@ function isOurBackup(j) { return !!j && (j.app === APP_ID || LEGACY_APP_IDS.inde
 export const PBKDF2_ITER = 600000;
 
 // Preferencias de este dispositivo: no forman parte del itinerario compartible.
-const DEVICE_KEYS = ["theme", "lastCur"];
+const DEVICE_KEYS = ["theme", "lastCur", "sumOpen"];
 export function isDeviceKey(k) { return DEVICE_KEYS.indexOf(k) >= 0; }
 
 export function itineraryKV(kv) {

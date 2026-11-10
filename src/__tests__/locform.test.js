@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /* Flujos reales del formulario de documentos, en un navegador simulado (jsdom):
    pegar enlaces, escribir nombres, quitar enlace, conflictos y "Casa 2". */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -29,10 +29,21 @@ function typeLoc(value, n = 1) {
   el.dispatchEvent(new Event("input", { bubbles: true }));
 }
 async function save() { click($('[data-act="save"]')); await tick(); }
+/* Va a Documentos y devuelve los enlaces guardados (desde Ajustes → Direcciones guardadas;
+   las tarjetas compactas ya no llevan mapa). Si hay una hoja abierta, no la toca. */
 function savedLinks() {
   location.hash = "#documentos";
   window.dispatchEvent(new HashChangeEvent("hashchange"));
-  return [...document.querySelectorAll("#v-docs a.map")].map((a) => a.getAttribute("href"));
+  if (!document.querySelector("#sheet").hidden) return [];
+  const b = document.createElement("button");
+  b.dataset.act = "places"; document.body.appendChild(b); click(b); b.remove();
+  const out = [...document.querySelectorAll("#sheet-body .adrg a.map")].map((a) => a.getAttribute("href"));
+  click(document.querySelector('[data-act="close"]'));
+  return out;
+}
+function openTicket(title) {
+  const tk = [...document.querySelectorAll("#v-docs .ticket")].find((x) => x.querySelector("h4").textContent === title);
+  click(tk.querySelector('[data-act="view"]'));
 }
 
 beforeAll(async () => {
@@ -365,10 +376,13 @@ describe("formulario: ubicaciones", () => {
   });
 
   it("19) dos «Casa» en ciudades distintas se ven como «Casa (Madrid)» y «Casa (Pamplona)»", () => {
-    savedLinks();
-    const t = $("#v-docs").textContent;
-    expect(t).toContain("Casa (Madrid)");
-    expect(t).toContain("Casa (Pamplona)");
+    savedLinks();                                                    // el nombre con la ciudad se ve en la ficha
+    openTicket("Museo");
+    expect($("#sheet-body").textContent).toContain("Casa (Madrid)");
+    click($('[data-act="close"]'));
+    openTicket("Casa Pamplona");
+    expect($("#sheet-body").textContent).toContain("Casa (Pamplona)");
+    click($('[data-act="close"]'));
   });
 
   it("20) ficha de lectura: Editar → Cancelar vuelve a la ficha; Guardar también", async () => {
@@ -640,7 +654,7 @@ describe("formulario: ubicaciones", () => {
     click($('[data-act="dtab"][data-v="docs"]'));
     const tk = [...document.querySelectorAll("#v-docs .ticket")].find((t) => t.textContent.includes("Renfe · Pamplona → Madrid"));
     expect(tk.textContent).toContain("ALV1 · AVE2");
-    expect(tk.textContent).toContain("escala 2 h 55 min en Zaragoza");
+    expect(tk.textContent).toContain("1 escala");                    // la duración y el lugar, en la ficha
     click(tk.querySelector('[data-act="view"]'));
     expect($("#sheet-body").textContent).toContain("Escala en Zaragoza · 2 h 55 min");
     // escala nocturna larga: llega a las 22:00 y sigue a las 08:00 → +1 y «noche de escala» (hotel permitido)
@@ -694,7 +708,7 @@ describe("formulario: ubicaciones", () => {
     await save();
     savedLinks();
     const find = () => [...document.querySelectorAll("#v-docs .ticket")].find((t) => t.textContent.includes("Con archivo"));
-    expect(find().textContent).toContain("entrada.pdf");
+    expect(find().querySelector(".tclip")).not.toBeNull();            // 📎: tiene archivo (el nombre, en la ficha)
     // quitar y cancelar: sigue el archivo
     click(find().querySelector('[data-act="view"]'));
     click($('[data-act="edit"]'));
@@ -711,7 +725,7 @@ describe("formulario: ubicaciones", () => {
     expect($("#sheet-body").textContent).not.toContain("entrada.pdf");
     click($('[data-act="close"]'));
     savedLinks();
-    expect(find().textContent).not.toContain("entrada.pdf");
+    expect(find().querySelector(".tclip")).toBeNull();
   });
 
   it("34) llegada antes que la salida: no deja bajar de +1 (el − atenuado explica por qué)", async () => {
@@ -761,20 +775,16 @@ describe("formulario: ubicaciones", () => {
     click($('[data-act="close"]'));
   });
 
-  it("36) toda la tarjeta de Documentos abre la ficha, salvo copiar el código y el mapa", () => {
+  it("36) tarjeta compacta: toda abre la ficha; sin código, precio, mapa ni nota (están en la ficha)", () => {
     savedLinks();
     const all = [...document.querySelectorAll("#v-docs .ticket")];
-    const tk = all.find((t) => t.querySelector(".tcode")), tm = all.find((t) => t.querySelector("a.map"));
-    click(tk.querySelector(".tstub"));                              // la franja de la izquierda
+    expect(all.length).toBeGreaterThan(0);
+    expect(all.some((t) => t.querySelector(".tcode, a.map, .price, [data-act=copy]"))).toBe(false);
+    const tk = all[0];
+    click(tk.querySelector(".tstub"));                              // la franja de la izquierda también abre
     expect($("#sheet").hidden).toBe(false);
+    expect($("#sh-title").textContent).toBe(tk.querySelector("h4").textContent);
     click($('[data-act="close"]'));
-    navigator.clipboard = { writeText: () => Promise.resolve() };
-    click(tk.querySelector('[data-act="copy"]'));                   // copiar: no abre
-    expect($("#sheet").hidden).toBe(true);
-    const map = tm.querySelector("a.map");
-    map.addEventListener("click", (e) => e.preventDefault(), { once: true });   // jsdom no navega
-    click(map);                                                     // mapa: no abre
-    expect($("#sheet").hidden).toBe(true);
   });
 
   it("37) billete guardado antes del +1 (sin día de llegada): se deduce de las horas", async () => {
@@ -1004,5 +1014,39 @@ describe("formulario: ubicaciones", () => {
     expect($("#pd-" + id).value).toBe("109,5");
     expect(document.querySelector('[data-paidc="' + id + '"]').value).toBe("USD");
     click($('[data-act="close"]'));
+  });
+
+  it("47) barra de gastos: una línea que se despliega con el desglose (y se recuerda)", () => {
+    location.hash = "#documentos"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect($("#v-docs .sumbox .sumrows")).toBeNull();                 // plegada por defecto
+    expect($("#v-docs .sumbox [data-act=spend]")).not.toBeNull();      // imprimir sigue a mano
+    click($("#v-docs .sumbox [data-act=sumtog]"));
+    expect($("#v-docs .sumbox .sumrows")).not.toBeNull();
+    expect($("#v-docs .sumbox [data-act=sumtog]").getAttribute("aria-expanded")).toBe("true");
+    location.hash = "#inicio"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    location.hash = "#documentos"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect($("#v-docs .sumbox .sumrows")).not.toBeNull();             // sigue abierta
+    click($("#v-docs .sumbox [data-act=sumtog]"));
+    expect($("#v-docs .sumbox .sumrows")).toBeNull();
+  });
+
+  it("48) durante el viaje, los días anteriores se pliegan en una línea", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2027, 0, 9, 12));
+    try {
+      location.hash = "#inicio"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+      location.hash = "#documentos"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+      const bar = $("#v-docs .pastbar");
+      expect(bar.textContent).toContain("Días anteriores");
+      expect($('#v-docs .group-h a[href="#dia-' + MADRID + '"]')).toBeNull();
+      expect($('#v-docs .group-h a[href="#dia-' + PAMPLONA + '"]')).not.toBeNull();   // 11 ene: aún no pasa
+      click(bar);
+      expect($('#v-docs .group-h a[href="#dia-' + MADRID + '"]')).not.toBeNull();
+      click($("#v-docs .pastbar"));
+      expect($('#v-docs .group-h a[href="#dia-' + MADRID + '"]')).toBeNull();
+    } finally { vi.useRealTimers(); }
+    location.hash = "#inicio"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    location.hash = "#documentos"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect($("#v-docs .pastbar")).toBeNull();                         // antes del viaje: todo visible
   });
 });

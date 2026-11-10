@@ -14,6 +14,25 @@ Reglas:
 
 ## 2026-11-10
 
+- Documentos más livianos (decidido con Nicolas):
+  - Tarjeta compacta, igual en la lista general y en la pestaña Documentos
+    de cada día: ícono del tipo con su color (sin el texto del tipo),
+    título y una línea con lo esencial (horas; número de vuelo/tren y
+    "1 escala" en transporte; noches en hotel), 📎 si hay archivo y ›. El
+    código, el precio, la nota, las ubicaciones con mapa y el nombre del
+    archivo quedan en la ficha (un toque). Una tarjeta de vuelo pasa de
+    ~230 px a ~90 px de alto.
+  - "Gastado en el viaje" pasa a ser una barra de una línea que se
+    despliega ahí mismo con el desglose por tipo (se recuerda en este
+    dispositivo: `sumOpen`, clave de dispositivo, no va en el itinerario
+    compartible). El ícono de imprimir sigue en la barra; la hoja queda
+    para imprimir.
+  - Sin el subtítulo "Reservas, billetes y códigos…"; encabezados de día
+    más livianos (fecha pequeña en mayúsculas encima de la ruta) y menos
+    espacio entre grupos.
+  - Durante el viaje, los días ya pasados se pliegan en una línea "Días
+    anteriores · N documentos" (se abre al tocarla; no se recuerda).
+
 - Resumen de gastos para imprimir: botón con ícono de imprimir arriba a la
   derecha del recuadro negro "Gastado en el viaje" (solo con el filtro
   "Todos"). Abre una hoja con todos los documentos con precio en el orden
