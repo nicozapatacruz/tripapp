@@ -234,11 +234,12 @@ var PLACES=[
  {n:"Estación de autobuses de Málaga",u:"https://www.google.com/maps/place/Alsa/@36.7132431,-4.4342625,18.7z/data=!3m1!5s0x8f5d22d12154761:0x69cc2b7d62325894!4m6!3m5!1s0xd72f79c540dcd6b:0x6592a4d2b5bb7ade!8m2!3d36.7126136!4d-4.4344971!16s%2Fg%2F1tdjsh95"},
  {n:"Aeropuerto de Málaga (AGP)",u:"https://www.google.com/maps/place/Aeropuerto+de+M%C3%A1laga+-+Costa+del+Sol/@36.6767487,-4.5169338,13z/data=!4m6!3m5!1s0xd72fa1876ba30a5:0x57b5ad2f47de3e9a!8m2!3d36.6767427!4d-4.4938696!16zL20vMDlseWNn"},
  {n:"Aeropuerto Tenerife Norte (TFN)",u:"https://www.google.com/maps/place/Aeropuerto+de+Tenerife+Norte-Ciudad+de+La+Laguna/@28.483812,-16.3453422,16z/data=!3m1!4b1!4m6!3m5!1s0xc41cdf4feec1d6f:0x1c5c91797353b078!8m2!3d28.4838073!4d-16.3427673!16zL20vMDV2M3hx"},
- {n:"Aeropuerto José María Córdova (MDE)",u:"https://www.google.com/maps/place/Aeropuerto+Internacional+Jos%C3%A9+Mar%C3%ADa+C%C3%B3rdova/@6.1714903,-75.4279447,16z/data=!3m1!4b1!4m6!3m5!1s0x8e469e78b840720f:0x9263a9a2a8b8e1b8!8m2!3d6.1714903!4d-75.4279447!16zL20vMDNuc2Nt"}
+ {n:"Aeropuerto José María Córdova (MDE)",u:"https://www.google.com/maps/place/Aeropuerto+Internacional+Jos%C3%A9+Mar%C3%ADa+C%C3%B3rdova/@6.1714903,-75.4279447,16z/data=!3m1!4b1!4m6!3m5!1s0x8e469e78b840720f:0x9263a9a2a8b8e1b8!8m2!3d6.1714903!4d-75.4279447!16zL20vMDNuc2Nt"},
+ {n:"Aeropuerto de Sevilla (SVQ)",u:"https://www.google.com/maps/place/Aeropuerto+de+Sevilla/@37.420274,-5.8933689,16z/data=!3m1!4b1!4m6!3m5!1s0xd12661c8d849bb9:0x1527e77a0fb273a!8m2!3d37.4202698!4d-5.890794!16zL20vMDlxcTJ4"}
 ];
 /* Nombres anteriores (con enlace de búsqueda): los documentos que eligieron uno se muestran con
    el nombre y el enlace nuevos. Solo en memoria; lo guardado cambia si se vuelve a guardar el documento. */
-var OLD_PLACES={"Madrid Puerta de Atocha":0,"Aeropuerto Adolfo Suárez Madrid-Barajas":1,"Estación de Pamplona-Iruña":2,"Aeropuerto de Pamplona":3,"Sevilla Santa Justa":4,"Córdoba Central (estación de tren)":5,"Estación de tren de Granada":6,"Estación de autobuses de Granada":7,"Estación de autobuses de Málaga":8,"Aeropuerto de Málaga-Costa del Sol":9,"Aeropuerto Tenerife Norte-Ciudad de La Laguna":10,"Aeropuerto José María Córdova (MDE), Rionegro":11};
+var OLD_PLACES={"Aeropuerto de Sevilla San Pablo":12,"Madrid Puerta de Atocha":0,"Aeropuerto Adolfo Suárez Madrid-Barajas":1,"Estación de Pamplona-Iruña":2,"Aeropuerto de Pamplona":3,"Sevilla Santa Justa":4,"Córdoba Central (estación de tren)":5,"Estación de tren de Granada":6,"Estación de autobuses de Granada":7,"Estación de autobuses de Málaga":8,"Aeropuerto de Málaga-Costa del Sol":9,"Aeropuerto Tenerife Norte-Ciudad de La Laguna":10,"Aeropuerto José María Córdova (MDE), Rionegro":11};
 function upgradeOldPlaces(list){list.forEach(function(d){[1,2].forEach(function(n){
  var t=d["loc"+n],k=t!=null&&OLD_PLACES.hasOwnProperty(t)?OLD_PLACES[t]:-1;
  if(k>=0&&d["loc"+n+"u"]===gmap(t)){d["loc"+n]=PLACES[k].n;d["loc"+n+"u"]=PLACES[k].u}

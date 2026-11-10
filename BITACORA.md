@@ -54,6 +54,10 @@ Reglas:
   lo guardado cambia solo si se vuelve a guardar el documento). Se probó
   añadir el aeropuerto de Bilbao, pero se quitó: no es ciudad de la ruta y
   se habría sugerido en cualquier documento.
+- Vuelve el aeropuerto de Sevilla, como "Aeropuerto de Sevilla (SVQ)" con
+  el enlace exacto de Nicolas (quedan 13). Los documentos que hubieran
+  elegido el antiguo "Aeropuerto de Sevilla San Pablo" se muestran con el
+  nuevo.
 
 - Nueva hoja "Direcciones guardadas" (Ajustes → fila con el número de
   direcciones). Solo consulta: muestra las ubicaciones de los documentos
