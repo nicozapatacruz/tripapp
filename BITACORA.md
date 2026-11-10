@@ -14,6 +14,36 @@ Reglas:
 
 ## 2026-11-10
 
+- Pestaña **Mapa** (todo menos el mapa de Google, que espera la clave),
+  según el diseño acordado:
+  - Quinto botón en la barra de abajo (ícono del mapa doblado), ruta `#mapa`.
+  - Modos Mapa | Lista. Por ahora abre en Lista; "Mapa" muestra un aviso
+    ("Aquí irá el mapa… falta conectar Google Maps"; sin internet: "Sin
+    internet: el mapa no se puede mostrar") con botón "Ver como lista".
+  - Filtros: día (Todo el viaje / Hoy durante el viaje / cada día), estado
+    (por defecto sin "Ya fui") y tipo (Hoteles, Traslados, Qué ver, Comer,
+    Otros). Contador "N lugares · M sin ubicar".
+  - Puntos: ubicaciones de los documentos (unidas por nombre + enlace) y
+    sitios de Qué ver / Comer. Coordenadas desde los enlaces largos de
+    Google Maps (`!3d…!4d…`, si no `@…`); sin ellas, "Sin ubicar". En un
+    día: hotel de esa noche, traslados (salida el día del billete, llegada
+    el día de llegada), otros documentos, y sitios de las ciudades del día;
+    numerados por hora (mismo orden que el calendario).
+  - Eventos creados con el 📅+ de un sitio quedan vinculados (campo nuevo
+    opcional `pk` en el evento; los eventos viejos siguen valiendo): el
+    formulario lo avisa, la ficha muestra el lugar, y en el mapa el sitio
+    sale solo los días de sus eventos.
+  - Tarjeta al tocar un punto: tipo y ciudad, distancia y tiempo a pie
+    estimados al hotel del día y a las estaciones de ese día ("Estimado en
+    línea recta"), estado, documentos y eventos, "Abrir en Maps" y "Cómo
+    llegar" (ruta de Google Maps).
+  - Ícono de mapa en la barra fija de cada día: abre el mapa filtrado en ese
+    día, con ‹ para volver (el día conserva su propio ‹).
+  - "Direcciones guardadas" sale de Ajustes: la Lista la reemplaza (incluye
+    al final la lista plegada de estaciones y aeropuertos de la app).
+  - Lógica pura en `src/mapdata.js` (coordenadas, distancia, tiempo a pie,
+    días de un sitio, numeración) con sus tests.
+
 - Diseño del mapa acordado (detalle en `PENDIENTES.md` → "Diseño del
   mapa"): pestaña Mapa | Lista, filtros por día, tipo y estado (sin "Ya
   fui" por defecto), numeración por hora en un día, eventos creados desde un

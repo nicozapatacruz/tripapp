@@ -4,9 +4,10 @@ import {
   buildBackup, encryptBackup, decryptBackup, parseBackupText, importPlan, itineraryKV,
   cryptoAvailable, WrongPasswordError,
 } from "./backup.js";
+import { coordsOf, distKm, walkMin, distText, minText as walkText, placeDays, numberDay } from "./mapdata.js";
 import {
   extractMapsUrl, normName, slotCities, needsCityChoice, cityChoices, cityMismatch,
-  resolvePlace, freeName, placeSuggestions, savedPlaces,
+  resolvePlace, freeName, placeSuggestions,
 } from "./places.js";
 
 (function(){
@@ -27,6 +28,7 @@ var ICON={
  flag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
  clip:'<path d="M20 11l-8.5 8.5a5 5 0 0 1-7-7L13 4a3.5 3.5 0 0 1 5 5l-8.6 8.6a2 2 0 0 1-2.8-2.8L14 8"/>',
  file:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>',
+ star:'<path d="M12 3.8l2.5 5.1 5.6.8-4 3.9.9 5.6L12 16.6l-5 2.6.9-5.6-4-3.9 5.6-.8z"/>',
  way:'<circle cx="5.5" cy="18.5" r="2"/><path d="M7.5 18.5H16a3 3 0 0 0 0-6H8a3 3 0 0 1 0-6h4.5"/><path d="M18 10.5s3-2.6 3-5a3 3 0 0 0-6 0c0 2.4 3 5 3 5z"/>',
  print:'<path d="M7 9V3.5h10V9"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v6.5H7z"/>',
  hotel:'<path d="M3 18V7M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="1.6"/>',
@@ -744,7 +746,7 @@ function mapUrl(name,city){return "https://www.google.com/maps/search/?api=1&que
 /* ================= Vistas ================= */
 var tab="general", docFilter="all", docsTab="docs", scrollPos={}, homeScrolled=false;
 function applyTheme(){document.documentElement.setAttribute("data-theme",kv.theme||"light")}
-var V={home:$("#v-home"),day:$("#v-day"),docs:$("#v-docs"),cal:$("#v-cal")};
+var V={home:$("#v-home"),day:$("#v-day"),docs:$("#v-docs"),cal:$("#v-cal"),map:$("#v-map")};
 
 function stagesOf(){
  var out=[];DAYS.forEach(function(d){var l=out[out.length-1];if(l&&l.city===d.base){l.to=d}else out.push({city:d.base,from:d,to:d})});
@@ -796,7 +798,7 @@ function listOf(id,kind){
 function itemKey(kind,cid,p){return (kind==="see"?"s:":"r:")+cid+":"+p.id}
 function itemRow(cid,kind,p,idx){
  var href=p.u&&/^https?:\/\//i.test(p.u)?p.u:mapUrl(p.n,cid);
- return '<li class="pl pin"><span class="pinn" style="--c:'+CITIES[cid].c1+'">'+(idx+1)+'</span><div><b>'+esc(p.n)+'</b>'+(p.d?'<p>'+esc(p.d)+'</p>':"")+'<div class="pact">'+statSel(itemKey(kind,cid,p))+'<span class="pgap"></span><button type="button" class="agb2" data-act="ev-add" data-title="'+esc(p.n)+'" data-day="'+esc(curDayId||"")+'" aria-label="Añadir '+esc(p.n)+' al calendario">'+svg("calplus",18)+'</button><a class="map ico" href="'+esc(href)+'" target="_blank" rel="noopener" aria-label="Abrir '+esc(p.n)+' en el mapa">'+svg("pin",18)+'</a></div></div></li>';
+ return '<li class="pl pin"><span class="pinn" style="--c:'+CITIES[cid].c1+'">'+(idx+1)+'</span><div><b>'+esc(p.n)+'</b>'+(p.d?'<p>'+esc(p.d)+'</p>':"")+'<div class="pact">'+statSel(itemKey(kind,cid,p))+'<span class="pgap"></span><button type="button" class="agb2" data-act="ev-add" data-pk="'+esc(itemKey(kind,cid,p))+'" data-title="'+esc(p.n)+'" data-day="'+esc(curDayId||"")+'" aria-label="Añadir '+esc(p.n)+' al calendario">'+svg("calplus",18)+'</button><a class="map ico" href="'+esc(href)+'" target="_blank" rel="noopener" aria-label="Abrir '+esc(p.n)+' en el mapa">'+svg("pin",18)+'</a></div></div></li>';
 }
 function listHead(title,cid,kind){
  return '<div class="lh"><h3 class="lab">'+title+'</h3><button type="button" class="pen" data-act="list" data-city="'+cid+'" data-kind="'+kind+'" aria-label="Editar lista: '+title+'">'+svg("pencil",18)+'</button></div>';
@@ -890,7 +892,7 @@ function renderDay(day){
  var panels={general:general,comer:eat,docs:(day.start?legsHTML(day):"")+docsPanel(day)};
  V.day.style.setProperty("--c1",c[0]);V.day.style.setProperty("--c2",c[1]);
  var rbar=day.stops.map(function(s){return '<i style="background:'+CITIES[s].c1+'"></i>'}).join("");
- V.day.innerHTML='<div class="dbar"><div class="in"><a class="back" href="'+dayBack+'" aria-label="Volver">'+svg("back",20)+'</a><b class="dbt" aria-hidden="true">'+esc(day.stops.map(nm).join(" → "))+'</b><span class="dnum">'+(isToday?"Hoy · ":"")+'Día '+(i+1)+' de '+DAYS.length+'</span></div></div>'+
+ V.day.innerHTML='<div class="dbar"><div class="in"><a class="back" href="'+dayBack+'" aria-label="Volver">'+svg("back",20)+'</a><b class="dbt" aria-hidden="true">'+esc(day.stops.map(nm).join(" → "))+'</b><button type="button" class="dmapb" data-act="map-day" data-day="'+day.d+'" aria-label="Ver este día en el mapa">'+svg("route",20)+'</button><span class="dnum">'+(isToday?"Hoy · ":"")+'Día '+(i+1)+' de '+DAYS.length+'</span></div></div>'+
  '<header class="dh"><div class="in"><p class="dwd">'+esc(longDate(day))+'</p><h1>'+titleHTML(day)+'</h1><div class="rbar">'+rbar+'</div>'+(day.sleep?'<p class="sleep">'+svg("bed",17)+'Dormimos en '+esc(nm(day.sleep))+'</p>':nightLabel(day)?'<p class="sleep">'+svg("vuelo",17)+(day.start?"Inicio del viaje · ":day.last?"Fin del viaje · ":"")+esc(nightLabel(day))+'</p>':'<p class="sleep">'+(day.start?"Inicio del viaje":"Fin del viaje")+'</p>')+'</div></header>'+
  '<nav class="tabs" role="tablist" aria-label="Secciones del día"><div class="in"><div class="trk">'+tabList.map(function(t){return '<button type="button" role="tab" class="tab" data-act="tab" data-tab="'+t[0]+'" aria-selected="'+(tab===t[0])+'">'+t[1]+(t[0]==="docs"&&n?' <em>'+n+'</em>':"")+'</button>'}).join("")+'</div></div></nav>'+
  '<main class="in panel" role="tabpanel">'+panels[tab]+'</main>'+
@@ -1311,47 +1313,132 @@ async function deleteItem(){
  await setKV("pl:"+c.cid+":"+c.kind,l);await delKV(itemKey(c.kind,c.cid,itemEd));refresh();openListSheet(c.cid,c.kind);toast("Eliminado");
 }
 
-/* ================= Direcciones guardadas (solo consulta) =================
-   Salen de las ubicaciones de los documentos; las estaciones y aeropuertos fijos
-   (PLACES) solo se cuentan al final. Agrupadas por ciudad en el orden del viaje. */
-function myPlaces(){return savedPlaces(placeIndex().filter(function(r){return r.docId!=="_places"}))}
-function placesCountText(){var n=myPlaces().length;return n?n+(n===1?" dirección":" direcciones")+" de tus documentos":"Aún no hay ninguna"}
-function openPlaces(){
- var list=myPlaces(),byId={},order=[],groups={};
- docs.forEach(function(d){byId[d.id]=d});
- DAYS.forEach(function(d){d.stops.forEach(function(s){if(order.indexOf(s)<0)order.push(s)})});
- list.forEach(function(p){
-  p.first=p.docIds.map(function(id){return byId[id]?byId[id].dayId:"trip"}).sort()[0];
-  var k=p.cities&&p.cities.length===1?p.cities[0]:"_";
-  if(k!=="_"&&order.indexOf(k)<0)order.push(k);
-  (groups[k]=groups[k]||[]).push(p);
+/* ================= Mapa (pestaña Mapa | Lista) =================
+   Diseño acordado en PENDIENTES.md → "Diseño del mapa". Puntos: ubicaciones de los documentos
+   (unidas por nombre + enlace) y sitios de Qué ver / Comer de cada ciudad. Las coordenadas salen
+   de los enlaces largos de Google Maps; el resto queda "Sin ubicar" hasta conectar Google.
+   El mapa en sí (Google Maps) está pendiente de la clave: mientras, se ve un aviso y la Lista. */
+var mapState={mode:"list",day:"all",cats:{hotel:1,trans:1,see:1,eat:1,other:1},st:"nodone"},mapFrom=null;
+var MCATS=[["hotel","Hoteles"],["trans","Traslados"],["see","Qué ver"],["eat","Comer"],["other","Otros"]];
+var MCOL={see:"#7C3AED",eat:TYPES.comida.t},MICO={see:"star",eat:"comida"};
+function isOnline(){return typeof navigator==="undefined"||navigator.onLine!==false}
+function inTripToday(){var t=todayStr();return dayById(t)?t:null}
+function mapDayId(){return mapState.day==="all"?null:mapState.day==="today"?inTripToday():mapState.day}
+function placeByKey(pk){var m=/^([sr]):([a-z]+):(.+)$/.exec(pk||"");if(!m||!CITIES[m[2]])return null;var kind=m[1]==="s"?"see":"eat",p=listOf(m[2],kind).filter(function(x){return x.id===m[3]})[0];return p?{cid:m[2],kind:kind,p:p}:null}
+function mapPoints(){
+ var by={},list=[];
+ function add(key,base){if(!by[key]){base.id="mp"+list.length;by[key]=base;list.push(base)}return by[key]}
+ docs.forEach(function(d){[1,2].forEach(function(n){
+  if(n===2&&!TRIPT[d.type])return;
+  var t=d["loc"+n];if(!t)return;
+  var u=d["loc"+n+"u"]||"",cities=slotCities(ctxOf(d.dayId,d.type,n,docLegVal(d),{t:t,u:u,c:d["loc"+n+"c"]}));
+  var p=add("d|"+normName(t)+"|"+u,{kind:"doc",cat:d.type==="hotel"?"hotel":TRIPT[d.type]?"trans":"other",type:d.type,name:t,url:u,city:cities&&cities.length===1?cities[0]:null,cities:cities,ll:coordsOf(u),docIds:[],evIds:[],days:{},refs:[]});
+  if(p.docIds.indexOf(d.id)<0)p.docIds.push(d.id);
+  var a=dayById(d.dayId);if(!a)return;            // documento de todo el viaje: solo en "Todo el viaje"
+  if(d.type==="hotel"){var b=(d.nightTo&&dayById(d.nightTo))||a;for(var k=a.i;k<=Math.max(a.i,b.i);k++)p.days[DAYS[k].d]=1;return}
+  var dd=d.dayId,tt=d.t1;
+  if(n===2){var ar=dayPlus(d.dayId,docArr(d));dd=ar?dsOf(ar):d.dayId;tt=d.t2}
+  if(dayById(dd)){p.days[dd]=1;p.refs.push({day:dd,t:tt||""})}
+ })});
+ Object.keys(CITIES).forEach(function(cid){
+  if(!hasInfo(cid))return;
+  var cityDays=DAYS.filter(function(x){return x.stops.indexOf(cid)>=0}).map(function(x){return x.d});
+  ["see","eat"].forEach(function(kind){listOf(cid,kind).forEach(function(it){
+   var pk=itemKey(kind,cid,it),evs=evList().filter(function(e){return e.pk===pk}),u=it.u&&/^https?:\/\//i.test(it.u)?it.u:"";
+   var p=add("pl|"+pk,{kind:"place",cat:kind,pk:pk,name:it.n,url:u,city:cid,cities:[cid],ll:coordsOf(u),docIds:[],evIds:evs.map(function(e){return e.id}),days:{},refs:[]});
+   placeDays(cityDays,evs.map(function(e){return e.day})).forEach(function(x){p.days[x]=1});
+   evs.forEach(function(e){p.refs.push({day:e.day,t:e.t1||""})});
+  })});
  });
- function row(p,city){
-  var d0=byId[p.docIds[0]],ty=d0&&TYPES[d0.type]?d0.type:"otro";
-  var used=p.docIds.map(function(id){var d=byId[id];if(!d)return "";var dy=dayById(d.dayId);
-   return '<li><button type="button" class="mini" data-act="view" data-id="'+d.id+'">'+esc(d.title||TYPES[ty].l)+(dy?' · '+esc(shortDay(dy)):"")+'</button></li>'}).filter(Boolean).join("");
-  var where=city==="_"&&p.cities?'<p>'+esc(p.cities.map(nm).join(" o "))+'</p>':"";
-  var u=p.url||gmap(p.name+(city!=="_"?", "+nm(city):""));
-  return '<li class="pl adr"><span class="adri" style="--t:'+TYPES[ty].t+'">'+svg(TYPE_ICON[ty]||"file",18)+'</span><div class="adrt"><b>'+esc(p.name)+'</b>'+where+'<ul class="adru">'+used+'</ul>'+(p.url?"":'<p class="adrw">Sin enlace al mapa · se buscará por el nombre</p>')+'</div>'+mapBtn(u)+'</li>';
- }
- var keys=order.filter(function(k){return groups[k]}).concat(groups._?["_"]:[]);
- var body=keys.map(function(k){var g=groups[k].sort(function(a,b){return a.first<b.first?-1:a.first>b.first?1:0});
-  return '<section class="adrg"><h3 class="lab">'+(k==="_"?"Sin ciudad definida":esc(nm(k)))+' <small>'+g.length+'</small></h3><ul class="rows">'+g.map(function(p){return row(p,k)}).join("")+'</ul></section>'}).join("");
- var usedFixed=PLACES.filter(function(x){return list.some(function(p){return normName(p.name)===normName(x.n)})}).length;
- openSheet('<div class="sh-head"><h2 id="sh-title">Direcciones guardadas</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
-  (body||'<p class="foot">Todavía no hay direcciones. Se guardan al poner una ubicación en un documento.</p>')+
-  fixedHTML());
- function fixedHTML(){
-  var l=PLACES.filter(function(x){return !list.some(function(p){return normName(p.name)===normName(x.n)})})
-   .map(function(x){return {n:x.n,u:x.u,c:detectCity(x.n,x.u)}})
-   .sort(function(a,b){var ia=order.indexOf(a.c),ib=order.indexOf(b.c);return (ia<0?1e3:ia)-(ib<0?1e3:ib)});
-  if(!l.length)return "";
-  return '<details class="adrx"><summary>'+(usedFixed?"Otras estaciones":"Estaciones")+' y aeropuertos de la app <small>'+l.length+'</small><span class="cv">'+svg("chev",18)+'</span></summary>'+
-   '<p class="foot">Se sugieren al escribir una ubicación. No se guardan ni van en la copia.</p><ul class="rows">'+l.map(function(x){
-    var ty=/aeropuerto/i.test(x.n)?"vuelo":/autobuses/i.test(x.n)?"bus":"tren";
-    return '<li class="pl adr"><span class="adri" style="--t:'+TYPES[ty].t+'">'+svg(TYPE_ICON[ty],18)+'</span><div class="adrt"><b>'+esc(x.n)+'</b>'+(x.c?'<p>'+esc(nm(x.c))+'</p>':"")+'</div>'+mapBtn(x.u)+'</li>'}).join("")+'</ul></details>';
- }
+ return list;
 }
+function mapVisible(list){
+ var dd=mapDayId();
+ return list.filter(function(p){
+  if(!mapState.cats[p.cat])return false;
+  if(mapState.day!=="all"&&(!dd||!p.days[dd]))return false;
+  if(p.kind==="place"){var s=kv[p.pk]||0;if(mapState.st==="nodone")return s!==3;if(mapState.st==="all")return true;return s===+mapState.st}
+  return mapState.st==="nodone"||mapState.st==="all";   // los documentos no tienen estado
+ });
+}
+function mapNumbers(list){
+ var dd=mapDayId();if(!dd)return {};
+ var items=[];list.forEach(function(p){p.refs.forEach(function(r){if(r.day===dd)items.push({pid:p.id,t:r.t})})});
+ return numberDay(items);
+}
+function mapColor(p){return p.kind==="place"?MCOL[p.cat]:(TYPES[p.type]||TYPES.otro).t}
+function mapIcon(p){return p.kind==="place"?MICO[p.cat]:(TYPE_ICON[p.type]||"file")}
+function mapHref(p){return p.url||gmap(p.name+(p.city?", "+nm(p.city):""))}
+/* Hotel de la noche y estaciones del día (para las distancias de la tarjeta) */
+function dayAnchors(dd,list){
+ var out=[];if(!dd)return out;
+ list.forEach(function(p){if(!p.ll||!p.days[dd]||p.kind!=="doc")return;
+  if(p.cat==="hotel")out.push({p:p,l:"del hotel"});
+  else if(p.cat==="trans"&&p.refs.some(function(r){return r.day===dd}))out.push({p:p,l:"de "+p.name});
+ });
+ return out.sort(function(a,b){return (a.p.cat==="hotel"?0:1)-(b.p.cat==="hotel"?0:1)}).slice(0,3);
+}
+function mapSub(p){
+ if(p.kind==="doc")return p.docIds.map(function(id){var d=docs.filter(function(x){return x.id===id})[0];return d?(d.title||(TYPES[d.type]||TYPES.otro).l):""}).filter(Boolean).join(" · ");
+ var s=kv[p.pk]||0,o=[listTitle(p.cat)];if(s)o.push(STATUS[s]);
+ p.evIds.forEach(function(id){var e=evList().filter(function(x){return x.id===id})[0];var dy=e&&dayById(e.day);if(dy)o.push(cap(shortDay(dy))+(e.t1?" "+e.t1:""))});
+ return o.join(" · ");
+}
+function mapRow(p,num){
+ return '<li class="pl mrow tap" data-act="mcard" data-id="'+p.id+'"><span class="adri'+(num?" mnum":"")+'" style="--t:'+mapColor(p)+'">'+(num?num:svg(mapIcon(p),18))+'</span><div class="adrt"><b>'+esc(p.name)+'</b><p>'+esc(mapSub(p))+'</p>'+(p.ll?"":'<p class="adrw">Sin ubicar</p>')+'</div>'+mapBtn(mapHref(p))+'</li>';
+}
+function fixedPlacesHTML(used,order){
+ var l=PLACES.filter(function(x){return !used.some(function(n){return normName(n)===normName(x.n)})})
+  .map(function(x){return {n:x.n,u:x.u,c:detectCity(x.n,x.u)}})
+  .sort(function(a,b){var ia=order.indexOf(a.c),ib=order.indexOf(b.c);return (ia<0?1e3:ia)-(ib<0?1e3:ib)});
+ if(!l.length)return "";
+ return '<details class="adrx"><summary>'+(l.length<PLACES.length?"Otras estaciones":"Estaciones")+' y aeropuertos de la app <small>'+l.length+'</small><span class="cv">'+svg("chev",18)+'</span></summary>'+
+  '<p class="foot">Se sugieren al escribir una ubicación. No se guardan ni van en la copia.</p><ul class="rows">'+l.map(function(x){
+   var ty=/aeropuerto/i.test(x.n)?"vuelo":/autobuses/i.test(x.n)?"bus":"tren";
+   return '<li class="pl adr"><span class="adri" style="--t:'+TYPES[ty].t+'">'+svg(TYPE_ICON[ty],18)+'</span><div class="adrt"><b>'+esc(x.n)+'</b>'+(x.c?'<p>'+esc(nm(x.c))+'</p>':"")+'</div>'+mapBtn(x.u)+'</li>'}).join("")+'</ul></details>';
+}
+function renderMap(){
+ var all=mapPoints(),vis=mapVisible(all),nums=mapNumbers(vis),order=[],groups={};
+ DAYS.forEach(function(d){d.stops.forEach(function(s){if(order.indexOf(s)<0)order.push(s)})});
+ var td=inTripToday();if(mapState.day==="today"&&!td)mapState.day="all";
+ var dayOpts='<option value="all">Todo el viaje</option>'+(td?'<option value="today"'+(mapState.day==="today"?" selected":"")+'>Hoy</option>':"")+DAYS.map(function(d){return '<option value="'+d.d+'"'+(mapState.day===d.d?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("");
+ var stOpts=[["nodone","Sin «Ya fui»"],["all","Todos los estados"],["1","Quiero ir"],["2","Reservado"],["3","Ya fui"]].map(function(x){return '<option value="'+x[0]+'"'+(mapState.st===x[0]?" selected":"")+'>'+x[1]+'</option>'}).join("");
+ var chips=MCATS.map(function(c){return '<button type="button" class="chip" data-act="mcat" data-c="'+c[0]+'" aria-pressed="'+!!mapState.cats[c[0]]+'">'+c[1]+'</button>'}).join("");
+ var unloc=vis.filter(function(p){return !p.ll}).length;
+ var body;
+ if(mapState.mode==="map"){
+  var off=!isOnline();
+  body='<div class="mapph">'+svg("route",34)+'<b>'+(off?"Sin internet: el mapa no se puede mostrar":"Aquí irá el mapa")+'</b><span>'+(off?"La lista funciona igual sin conexión.":"Falta conectar Google Maps (la clave está pendiente). Mientras, usa la lista.")+'</span><button type="button" class="btn" data-act="mmode" data-v="list">Ver como lista</button></div>';
+ }else{
+  vis.forEach(function(p){var k=p.city&&order.indexOf(p.city)>=0?p.city:"_";(groups[k]=groups[k]||[]).push(p)});
+  var co={hotel:0,trans:1,other:2,see:3,eat:4};
+  var keys=order.filter(function(k){return groups[k]}).concat(groups._?["_"]:[]);
+  body=keys.map(function(k){var g=groups[k].sort(function(a,b){var na=nums[a.id]||1e3,nb=nums[b.id]||1e3;return na-nb||co[a.cat]-co[b.cat]||a.name.localeCompare(b.name)});
+   return '<section class="adrg"><h3 class="lab">'+(k==="_"?"Sin ciudad definida":esc(nm(k)))+' <small>'+g.length+'</small></h3><ul class="rows">'+g.map(function(p){return mapRow(p,nums[p.id])}).join("")+'</ul></section>'}).join("")||'<p class="foot">Nada con estos filtros.</p>';
+  if(mapState.day==="all"&&mapState.cats.trans)body+=fixedPlacesHTML(all.filter(function(p){return p.kind==="doc"}).map(function(p){return p.name}),order);
+ }
+ V.map.innerHTML='<div class="in"><div class="page-h mh">'+(mapFrom?'<a class="back" href="'+esc(mapFrom)+'" aria-label="Volver al día">'+svg("back",20)+'</a>':"")+'<h1>Mapa</h1></div>'+
+  '<div class="seg"><div class="trk" role="tablist">'+[["map","Mapa"],["list","Lista"]].map(function(t){return '<button type="button" role="tab" class="tab" data-act="mmode" data-v="'+t[0]+'" aria-selected="'+(mapState.mode===t[0])+'">'+t[1]+'</button>'}).join("")+'</div></div>'+
+  '<div class="mfil"><select id="m-day" class="msel" aria-label="Día">'+dayOpts+'</select><select id="m-st" class="msel" aria-label="Estado">'+stOpts+'</select></div>'+
+  '<div class="filters">'+chips+'</div>'+
+  '<p class="mcount">'+vis.length+(vis.length===1?" lugar":" lugares")+(unloc?" · "+unloc+" sin ubicar":"")+'</p>'+
+  '<div class="dgroups">'+body+'</div><div class="fabspace"></div></div>';
+}
+function openMapCard(id){
+ var all=mapPoints(),p=all.filter(function(x){return x.id===id})[0];if(!p)return;
+ var dd=mapDayId()||inTripToday(),h=vType(mapIcon(p),mapColor(p),p.kind==="place"?listTitle(p.cat):(TYPES[p.type]||TYPES.otro).l,p.city?nm(p.city):"");
+ if(p.ll){
+  var an=dayAnchors(dd,all).filter(function(a){return a.p!==p});
+  if(an.length)h+='<ul class="mdist">'+an.map(function(a){var km=distKm(p.ll,a.p.ll);return '<li>'+svg("clock",15)+'<span><b>'+distText(km)+' '+esc(a.l)+'</b> · ≈ '+walkText(walkMin(km))+' a pie</span></li>'}).join("")+'</ul><p class="foot" style="margin:0">Estimado en línea recta'+(isOnline()?"":" (sin internet)")+'.</p>';
+ }else h+='<p class="adrw" style="align-self:flex-start">Sin ubicar: '+(p.url?"el enlace no trae coordenadas":"no tiene enlace de Google Maps")+'. Se ubicará al conectar Google.</p>';
+ if(p.kind==="place")h+=vField("Estado",statSel(p.pk));
+ if(p.docIds.length)h+=vField(p.docIds.length>1?"Documentos":"Documento",'<ul class="adru">'+p.docIds.map(function(did){var d=docs.filter(function(x){return x.id===did})[0];if(!d)return "";var dy=dayById(d.dayId);return '<li><button type="button" class="mini" data-act="view" data-id="'+d.id+'">'+esc(d.title||(TYPES[d.type]||TYPES.otro).l)+(dy?' · '+esc(shortDay(dy)):"")+'</button></li>'}).join("")+'</ul>');
+ if(p.evIds.length)h+=vField("En el calendario",'<ul class="adru">'+p.evIds.map(function(eid){var e=evList().filter(function(x){return x.id===eid})[0];var dy=e&&dayById(e.day);return e?'<li><button type="button" class="mini" data-act="ev-view" data-id="'+e.id+'">'+esc(dy?cap(shortDay(dy)):"")+(e.t1?' · '+esc(e.t1):"")+'</button></li>':""}).join("")+'</ul>');
+ var dest=p.ll?p.ll.join(","):p.name+(p.city?", "+nm(p.city):"");
+ openSheet('<div class="sh-head"><h2 id="sh-title">'+esc(p.name)+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+h,
+  '<div class="actions"><a class="btn" href="'+esc(mapHref(p))+'" target="_blank" rel="noopener">Abrir en Maps</a><a class="btn primary" style="--c1:var(--accent)" href="'+esc("https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(dest))+'" target="_blank" rel="noopener">Cómo llegar</a></div>');
+}
+if(typeof window!=="undefined"){window.addEventListener("online",function(){if(view==="map")renderMap()});window.addEventListener("offline",function(){if(view==="map")renderMap()})}
 
 /* ================= Resumen de gastos e impresión =================
    Todos los documentos con precio, en el orden del viaje. En cada uno se puede poner lo
@@ -1431,7 +1518,6 @@ function openSettings(){
  openSheet('<div class="sh-head"><h2 id="sh-title">Ajustes</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
  '<div class="kv"><div><h3 class="lab">Almacenamiento</h3><p id="s-store">Calculando...</p></div>'+(db?"":'<div class="note">'+svg("flag",20)+'<p>Este navegador no permite guardar datos. Lo que añadas se perderá al cerrar la página.</p></div>')+
  '<div><h3 class="lab">Apariencia</h3><div class="chips">'+[["light","Claro"],["dark","Oscuro"],["auto","Automático"]].map(function(t){return '<button type="button" class="chip" data-act="theme" data-v="'+t[0]+'" aria-pressed="'+((kv.theme||"light")===t[0])+'">'+t[1]+'</button>'}).join("")+'</div></div>'+
- '<ul class="rows"><li class="pl tap" data-act="places"><div><b>Direcciones guardadas</b><p>'+placesCountText()+'</p></div><span class="pen" aria-hidden="true">'+svg("chev",18)+'</span></li></ul>'+
  '<div><h3 class="lab">Copia de seguridad</h3><p>Guarda un archivo con todos tus documentos y estados, protegido con contraseña si quieres. Hazlo antes de salir de viaje y cada vez que añadas algo importante.</p></div>'+
  '<div class="actions"><button type="button" class="btn" data-act="export">Exportar copia</button><label class="btn" for="s-import">Importar copia</label><input id="s-import" type="file" accept="application/json,.json" hidden></div>'+
  '<div class="actions"><button type="button" class="btn" data-act="persist">Proteger datos del borrado</button></div>'+
@@ -1611,7 +1697,7 @@ function confirmTap(b,msg,fn){
  tapArm={el:b,txt:b.textContent,t:setTimeout(function(){if(tapArm&&tapArm.el===b){b.textContent=tapArm.txt;b.classList.remove("armed");tapArm=null}},4000)};
  b.textContent=msg;b.classList.add("armed");
 }
-var calTab="dias",calSel=null,curDayId=null,calScrolled=false,evEditing=null;
+var calTab="dias",calSel=null,curDayId=null,calScrolled=false,evEditing=null,evPk=null;   // evPk: sitio del que sale el evento nuevo (📅+)
 function evList(){return Array.isArray(kv.events)?kv.events:[]}
 function tmin(t){if(!/^\d{1,2}:\d{2}$/.test(t||""))return null;var a=t.split(":");return +a[0]*60+ +a[1]}
 function colOf(t){return TYPES[t]?TYPES[t].t:"var(--accent)"}
@@ -1691,11 +1777,13 @@ function renderCal(){
 }
 function openEventSheet(o){
  var e=o.id?evList().filter(function(x){return x.id===o.id})[0]:null;evEditing=e||null;
+ evPk=e?(e.pk||null):(o.pk&&placeByKey(o.pk)?o.pk:null);var lp=placeByKey(evPk);
  var day=e?e.day:(dayById(o.day)?o.day:(calSel&&dayById(calSel)?calSel:DAYS[0].d));
  openSheet('<div class="sh-head"><h2 id="sh-title">'+(e?"Editar evento":"Nuevo evento")+'</h2>'+(e?'<button type="button" class="x" data-act="ev-view" data-id="'+esc(e.id)+'">Cancelar</button>':'<button type="button" class="x" data-act="close">Cancelar</button>')+'</div>'+
  '<div class="field"><label for="e-title">Nombre'+REQ+'</label><input id="e-title" type="text" placeholder="Ej. Visita a Plaza de España" value="'+esc(e?e.title:(o.title||""))+'" autocomplete="off"></div>'+
  '<div class="field"><label for="e-day">Día'+REQ+'</label><select id="e-day">'+DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===day?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'</select></div>'+
  '<div class="field"><span class="fl">Hora de inicio y fin</span><div class="timerow">'+timeBox("e-t1",e&&e.t1,"Hora de inicio")+'<span>–</span>'+timeBox("e-t2",e&&e.t2,"Hora de fin")+'</div></div>'+
+ (lp?'<p class="note ok evpl">'+svg("pin",18)+'<span>Vinculado a «'+esc(lp.p.n)+'»: en el mapa sale solo el día de este evento.</span></p>':"")+
  '<div class="field"><label for="e-note">Nota o lugar</label><input id="e-note" type="text" placeholder="Ej. Entrada por la puerta principal" value="'+esc(e&&e.note||"")+'" autocomplete="off"></div>'+
  '',
  '<p class="err" id="e-err" role="alert"></p><div class="actions">'+(e?'<button type="button" class="btn danger" data-act="ev-del">Eliminar</button>':"")+'<button type="button" class="btn primary" style="--c1:var(--accent)" data-act="ev-save">Guardar</button></div>');
@@ -1705,6 +1793,7 @@ function openEventView(id){
  evEditing=null;
  var dy=dayById(e.day),h=vType("cal","var(--accent)","Evento",dy?cap(shortDay(dy))+" · "+routeText(dy):"");
  h+=vTimes("evento",e.t1,e.t2);
+ var lp=placeByKey(e.pk);if(lp)h+=vField("Lugar",'<div class="loc"><span>'+esc(lp.p.n)+'</span>'+mapBtn(lp.p.u&&/^https?:\/\//i.test(lp.p.u)?lp.p.u:mapUrl(lp.p.n,lp.cid))+'</div>');
  if(e.note)h+='<div class="field"><span class="fl">Nota o lugar</span><p class="vtxt">'+esc(e.note)+'</p></div>';
  openSheet('<div class="sh-head"><h2 id="sh-title">'+esc(e.title)+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+h,
   '<div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="ev-edit" data-id="'+esc(e.id)+'">Editar</button></div>');
@@ -1716,6 +1805,7 @@ async function saveEvent(){
  if(t1&&t2&&t2<=t1){$("#e-err").textContent="La hora de fin debe ser posterior a la de inicio.";return}
  var list=evList().slice(),ev=evEditing?Object.assign({},evEditing):{id:uid()};
  ev.title=title;ev.day=$("#e-day").value;ev.t1=t1;ev.t2=t2;ev.note=$("#e-note").value.trim();
+ if(evPk)ev.pk=evPk;   // campo nuevo opcional: los eventos viejos siguen valiendo
  var k=-1;list.forEach(function(x,i){if(x.id===ev.id)k=i});if(k>=0)list[k]=ev;else list.push(ev);
  var wasEdit=!!evEditing;await setKV("events",list);calSel=ev.day;refresh();
  if(wasEdit)openEventView(ev.id);else closeSheet();
@@ -1731,17 +1821,19 @@ function setBand(color){document.body.style.setProperty("--band",color)}
 function route(){
  applyTransit();
  var h=location.hash.replace(/^#/,""),day=null,v="home";
- if(h.indexOf("dia-")===0){day=dayById(h.slice(4));if(day)v="day"}else if(h==="documentos")v="docs";else if(h==="calendario")v="cal";
+ if(h.indexOf("dia-")===0){day=dayById(h.slice(4));if(day)v="day"}else if(h==="documentos")v="docs";else if(h==="calendario")v="cal";else if(h==="mapa")v="map";
  scrollPos[view]=window.scrollY;
  var changed=v!==view||(v==="day"&&V.day.dataset.id!==(day&&day.d));
- if(v==="day"&&view!=="day")dayFrom={home:"#inicio",docs:"#documentos",cal:"#calendario"}[view]||"#inicio";
+ if(v==="day"&&view!=="day"&&!(view==="map"&&mapFrom))dayFrom={home:"#inicio",docs:"#documentos",cal:"#calendario",map:"#mapa"}[view]||"#inicio";   // al volver del mapa abierto desde el día, se conserva
+ if(v==="map"&&view!=="day")mapFrom=null;   // entrar desde la barra de abajo: sin ‹
  view=v;
- ["home","day","docs","cal"].forEach(function(k){V[k].hidden=k!==v});
+ ["home","day","docs","cal","map"].forEach(function(k){V[k].hidden=k!==v});
  $("#bnav").hidden=v==="day";
- $("#nav-home").setAttribute("aria-current",v==="home"?"page":"false");$("#nav-docs").setAttribute("aria-current",v==="docs"?"page":"false");$("#nav-cal").setAttribute("aria-current",v==="cal"?"page":"false");
+ $("#nav-home").setAttribute("aria-current",v==="home"?"page":"false");$("#nav-docs").setAttribute("aria-current",v==="docs"?"page":"false");$("#nav-cal").setAttribute("aria-current",v==="cal"?"page":"false");$("#nav-map").setAttribute("aria-current",v==="map"?"page":"false");
  if(v==="home"){renderHome();setBand("var(--bg)")}
  else if(v==="docs"){renderDocsView();setBand("var(--bg)")}
  else if(v==="cal"){renderCal();setBand("var(--bg)")}
+ else if(v==="map"){renderMap();setBand("var(--bg)")}
  else{if(V.day.dataset.id!==day.d){tab="general"}V.day.dataset.id=day.d;renderDay(day);setBand("var(--bg)")}
  if(changed){window.scrollTo(0,v==="day"?0:(scrollPos[v]||0))}
  if(v==="cal"&&calTab==="dias"&&!calScrolled){calScrolled=true;var ce=document.getElementById("c-"+todayStr());if(ce)requestAnimationFrame(function(){ce.scrollIntoView({block:"start"});window.scrollBy(0,-12)})}
@@ -1777,7 +1869,7 @@ function updateFab(){
  fab.classList.toggle("wide",atEnd);
 }
 function refresh(){applyTransit();var y=window.scrollY;var h=location.hash.replace(/^#/,"");
- if(view==="day"){var d=dayById(h.slice(4));if(d)renderDay(d)}else if(view==="docs")renderDocsView();else if(view==="cal")renderCal();else renderHome();
+ if(view==="day"){var d=dayById(h.slice(4));if(d)renderDay(d)}else if(view==="docs")renderDocsView();else if(view==="cal")renderCal();else if(view==="map")renderMap();else renderHome();
  window.scrollTo(0,y)}
 
 document.addEventListener("click",function(e){
@@ -1790,7 +1882,7 @@ document.addEventListener("click",function(e){
  else if(a==="add"){openDocSheet({day:b.dataset.day,type:b.dataset.type,title:b.dataset.title,leg:b.dataset.leg,to:b.dataset.to})}
  else if(a==="ctab"){calTab=b.dataset.v;renderCal()}
  else if(a==="csel"){calSel=b.dataset.d;renderCal()}
- else if(a==="ev-add"){openEventSheet({day:b.dataset.day,title:b.dataset.title})}
+ else if(a==="ev-add"){openEventSheet({day:b.dataset.day,title:b.dataset.title,pk:b.dataset.pk})}
  else if(a==="ev-view"){openEventView(b.dataset.id)}
  else if(a==="ev-edit"){openEventSheet({id:b.dataset.id})}
  else if(a==="ev-save"){saveEvent()}
@@ -1868,7 +1960,10 @@ document.addEventListener("click",function(e){
  else if(a==="resto"){var s=((kv[b.dataset.k]||0)+1)%4;setKV(b.dataset.k,s).then(refresh)}
  else if(a==="filter"){docFilter=b.dataset.f;renderDocsView()}
  else if(a==="settings"){openSettings()}
- else if(a==="places"){openPlaces()}
+ else if(a==="mmode"){mapState.mode=b.dataset.v;renderMap()}
+ else if(a==="mcat"){var mc=b.dataset.c;if(mapState.cats[mc])delete mapState.cats[mc];else mapState.cats[mc]=1;renderMap()}
+ else if(a==="mcard"){openMapCard(b.dataset.id)}
+ else if(a==="map-day"){mapState.day=b.dataset.day;mapFrom=location.hash||"#inicio";location.hash="#mapa"}
  else if(a==="spend"){openSpend()}
  else if(a==="sumtog"){setKV("sumOpen",!kv.sumOpen);renderDocsView()}
  else if(a==="pastdocs"){pastOpen=!pastOpen;renderDocsView()}
@@ -1886,9 +1981,11 @@ document.addEventListener("change",function(e){
  clearBad(e.target);
  if(e.target.id==="f-day"){var fe0=$("#f-err");if(fe0&&fe0.dataset.k==="type")formErr("")}
  if(e.target.type==="time")syncTimeClr(e.target);
+ if(e.target.id==="m-day"){mapState.day=e.target.value;renderMap();return}
+ if(e.target.id==="m-st"){mapState.st=e.target.value;renderMap();return}
  if(e.target.dataset&&e.target.dataset.spinc){saveIncl(e.target);return}
  if(e.target.dataset&&(e.target.dataset.paid||e.target.dataset.paidc)){savePaid(e.target.dataset.paid||e.target.dataset.paidc);return}
- if(e.target.classList&&e.target.classList.contains("statsel")){var sv=+e.target.value;e.target.className="stat statsel s"+sv;setKV(e.target.dataset.k,sv);return}
+ if(e.target.classList&&e.target.classList.contains("statsel")){var sv=+e.target.value;e.target.className="stat statsel s"+sv;setKV(e.target.dataset.k,sv);if(view==="map")renderMap();return}
  if(e.target.id==="f-file"){var f=e.target.files[0];if(f){var fd=$("#f-filedel");if(fd)fd.hidden=false;$("#f-name").innerHTML=esc(f.name)+"<small>"+fmtSize(f.size)+"</small>";var ft=$("#f-title");if(ft&&!ft.value)ft.value=f.name.replace(/\.[^.]+$/,"");
   var bn=$("#f-bignote");if(bn){bn.hidden=f.size<=BIG_FILE;bn.textContent=f.size>BIG_FILE?"Este archivo pesa "+fmtSize(f.size)+". Las copias de seguridad tardarán y pueden fallar en iPhone o iPad. Si puedes, usa un PDF más liviano o una captura.":""}}}
  else if(e.target.id==="f-day"){
@@ -1938,7 +2035,7 @@ window.addEventListener("scroll",updateFab,{passive:true});
 sheetBody.addEventListener("scroll",function(){var on=sheetBody.scrollTop>4;if(sheetHead.classList.contains("scrolled")!==on)sheetHead.classList.toggle("scrolled",on)},{passive:true});
 window.addEventListener("resize",updateFab);
 /* Barra de abajo solo con íconos (el título de cada página dice dónde se está); el nombre va en aria-label */
-[["#nav-home","way","Ruta"],["#nav-cal","cal","Calendario"],["#nav-docs","file","Documentos"],["#nav-set","sliders","Ajustes"]].forEach(function(x){var el=$(x[0]);el.innerHTML=svg(x[1],26);el.setAttribute("aria-label",x[2]);el.setAttribute("title",x[2])});
+[["#nav-home","way","Ruta"],["#nav-cal","cal","Calendario"],["#nav-map","route","Mapa"],["#nav-docs","file","Documentos"],["#nav-set","sliders","Ajustes"]].forEach(function(x){var el=$(x[0]);el.innerHTML=svg(x[1],26);el.setAttribute("aria-label",x[2]);el.setAttribute("title",x[2])});
 
 loadAll().then(function(){
  applyTheme();

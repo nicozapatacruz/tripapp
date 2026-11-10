@@ -14,7 +14,12 @@ En este orden:
        API + Geocoding API + Routes API (tiempo a pie), clave restringida a
        `nicozapatacruz.github.io/tripapp/*` y `localhost:5180/*`, límites
        diarios y alerta de presupuesto. Claude guía paso a paso.
-3. [ ] Construir el mapa. Coordenadas: se buscan una vez por nombre + ciudad
+3. [ ] Conectar Google Maps (el resto de la pestaña Mapa ya está hecho,
+       ver bitácora 10 nov): dibujar el mapa con los puntos y sus números,
+       "estoy aquí", "encuadrar", tarjeta al tocar un punto, tiempo a pie
+       real con Google (sin internet sigue el estimado) y abrir el modo Mapa
+       por defecto.
+   - Construir el mapa. Coordenadas: se buscan una vez por nombre + ciudad
        y se guardan; las dudosas se marcan para corregir (mover el punto o
        pegar el enlace largo). Los enlaces cortos (maps.app.goo.gl) no se
        pueden abrir desde la app sin servidor.

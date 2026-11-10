@@ -29,18 +29,17 @@ function typeLoc(value, n = 1) {
   el.dispatchEvent(new Event("input", { bubbles: true }));
 }
 async function save() { click($('[data-act="save"]')); await tick(); }
-/* Va a Documentos y devuelve los enlaces guardados (desde Ajustes → Direcciones guardadas;
-   las tarjetas compactas ya no llevan mapa). Si hay una hoja abierta, no la toca. */
+/* Devuelve los enlaces guardados en los documentos (desde Mapa → Lista; las tarjetas compactas
+   ya no llevan mapa) y deja la vista en Documentos. */
 function savedLinks() {
-  location.hash = "#documentos";
-  window.dispatchEvent(new HashChangeEvent("hashchange"));
-  if (!document.querySelector("#sheet").hidden) return [];
-  const b = document.createElement("button");
-  b.dataset.act = "places"; document.body.appendChild(b); click(b); b.remove();
-  const out = [...document.querySelectorAll("#sheet-body .adrg a.map")].map((a) => a.getAttribute("href"));
-  click(document.querySelector('[data-act="close"]'));
+  const go = (h) => { location.hash = h; window.dispatchEvent(new HashChangeEvent("hashchange")); };
+  go("#mapa");
+  const out = [...document.querySelectorAll("#v-map .adrg .mrow a.map")].map((a) => a.getAttribute("href"));
+  go("#documentos");
   return out;
 }
+/* Cambia un <select> del mapa (se redibuja al cambiar: hay que volver a buscarlo cada vez) */
+function setSel(id, v) { const el = document.getElementById(id); el.value = v; el.dispatchEvent(new Event("change", { bubbles: true })); }
 function openTicket(title) {
   const tk = [...document.querySelectorAll("#v-docs .ticket")].find((x) => x.querySelector("h4").textContent === title);
   click(tk.querySelector('[data-act="view"]'));
@@ -913,37 +912,112 @@ describe("formulario: ubicaciones", () => {
     expect($("#sheet-head").innerHTML).toBe("");
   });
 
-  it("45) Ajustes → Direcciones guardadas: por ciudad, con sus documentos, mapa y aviso sin enlace", async () => {
+  it("45) Mapa → Lista: por ciudad en el orden del viaje, con sus documentos, mapa y «Sin ubicar»", async () => {
     openNew(MADRID);
     typeLoc("Mercado sin enlace");
     $("#f-title").value = "Vermut";
     await save();
-    expect($("#f-err")).toBeNull();                                    // guardado: el formulario se cerró
-    click($("#nav-set"));
-    const row = $('#sheet-body [data-act="places"]');
-    expect(row.textContent).toMatch(/\d+ direcciones de tus documentos/);
-    click(row);
-    expect($("#sh-title").textContent).toBe("Direcciones guardadas");
-    const heads = [...document.querySelectorAll("#sheet-body .adrg .lab")].map((h) => h.textContent);
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect($("#v-map h1").textContent).toBe("Mapa");
+    expect($('#nav-map').getAttribute("aria-current")).toBe("page");
+    const heads = [...document.querySelectorAll("#v-map .adrg .lab")].map((h) => h.textContent);
     const at = (c) => heads.findIndex((h) => h.startsWith(c));
     expect(at("Medellín")).toBeLessThan(at("Madrid"));                  // orden del viaje (sale de Medellín)
-    const li = [...document.querySelectorAll("#sheet-body .pl.adr")].find((x) => x.textContent.includes("Mercado sin enlace"));
-    expect(li.querySelector(".adrw").textContent).toContain("Sin enlace al mapa");
+    const li = [...document.querySelectorAll("#v-map .mrow")].find((x) => x.textContent.includes("Mercado sin enlace"));
+    expect(li.textContent).toContain("Vermut");                         // el documento que la usa
+    expect(li.querySelector(".adrw").textContent).toBe("Sin ubicar");
     expect(li.querySelector("a.map").getAttribute("href")).toContain("Mercado%20sin%20enlace%2C%20Madrid");
-    const casas = [...document.querySelectorAll("#sheet-body .pl.adr")].filter((x) => x.querySelector("b").textContent === "Casa");
-    const linked = casas.find((x) => x.querySelector("a.map").getAttribute("href") === A);  // la Casa con enlace
-    expect(linked.querySelector(".adrw")).toBeNull();
-    expect(linked.querySelectorAll('[data-act="view"]').length).toBeGreaterThan(0);
-    const fx = $("#sheet-body details.adrx");                           // las de la app: plegadas
+    expect([...document.querySelectorAll("#v-map .mrow")].some((x) => x.textContent.includes("Qué ver"))).toBe(true);   // sitios de Qué ver
+    const fx = $("#v-map details.adrx");                                // estaciones de la app: plegadas
     expect(fx.open).toBe(false);
-    expect(fx.querySelector("summary").textContent).toMatch(/aeropuertos de la app/);
-    expect(fx.querySelectorAll(".pl.adr").length).toBe(+fx.querySelector("summary small").textContent);
-    expect(fx.textContent).toContain("Sevilla Santa Justa");
-    // enlaces exactos de Google Maps (ficha del lugar), no búsquedas por texto
     expect([...fx.querySelectorAll("a.map")].every((x) => x.getAttribute("href").includes("/maps/place/"))).toBe(true);
-    click(li.querySelector('[data-act="view"]'));                       // abre la ficha del documento
-    expect($("#sh-title").textContent).not.toBe("Direcciones guardadas");
+    // en Ajustes ya no está
+    click($("#nav-set"));
+    expect($("#sheet-body").textContent).not.toContain("Direcciones guardadas");
     click($('[data-act="close"]'));
+    // modo Mapa: aviso mientras falta la clave, con salida a la lista
+    click($('#v-map [data-act=mmode][data-v="map"]'));
+    expect($("#v-map .mapph").textContent).toContain("Google Maps");
+    click($("#v-map .mapph [data-act=mmode]"));
+    expect($("#v-map .mapph")).toBeNull();
+  });
+
+  it("45b) filtros del mapa: tipo, estado (sin «Ya fui» por defecto) y día", () => {
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const rows = () => [...document.querySelectorAll("#v-map .mrow")];
+    const plaza = () => rows().find((x) => x.querySelector("b").textContent === "Plaza Mayor y Puerta del Sol");
+    expect(plaza()).toBeTruthy();
+    click($('#v-map [data-act=mcat][data-c="see"]'));                   // quitar Qué ver
+    expect(plaza()).toBeFalsy();
+    click($('#v-map [data-act=mcat][data-c="see"]'));
+    // marcar «Ya fui» la esconde; «Todos los estados» la muestra
+    click(plaza()); const sel = $("#sheet-body select.statsel");
+    sel.value = "3"; sel.dispatchEvent(new Event("change", { bubbles: true }));
+    click($('[data-act="close"]'));
+    location.hash = "#inicio"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect(plaza()).toBeFalsy();
+    setSel("m-st", "all");
+    expect(plaza()).toBeTruthy();
+    // día de Tenerife: no salen los sitios de Madrid
+    setSel("m-day", TENERIFE);
+    expect(plaza()).toBeFalsy();
+    expect(rows().some((x) => x.textContent.includes("Teide"))).toBe(true);
+    setSel("m-day", "all");
+  });
+
+  it("45c) evento creado desde un sitio: queda vinculado y el sitio sale solo ese día, con número", async () => {
+    location.hash = "#dia-" + MADRID; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    click($('#v-day [data-act="tab"][data-tab="general"]'));
+    const btn = [...document.querySelectorAll('#v-day [data-act="ev-add"][data-pk]')].find((b) => b.dataset.title === "Plaza Mayor y Puerta del Sol");
+    click(btn);
+    expect($("#sheet-body .evpl").textContent).toContain("Plaza Mayor");
+    $("#e-day").value = "2026-12-29"; $("#e-t1").value = "11:00";
+    click($('[data-act="ev-save"]')); await tick();
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const plaza = () => [...document.querySelectorAll("#v-map .mrow")].find((x) => x.querySelector("b").textContent === "Plaza Mayor y Puerta del Sol");
+    setSel("m-day", "2026-12-29");
+    expect(plaza().querySelector(".mnum").textContent).toBe("1");       // con número por su hora
+    setSel("m-day", "2026-12-30");
+    expect(plaza()).toBeFalsy();                                         // ya no sale los otros días de Madrid
+    setSel("m-day", "all");
+    expect(plaza()).toBeTruthy();                                        // en todo el viaje, sí
+  });
+
+  it("45d) botón de mapa en el día: abre el mapa filtrado y ‹ vuelve al día", () => {
+    location.hash = "#inicio"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    location.hash = "#dia-" + TENERIFE; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    click($("#v-day .dbar [data-act=map-day]"));
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect(location.hash).toBe("#mapa");
+    expect($("#m-day").value).toBe(TENERIFE);
+    const back = $("#v-map .page-h .back");
+    expect(back.getAttribute("href")).toBe("#dia-" + TENERIFE);
+    location.hash = "#dia-" + TENERIFE; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect($("#v-day .dbar .back").getAttribute("href")).toBe("#inicio");   // conserva de dónde se llegó al día
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    location.hash = "#documentos"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect($("#v-map .page-h .back")).toBeNull();                       // desde la barra de abajo: sin ‹
+    setSel("m-day", "all");
+  });
+
+  it("45e) tarjeta: distancia y tiempo a pie estimados al hotel del día; Cómo llegar", async () => {
+    const H = "https://www.google.com/maps/place/Hotel/@40.41,-3.70,17z/data=!3m1!4b1!8m2!3d40.4168!4d-3.7038";
+    const M = "https://www.google.com/maps/place/Museo/@40.41,-3.69,17z/data=!3m1!4b1!8m2!3d40.4138!4d-3.6921";
+    openNew("2026-12-30", "hotel"); typeLoc("Hotel Sol " + H); await save();
+    openNew("2026-12-30", "entrada"); typeLoc("Museo Prado " + M); $("#f-title").value = "Prado"; await save();
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    setSel("m-day", "2026-12-30");
+    const row = [...document.querySelectorAll("#v-map .mrow")].find((x) => x.querySelector("b").textContent === "Museo Prado");
+    expect(row.querySelector(".adrw")).toBeNull();                       // tiene coordenadas
+    click(row);
+    expect($("#sheet-body .mdist").textContent).toMatch(/km del hotel · ≈ \d+ min a pie/);
+    expect($("#sheet-body").textContent).toContain("Estimado en línea recta");
+    expect($("#sheet-foot").textContent).toContain("Cómo llegar");
+    expect($('#sheet-foot a.primary').getAttribute("href")).toContain("destination=40.4138%2C-3.6921");
+    click($('[data-act="close"]'));
+    setSel("m-day", "all");
   });
 
   it("46) resumen de gastos: botón en el recuadro, cobrado en otra moneda guardado e impresión", async () => {
@@ -1065,7 +1139,7 @@ describe("formulario: ubicaciones", () => {
 
   it("49) barra de abajo: solo íconos, con su nombre para lectores de pantalla", () => {
     const items = [...document.querySelectorAll("#bnav a, #bnav button")];
-    expect(items.map((x) => x.getAttribute("aria-label"))).toEqual(["Ruta", "Calendario", "Documentos", "Ajustes"]);
+    expect(items.map((x) => x.getAttribute("aria-label"))).toEqual(["Ruta", "Calendario", "Mapa", "Documentos", "Ajustes"]);
     expect(items.every((x) => x.textContent.trim() === "" && x.querySelector("svg"))).toBe(true);
   });
 });
