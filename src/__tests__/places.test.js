@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   isMapsUrl, extractMapsUrl, normName, slotCities, needsCityChoice, cityChoices, cityMismatch,
-  resolvePlace, freeName, placeSuggestions,
+  resolvePlace, freeName, placeSuggestions, savedPlaces,
 } from "../places.js";
 
 const SHORT_A = "https://maps.app.goo.gl/AAAA1111";
@@ -158,5 +158,29 @@ describe("coincidencias y conflictos", () => {
     const sug = placeSuggestions(idx, ["sevilla"], null, cityName);
     expect(sug).toHaveLength(1);
     expect(sug[0]).toMatchObject({ label: "Casa", url: SHORT_A });
+  });
+});
+
+describe("direcciones guardadas (lista para ver)", () => {
+  it("une por nombre y enlace, junta documentos y ciudades", () => {
+    const ix = [
+      { name: "Hotel Sol", url: SHORT_A, cities: ["madrid"], docId: "d1" },
+      { name: "hotel sol", url: SHORT_A, cities: ["madrid"], docId: "d2" },   // mismo lugar, otra mayúscula
+      { name: "Hotel Sol", url: SHORT_B, cities: ["sevilla"], docId: "d3" },  // mismo nombre, otro enlace
+      { name: "Casa", url: "", cities: ["madrid", "pamplona"], docId: "d4" }, // sin enlace, ciudad dudosa
+      { name: "Atocha", url: SHORT_C, cities: ["madrid"], docId: "d5" },
+      { name: "Atocha", url: SHORT_C, cities: ["madrid"], docId: "d5" },      // salida y llegada del mismo doc
+    ];
+    const r = savedPlaces(ix);
+    expect(r.map((x) => x.name + ":" + x.docIds.join(","))).toEqual(["Hotel Sol:d1,d2", "Hotel Sol:d3", "Casa:d4", "Atocha:d5"]);
+    expect(r[2].url).toBe("");
+    expect(r[2].cities).toEqual(["madrid", "pamplona"]);
+  });
+  it("un documento de todo el viaje deja la ciudad sin definir", () => {
+    const r = savedPlaces([
+      { name: "Seguro", url: "", cities: ["madrid"], docId: "a" },
+      { name: "Seguro", url: "", cities: null, docId: "b" },
+    ]);
+    expect(r[0].cities).toBeNull();
   });
 });

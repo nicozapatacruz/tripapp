@@ -12,6 +12,21 @@ Reglas:
 
 ---
 
+## 2026-11-10
+
+- Nueva hoja "Direcciones guardadas" (Ajustes → fila con el número de
+  direcciones). Solo consulta: muestra las ubicaciones de los documentos
+  agrupadas por ciudad en el orden del viaje (las de ciudad dudosa o de
+  "todo el viaje" van al final en "Sin ciudad definida"). Cada fila lleva el
+  ícono del tipo, los documentos que la usan (tocarlos abre su ficha), el
+  botón de mapa y, si no hay enlace, el aviso "Sin enlace al mapa" (el
+  botón busca por el nombre y la ciudad). Sirve para detectar duplicados,
+  ciudades mal asignadas y faltas de enlace. No se edita ni se borra desde
+  ahí: las direcciones salen de los documentos (corregir en bloque queda
+  para más adelante si hace falta). Las 20 estaciones y aeropuertos que trae
+  la app (solo sugerencias, no se guardan ni van en la copia) no se listan;
+  solo se cuentan al final. Lógica de agrupado en `savedPlaces` (places.js).
+
 ## 2026-11-09
 
 - Tercer y definitivo planteamiento del encabezado del día (patrón de títulos

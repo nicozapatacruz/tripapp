@@ -123,6 +123,30 @@ function union(a, b) {
   return o;
 }
 
+/**
+ * Direcciones guardadas para mostrarlas (Ajustes → Direcciones guardadas): una por
+ * (nombre, enlace), con los documentos que la usan y la unión de sus ciudades.
+ * index: [{name, url, cities, docId}] (solo las de documentos, sin las sugerencias fijas)
+ * → [{name, url, cities, docIds}] en el orden en que aparecen
+ */
+export function savedPlaces(index) {
+  const by = {};
+  const out = [];
+  index.forEach((r) => {
+    if (!r.name) return;
+    const key = normName(r.name) + "|" + (r.url || "");
+    const g = by[key];
+    if (!g) {
+      by[key] = { name: r.name, url: r.url || "", cities: r.cities ? r.cities.slice() : null, docIds: [r.docId] };
+      out.push(by[key]);
+      return;
+    }
+    g.cities = union(g.cities, r.cities);
+    if (g.docIds.indexOf(r.docId) < 0) g.docIds.push(r.docId);
+  });
+  return out;
+}
+
 /** "Casa" → "Casa 2" (o el primer número libre) en esas ciudades. */
 export function freeName(index, name, cities, docId) {
   const base = String(name || "").trim().replace(/\s+\d+$/, "");

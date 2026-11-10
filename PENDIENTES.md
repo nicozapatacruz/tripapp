@@ -7,6 +7,8 @@ El viaje empieza el **27 de diciembre de 2026**.
 
 Antes de seguir con las fases 2 y 3, Nicolas quiere pulir la app.
 
+- [ ] Revisar la versión resumida en Documentos y optimizar el espacio.
+
 
 ## Fase 3 · Compartir con Supabase (en pausa; idea original: 20 nov – 15 dic)
 

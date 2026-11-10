@@ -6,7 +6,7 @@ import {
 } from "./backup.js";
 import {
   extractMapsUrl, normName, slotCities, needsCityChoice, cityChoices, cityMismatch,
-  resolvePlace, freeName, placeSuggestions,
+  resolvePlace, freeName, placeSuggestions, savedPlaces,
 } from "./places.js";
 
 (function(){
@@ -1257,11 +1257,44 @@ async function deleteItem(){
  await setKV("pl:"+c.cid+":"+c.kind,l);await delKV(itemKey(c.kind,c.cid,itemEd));refresh();openListSheet(c.cid,c.kind);toast("Eliminado");
 }
 
+/* ================= Direcciones guardadas (solo consulta) =================
+   Salen de las ubicaciones de los documentos; las estaciones y aeropuertos fijos
+   (PLACES) solo se cuentan al final. Agrupadas por ciudad en el orden del viaje. */
+function myPlaces(){return savedPlaces(placeIndex().filter(function(r){return r.docId!=="_places"}))}
+function placesCountText(){var n=myPlaces().length;return n?n+(n===1?" dirección":" direcciones")+" de tus documentos":"Aún no hay ninguna"}
+function openPlaces(){
+ var list=myPlaces(),byId={},order=[],groups={};
+ docs.forEach(function(d){byId[d.id]=d});
+ DAYS.forEach(function(d){d.stops.forEach(function(s){if(order.indexOf(s)<0)order.push(s)})});
+ list.forEach(function(p){
+  p.first=p.docIds.map(function(id){return byId[id]?byId[id].dayId:"trip"}).sort()[0];
+  var k=p.cities&&p.cities.length===1?p.cities[0]:"_";
+  if(k!=="_"&&order.indexOf(k)<0)order.push(k);
+  (groups[k]=groups[k]||[]).push(p);
+ });
+ function row(p,city){
+  var d0=byId[p.docIds[0]],ty=d0&&TYPES[d0.type]?d0.type:"otro";
+  var used=p.docIds.map(function(id){var d=byId[id];if(!d)return "";var dy=dayById(d.dayId);
+   return '<button type="button" class="mini" data-act="view" data-id="'+d.id+'">'+esc(d.title||TYPES[ty].l)+(dy?' · '+esc(shortDay(dy)):"")+'</button>'}).filter(Boolean).join(" · ");
+  var where=city==="_"&&p.cities?'<p>'+esc(p.cities.map(nm).join(" o "))+'</p>':"";
+  var u=p.url||gmap(p.name+(city!=="_"?", "+nm(city):""));
+  return '<li class="pl adr"><span class="adri" style="--t:'+TYPES[ty].t+'">'+svg(TYPE_ICON[ty]||"file",18)+'</span><div class="adrt"><b>'+esc(p.name)+'</b>'+where+'<p>'+used+'</p>'+(p.url?"":'<p class="adrw">Sin enlace al mapa · se buscará por el nombre</p>')+'</div>'+mapBtn(u)+'</li>';
+ }
+ var keys=order.filter(function(k){return groups[k]}).concat(groups._?["_"]:[]);
+ var body=keys.map(function(k){var g=groups[k].sort(function(a,b){return a.first<b.first?-1:a.first>b.first?1:0});
+  return '<section class="adrg"><h3 class="lab">'+(k==="_"?"Sin ciudad definida":esc(nm(k)))+' <small>'+g.length+'</small></h3><ul class="rows">'+g.map(function(p){return row(p,k)}).join("")+'</ul></section>'}).join("");
+ var usedFixed=PLACES.filter(function(n){return list.some(function(p){return normName(p.name)===normName(n)})}).length,rest=PLACES.length-usedFixed;
+ openSheet('<div class="sh-head"><h2 id="sh-title">Direcciones guardadas</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
+  (body||'<p class="foot">Todavía no hay direcciones. Se guardan al poner una ubicación en un documento.</p>')+
+  (rest?'<p class="foot">Además, la app trae '+(usedFixed?"otras ":"")+rest+' estaciones y aeropuertos que se sugieren al escribir una ubicación.</p>':""));
+}
+
 /* ================= Ajustes y copia de seguridad ================= */
 function openSettings(){
  openSheet('<div class="sh-head"><h2 id="sh-title">Ajustes</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
  '<div class="kv"><div><h3 class="lab">Almacenamiento</h3><p id="s-store">Calculando...</p></div>'+(db?"":'<div class="note">'+svg("flag",20)+'<p>Este navegador no permite guardar datos. Lo que añadas se perderá al cerrar la página.</p></div>')+
  '<div><h3 class="lab">Apariencia</h3><div class="chips">'+[["light","Claro"],["dark","Oscuro"],["auto","Automático"]].map(function(t){return '<button type="button" class="chip" data-act="theme" data-v="'+t[0]+'" aria-pressed="'+((kv.theme||"light")===t[0])+'">'+t[1]+'</button>'}).join("")+'</div></div>'+
+ '<ul class="rows"><li class="pl tap" data-act="places"><div><b>Direcciones guardadas</b><p>'+placesCountText()+'</p></div><span class="pen" aria-hidden="true">'+svg("chev",18)+'</span></li></ul>'+
  '<div><h3 class="lab">Copia de seguridad</h3><p>Guarda un archivo con todos tus documentos y estados, protegido con contraseña si quieres. Hazlo antes de salir de viaje y cada vez que añadas algo importante.</p></div>'+
  '<div class="actions"><button type="button" class="btn" data-act="export">Exportar copia</button><label class="btn" for="s-import">Importar copia</label><input id="s-import" type="file" accept="application/json,.json" hidden></div>'+
  '<div class="actions"><button type="button" class="btn" data-act="persist">Proteger datos del borrado</button></div>'+
@@ -1698,6 +1731,7 @@ document.addEventListener("click",function(e){
  else if(a==="resto"){var s=((kv[b.dataset.k]||0)+1)%4;setKV(b.dataset.k,s).then(refresh)}
  else if(a==="filter"){docFilter=b.dataset.f;renderDocsView()}
  else if(a==="settings"){openSettings()}
+ else if(a==="places"){openPlaces()}
  else if(a==="export"){openExportSheet()}
  else if(a==="exp-kind"){expKindChanged(b)}
  else if(a==="exp-make"){makeExport(b)}

@@ -902,4 +902,31 @@ describe("formulario: ubicaciones", () => {
     click($('[data-act="close"]'));
     expect($("#sheet-head").innerHTML).toBe("");
   });
+
+  it("45) Ajustes → Direcciones guardadas: por ciudad, con sus documentos, mapa y aviso sin enlace", async () => {
+    openNew(MADRID);
+    typeLoc("Mercado sin enlace");
+    $("#f-title").value = "Vermut";
+    await save();
+    expect($("#f-err")).toBeNull();                                    // guardado: el formulario se cerró
+    click($("#nav-set"));
+    const row = $('#sheet-body [data-act="places"]');
+    expect(row.textContent).toMatch(/\d+ direcciones de tus documentos/);
+    click(row);
+    expect($("#sh-title").textContent).toBe("Direcciones guardadas");
+    const heads = [...document.querySelectorAll("#sheet-body .adrg .lab")].map((h) => h.textContent);
+    const at = (c) => heads.findIndex((h) => h.startsWith(c));
+    expect(at("Medellín")).toBeLessThan(at("Madrid"));                  // orden del viaje (sale de Medellín)
+    const li = [...document.querySelectorAll("#sheet-body .pl.adr")].find((x) => x.textContent.includes("Mercado sin enlace"));
+    expect(li.querySelector(".adrw").textContent).toContain("Sin enlace al mapa");
+    expect(li.querySelector("a.map").getAttribute("href")).toContain("Mercado%20sin%20enlace%2C%20Madrid");
+    const casas = [...document.querySelectorAll("#sheet-body .pl.adr")].filter((x) => x.querySelector("b").textContent === "Casa");
+    const linked = casas.find((x) => x.querySelector("a.map").getAttribute("href") === A);  // la Casa con enlace
+    expect(linked.querySelector(".adrw")).toBeNull();
+    expect(linked.querySelectorAll('[data-act="view"]').length).toBeGreaterThan(0);
+    expect($("#sheet-body").textContent).toMatch(/estaciones y aeropuertos/);
+    click(li.querySelector('[data-act="view"]'));                       // abre la ficha del documento
+    expect($("#sh-title").textContent).not.toBe("Direcciones guardadas");
+    click($('[data-act="close"]'));
+  });
 });
