@@ -27,6 +27,7 @@ var ICON={
  flag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
  clip:'<path d="M20 11l-8.5 8.5a5 5 0 0 1-7-7L13 4a3.5 3.5 0 0 1 5 5l-8.6 8.6a2 2 0 0 1-2.8-2.8L14 8"/>',
  file:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>',
+ way:'<circle cx="5.5" cy="18.5" r="2"/><path d="M7.5 18.5H16a3 3 0 0 0 0-6H8a3 3 0 0 1 0-6h4.5"/><path d="M18 10.5s3-2.6 3-5a3 3 0 0 0-6 0c0 2.4 3 5 3 5z"/>',
  print:'<path d="M7 9V3.5h10V9"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v6.5H7z"/>',
  hotel:'<path d="M3 18V7M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="1.6"/>',
  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
@@ -1936,10 +1937,8 @@ window.addEventListener("scroll",updateFab,{passive:true});
 // hojas: la cabecera (título y Cerrar/Cancelar) queda fija; con una línea debajo cuando hay contenido detrás
 sheetBody.addEventListener("scroll",function(){var on=sheetBody.scrollTop>4;if(sheetHead.classList.contains("scrolled")!==on)sheetHead.classList.toggle("scrolled",on)},{passive:true});
 window.addEventListener("resize",updateFab);
-$("#nav-home").innerHTML=svg("route",24)+"Ruta";
-$("#nav-cal").innerHTML=svg("cal",24)+"Calendario";
-$("#nav-docs").innerHTML=svg("file",24)+"Documentos";
-$("#nav-set").innerHTML=svg("sliders",24)+"Ajustes";
+/* Barra de abajo solo con íconos (el título de cada página dice dónde se está); el nombre va en aria-label */
+[["#nav-home","way","Ruta"],["#nav-cal","cal","Calendario"],["#nav-docs","file","Documentos"],["#nav-set","sliders","Ajustes"]].forEach(function(x){var el=$(x[0]);el.innerHTML=svg(x[1],26);el.setAttribute("aria-label",x[2]);el.setAttribute("title",x[2])});
 
 loadAll().then(function(){
  applyTheme();

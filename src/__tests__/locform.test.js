@@ -1062,4 +1062,10 @@ describe("formulario: ubicaciones", () => {
     location.hash = "#documentos"; window.dispatchEvent(new HashChangeEvent("hashchange"));
     expect($("#v-docs .pastbar")).toBeNull();                         // antes del viaje: todo visible
   });
+
+  it("49) barra de abajo: solo íconos, con su nombre para lectores de pantalla", () => {
+    const items = [...document.querySelectorAll("#bnav a, #bnav button")];
+    expect(items.map((x) => x.getAttribute("aria-label"))).toEqual(["Ruta", "Calendario", "Documentos", "Ajustes"]);
+    expect(items.every((x) => x.textContent.trim() === "" && x.querySelector("svg"))).toBe(true);
+  });
 });

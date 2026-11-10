@@ -14,6 +14,13 @@ Reglas:
 
 ## 2026-11-10
 
+- Barra de abajo solo con íconos (decisión de Nicolas: el título de cada
+  página ya dice dónde se está; así cabe un quinto botón, "Mapa"). El
+  nombre sigue en `aria-label` para lectores de pantalla. Ruta tiene un
+  ícono nuevo de recorrido (punto de salida, camino y marcador); el del
+  mapa doblado queda para la futura pestaña Mapa. Si con 5 se aprieta, se
+  considerará pasar Ajustes a un engranaje en la cabecera de Ruta.
+
 - Documentos más livianos (decidido con Nicolas):
   - Tarjeta compacta, igual en la lista general y en la pestaña Documentos
     de cada día: ícono del tipo con su color (sin el texto del tipo),
