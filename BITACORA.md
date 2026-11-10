@@ -36,6 +36,11 @@ Reglas:
   Lo escrito en "Cobrado" también se guarda al cerrar la hoja sin haber
   salido del campo (con el teclado abierto, iOS no siempre avisa del
   cambio y se perdía).
+  Nota de los totales más clara: "En el total cobrado, lo que no tiene
+  «Cobrado» se suma con su precio." (antes "Lo que no tiene cobro aparte
+  cuenta con su precio", que no se entendía); los gastos desmarcados van en
+  otra línea. En el PDF: "«—» = sin «Cobrado»: en el total cobrado se suma
+  con su precio."
 
 - Nueva hoja "Direcciones guardadas" (Ajustes → fila con el número de
   direcciones). Solo consulta: muestra las ubicaciones de los documentos

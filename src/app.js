@@ -1321,7 +1321,7 @@ function spendTotals(l){var pr={},pd={},np=0;l.forEach(function(d){var c=d.cur||
 function spendIncl(){return spendDocs().filter(function(d){return !d.noPrint})}
 function spendTotHTML(){var l=spendIncl(),t=spendTotals(l),ex=spendDocs().length-l.length;if(!l.length)return '<div class="sptot"><p>No hay nada marcado para imprimir.</p></div>';
  return '<div class="sptot"><div><span>Total de precios</span><b>'+esc(sumText(t.pr))+'</b></div><div><span>Total cobrado</span><b>'+esc(sumText(t.pd))+'</b></div>'+
-  '<p>'+(t.np?"Lo que no tiene cobro aparte cuenta con su precio.":"Aún no hay cobros en otra moneda: el total cobrado es igual al de precios.")+(ex?" "+ex+(ex===1?" gasto desmarcado no se incluye.":" gastos desmarcados no se incluyen."):"")+'</p></div>'}
+  '<p>'+(t.np?"En el total cobrado, lo que no tiene «Cobrado» se suma con su precio.":"Aún no hay cobros en otra moneda: el total cobrado es igual al de precios.")+'</p>'+(ex?'<p>'+ex+(ex===1?" gasto desmarcado no se incluye.":" gastos desmarcados no se incluyen.")+'</p>':"")+'</div>'}
 function openSpend(){
  var l=spendDocs();
  var rows=l.map(function(d){var T=TYPES[d.type]||TYPES.otro,p=paidOf(d),pc=p?p.c:defPaidCur(d);
@@ -1368,7 +1368,7 @@ async function printSpend(){
  el.innerHTML='<h1>Gastos del viaje</h1><p class="psub">Journest · '+first.dt.getDate()+' '+MO3[first.dt.getMonth()]+' '+first.dt.getFullYear()+' – '+last.dt.getDate()+' '+MO3[last.dt.getMonth()]+' '+last.dt.getFullYear()+' · impreso el '+now.getDate()+' '+MO3[now.getMonth()]+' '+now.getFullYear()+'</p>'+
   '<table><thead><tr><th>Fecha</th><th>Concepto</th><th class="n">Precio</th><th class="n">Cobrado</th></tr></thead><tbody>'+rows+'</tbody>'+
   '<tfoot><tr><td colspan="2">Total</td><td class="n">'+esc(sumText(t.pr)).replace(/ \+ /g,"<br>")+'</td><td class="n">'+esc(sumText(t.pd)).replace(/ \+ /g,"<br>")+'</td></tr></tfoot></table>'+
-  '<p class="pnote">Cobrado: lo que se cobró en otra moneda (extracto de la tarjeta). «—» = sin cobro aparte; en el total cuenta con su precio.</p>';
+  '<p class="pnote">Cobrado: lo que se cobró en otra moneda (extracto de la tarjeta). «—» = sin «Cobrado»: en el total cobrado se suma con su precio.</p>';
  if(docTitle0===null)docTitle0=document.title;
  document.title="Journest - Gastos del viaje";
  try{window.print()}catch(e){toast("Este navegador no permite imprimir")}
