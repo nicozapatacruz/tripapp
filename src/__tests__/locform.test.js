@@ -955,14 +955,14 @@ describe("formulario: ubicaciones", () => {
     expect($("#v-map .mdot")).toBeTruthy();                             // avisa que hay filtros puestos
     expect($('#sheet-body [data-act=mgrp][data-g="plan"]').getAttribute("aria-pressed")).toBe("false");
     click($('#sheet-body [data-act=mcat][data-c="see"]'));
-    // «Lo esencial»: solo hoteles, traslados y otros documentos
-    click($('#sheet-body [data-act=mpre][data-v="ess"]'));
+    // la casilla de Planes quita el grupo entero (queda la logística) y lo vuelve a poner
+    click($('#sheet-body [data-act=mgrp][data-g="plan"]'));
     expect(plaza()).toBeFalsy();
     expect(rows().some((x) => x.textContent.includes("Vermut"))).toBe(true);
-    expect($('#sheet-body [data-act=mpre][data-v="ess"]').getAttribute("aria-selected")).toBe("true");
-    click($('#sheet-body [data-act=mgrp][data-g="plan"]'));            // la casilla del grupo lo vuelve a poner
+    expect($('#sheet-body [data-act=mcat][data-c="eat"]').getAttribute("aria-pressed")).toBe("false");
+    click($('#sheet-body [data-act=mgrp][data-g="plan"]'));
     expect(plaza()).toBeTruthy();
-    expect($('#sheet-body [data-act=mpre][data-v="all"]').getAttribute("aria-selected")).toBe("true");
+    expect($("#sheet-body [data-act=mpre]")).toBeNull();                 // sin atajos: las casillas bastan
     click($('[data-act="close"]'));
     // marcar «Ya fui» la esconde; Estado «Todos» la muestra
     click(plaza()); const sel = $("#sheet-body select.statsel");
@@ -1045,6 +1045,45 @@ describe("formulario: ubicaciones", () => {
     expect(q.textContent).toContain("Quitar del plan");
     click(q); await tick();
     expect(names()).not.toContain("Gran Vía y calle Preciados");
+    setSel("m-day", "all");
+  });
+
+  it("45f) enlace corto: aviso al pegarlo; sin ubicar (no se busca por nombre) y «Abrir en Maps» usa ese enlace", async () => {
+    const SHORT = "https://maps.app.goo.gl/AbCdEf123";
+    openNew("2026-12-30", "hotel"); typeLoc("Casa Tote " + SHORT);
+    expect($("#ls-1").textContent).toContain("Este enlace es corto");
+    expect($("#ls-1").textContent).toContain("ábrelo en Safari");
+    await save();
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    setSel("m-day", "2026-12-30");
+    const row = [...document.querySelectorAll("#v-map .mrow")].find((x) => x.querySelector("b").textContent === "Casa Tote");
+    expect(row.querySelector("a.map").getAttribute("href")).toBe(SHORT);
+    click(row);
+    expect($("#sheet-body").textContent).toContain("el enlace es corto");
+    expect($("#sheet-foot a.btn").getAttribute("href")).toBe(SHORT);           // Abrir en Maps
+    expect($("#sheet-foot a.primary").getAttribute("href")).toBe(SHORT);       // Cómo llegar: su ficha
+    click($('[data-act="close"]'));
+    // «sin ubicar» se toca y abre Revisar ubicaciones, con el motivo
+    click($("#v-map [data-act=mreview]"));
+    const r = [...document.querySelectorAll("#sheet-body .mrow")].find((x) => x.textContent.includes("Casa Tote"));
+    expect(r.textContent).toContain("Enlace corto");
+    expect(r.dataset.act).toBe("view");                                  // lleva al documento para corregirlo
+    click($('[data-act="close"]'));
+    setSel("m-day", "all");
+  });
+
+  it("45g) a más de 3 km solo la distancia, sin tiempo a pie", async () => {
+    const H = "https://www.google.com/maps/place/Hotel/@40.41,-3.70,17z/data=!3m1!4b1!8m2!3d40.4168!4d-3.7038";
+    const A = "https://www.google.com/maps/place/Aeropuerto/@40.49,-3.56,17z/data=!3m1!4b1!8m2!3d40.4936!4d-3.5668";
+    openNew("2027-01-02", "hotel"); typeLoc("Hotel Lejos " + H); await save();
+    openNew("2027-01-02", "entrada"); typeLoc("Sitio Lejano " + A); $("#f-title").value = "Lejos"; await save();
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    setSel("m-day", "2027-01-02");
+    click([...document.querySelectorAll("#v-map .mrow")].find((x) => x.querySelector("b").textContent === "Sitio Lejano"));
+    const t = $("#sheet-body .mdist").textContent;
+    expect(t).toMatch(/km del hotel en línea recta/);
+    expect(t).not.toContain("a pie");
+    click($('[data-act="close"]'));
     setSel("m-day", "all");
   });
 

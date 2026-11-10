@@ -22,10 +22,11 @@ En este orden:
      círculo con el número de sitios que se abre al acercarse). Hoy, en
      "Todo el viaje", los sitios de una ciudad quedan uno encima del otro.
    - Volver a probar en el iPhone (10 nov, después de la cabecera nueva):
-     tiempo a pie real de Google (sin "≈"), sin scroll de sobra en el
-     mapa, arrastrar en el Plan del día, y el día 1 que se abría con un poco
-     de scroll y a veces no respondía el ‹. Si el tiempo a pie sigue
-     estimado: revisar en Google Cloud que "Routes API" esté habilitada.
+     sin scroll de sobra en el mapa, arrastrar en el Plan del día, y el
+     día 1 que se abría con un poco de scroll y a veces no respondía el ‹.
+   - Corregir las ubicaciones con "N sin ubicar" → Revisar ubicaciones
+     (documentos con enlace corto: pegar el largo) y mirar los sitios con
+     borde punteado.
    - Quizás: corregir un punto moviéndolo en el mapa (hoy se corrige
      pegando el enlace largo de Google Maps en el documento o la lista).
 
@@ -41,8 +42,7 @@ Para planear el orden de cada día y no alejarse de los puntos de traslado.
     viaje) / un día.
   - Filtros en una hoja (botón con puntito si hay algo filtrado):
     Logística (Hoteles, Traslados, Otros documentos) y Planes (Qué ver,
-    Comer, Estado). Atajos Todo / Lo esencial / Planes. Por defecto se
-    esconde "Ya fui".
+    Comer, Estado). Por defecto se esconde "Ya fui".
   - **Plan del día** (ver bitácora 10 nov): numerado; lo que tiene hora no
     se mueve, lo sin hora se arrastra; línea punteada en el mapa.
   - Puntos con el color e ícono de su tipo. "Todo el viaje" encuadra

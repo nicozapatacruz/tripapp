@@ -343,6 +343,7 @@ function locStat(n){
  if(res.kind!=="ambiguous"&&(s.t.trim()||s.u)&&!ctx.detected&&needsCityChoice(ctx)){
   h+='<div class="locnote"><span>¿Dónde está?</span> '+cityChoices(ctx).map(function(c){return '<button type="button" class="chip" data-act="loc-city" data-n="'+n+'" data-c="'+c+'" aria-pressed="'+(s.c===c)+'">'+esc(nm(c))+'</button>'}).join("")+'</div>';
  }
+ if(s.u&&!coordsOf(s.u))h+='<div class="locnote warn">'+(isShortMaps(s.u)?"Este enlace es corto y no trae la ubicación exacta":"Este enlace no trae la ubicación exacta")+': abre bien en Google Maps, pero no saldrá en el mapa de la app. Para que salga, ábrelo en Safari, copia la dirección larga de la barra y pégala aquí.</div>';
  var mm=cityMismatch(ctx),dy=dayById(curDay());
  if(mm&&dy)h+='<div class="locnote warn">Esta ubicación parece estar en '+esc(nm(mm))+', pero ese día estás en '+esc(citiesText(dy.stops))+'. ¿El día es correcto?</div>';
  return h;
@@ -1329,18 +1330,15 @@ var mapState={mode:"list",day:"all",cats:{hotel:1,trans:1,see:1,eat:1,other:1},s
 var MCATS=[["hotel","Hoteles"],["trans","Traslados"],["see","Qué ver"],["eat","Comer"],["other","Otros documentos"]];
 /* Filtros (hoja): dos grupos según para qué sirve cada cosa. El estado solo afecta a los sitios. */
 var MGROUPS={log:["hotel","trans","other"],plan:["see","eat"]};
-var MPRESETS=[["all","Todo",["hotel","trans","other","see","eat"]],["ess","Lo esencial",MGROUPS.log],["plan","Planes",MGROUPS.plan]];
 var MST=[["nodone","Pendientes"],["all","Todos"],["3","Ya fui"]];
 function mapCatsIs(l){var k=Object.keys(mapState.cats);return k.length===l.length&&l.every(function(c){return mapState.cats[c]})}
-function mapFiltered(){return !mapCatsIs(MPRESETS[0][2])||mapState.st!=="nodone"}
+function mapFiltered(){return !mapCatsIs(MGROUPS.log.concat(MGROUPS.plan))||mapState.st!=="nodone"}
 function openMapFilters(){
  var chip=function(c){var l=MCATS.filter(function(x){return x[0]===c})[0][1];return '<button type="button" class="chip" data-act="mcat" data-c="'+c+'" aria-pressed="'+!!mapState.cats[c]+'">'+l+'</button>'};
- var grp=function(g,t){var on=MGROUPS[g].every(function(c){return mapState.cats[c]});return '<div class="mgh"><h3 class="lab">'+t+'</h3><button type="button" class="mchk" data-act="mgrp" data-g="'+g+'" aria-pressed="'+on+'" aria-label="'+(on?"Quitar":"Mostrar")+' '+t.toLowerCase()+'">'+(on?svg("check",16):"")+'</button></div>'};
- var pre=MPRESETS.filter(function(x){return mapCatsIs(x[2])})[0];
+ var grp=function(g,t){var on=MGROUPS[g].every(function(c){return mapState.cats[c]});return '<button type="button" class="mgh" data-act="mgrp" data-g="'+g+'" aria-pressed="'+on+'"><span class="mchk">'+(on?svg("check",16):"")+'</span><span class="lab">'+t+'</span></button>'};
  openSheet('<div class="sh-head"><h2 id="sh-title">Filtros</h2><button type="button" class="x" data-act="close">Listo</button></div>'+
-  '<div class="seg"><div class="trk" role="tablist" aria-label="Ver">'+MPRESETS.map(function(x){return '<button type="button" role="tab" class="tab" data-act="mpre" data-v="'+x[0]+'" aria-selected="'+(pre===x)+'">'+x[1]+'</button>'}).join("")+'</div></div>'+
-  '<section>'+grp("log","Logística")+'<div class="chips">'+MGROUPS.log.map(chip).join("")+'</div></section>'+
-  '<section>'+grp("plan","Planes")+'<div class="chips">'+MGROUPS.plan.map(chip).join("")+'</div>'+
+  '<section class="mgs">'+grp("log","Logística")+'<div class="chips">'+MGROUPS.log.map(chip).join("")+'</div></section>'+
+  '<section class="mgs">'+grp("plan","Planes")+'<div class="chips">'+MGROUPS.plan.map(chip).join("")+'</div>'+
   '<p class="mstl">Estado</p><div class="chips">'+MST.map(function(x){return '<button type="button" class="chip" data-act="mst" data-v="'+x[0]+'" aria-pressed="'+(mapState.st===x[0])+'">'+x[1]+'</button>'}).join("")+'</div></section>',
   mapFiltered()?'<div class="actions"><button type="button" class="btn" data-act="mreset">Quitar filtros</button></div>':"");
 }
@@ -1439,7 +1437,17 @@ function openPlanPicker(){
 }
 function mapColor(p){return p.kind==="place"?MCOL[p.cat]:(TYPES[p.type]||TYPES.otro).t}
 function mapIcon(p){return p.kind==="place"?MICO[p.cat]:(TYPE_ICON[p.type]||"file")}
-function mapHref(p){if(p.pid)return gmap(p.name)+"&query_place_id="+encodeURIComponent(p.pid);return p.url||gmap(p.name+(p.city?", "+nm(p.city):""))}
+/* Abrir en Maps: el enlace del usuario manda siempre (lo encontrado por nombre solo pone el punto) */
+function mapHref(p){if(p.url)return p.url;if(p.pid)return gmap(p.name)+"&query_place_id="+encodeURIComponent(p.pid);return gmap(p.name+(p.city?", "+nm(p.city):""))}
+/* Cómo llegar: con coordenadas de su enlace, la ruta a ese punto; con un enlace sin coordenadas
+   (corto), el propio enlace (la ficha de Google tiene «Cómo llegar»); si no, por nombre */
+function dirHref(p){
+ if(p.url&&!p.geo&&p.ll)return "https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(p.ll.join(","));
+ if(p.url)return p.url;
+ var dest=p.ll?p.ll.join(","):p.name+(p.city?", "+nm(p.city):"");
+ return "https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(dest)+(p.pid?"&destination_place_id="+encodeURIComponent(p.pid):"");
+}
+function isShortMaps(u){return /^https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps)\//i.test(u||"")}
 /* Hotel de la noche y estaciones del día (para las distancias de la tarjeta) */
 function dayAnchors(dd,list){
  var out=[];if(!dd)return out;
@@ -1455,8 +1463,28 @@ function mapSub(p){
  p.evIds.forEach(function(id){var e=evList().filter(function(x){return x.id===id})[0];var dy=e&&dayById(e.day);if(dy)o.push(cap(shortDay(dy))+(e.t1?" "+e.t1:""))});
  return o.join(" · ");
 }
+function unlocWhy(p){
+ if(p.kind==="doc")return isShortMaps(p.url)?"el enlace es corto y no trae la ubicación exacta. Ábrelo en Safari, copia la dirección larga de la barra y pégala en el documento.":p.url?"el enlace no trae coordenadas. Pega el enlace largo de Google Maps en el documento.":"no tiene enlace de Google Maps. Pégalo en el documento.";
+ var g=geoOf(p.gk);
+ if(g&&g.no)return "lo quitaste del mapa («No es aquí»). Pega su enlace largo de Google Maps en la lista.";
+ if(!GM_ON||gFail)return p.url?"el enlace no trae coordenadas.":"no tiene enlace de Google Maps.";
+ if(!isOnline())return "se ubicará al volver la conexión.";
+ return "Google no lo encontró por su nombre. Pega su enlace largo de Google Maps en la lista.";
+}
+function reviewRow(p,why){
+ var act=p.kind==="doc"?'data-act="view" data-id="'+esc(p.docIds[0])+'"':'data-act="list" data-city="'+esc(p.city)+'" data-kind="'+p.cat+'"';
+ return '<li class="pl mrow tap" '+act+'><span class="adri" style="--t:'+mapColor(p)+'">'+svg(mapIcon(p),18)+'</span><div class="adrt"><b>'+esc(p.name)+'</b><p>'+esc(why)+'</p></div><span class="pen" aria-hidden="true">'+svg("pencil",17)+'</span></li>';
+}
+function openReview(){
+ var vis=mapVisible(mapPoints()),un=vis.filter(function(p){return !p.ll}),bn=vis.filter(function(p){return p.geo});
+ var why=function(p){var g=geoOf(p.gk);return p.kind==="doc"?(isShortMaps(p.url)?"Enlace corto":p.url?"Enlace sin coordenadas":"Sin enlace"):((g&&g.no?"Quitado del mapa":"No encontrado por nombre")+" · "+listTitle(p.cat)+(p.city?" · "+nm(p.city):""))};
+ openSheet('<div class="sh-head"><h2 id="sh-title">Revisar ubicaciones</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
+  (un.length?'<section class="adrg"><h3 class="lab">Sin ubicar <small>'+un.length+'</small></h3><p class="foot" style="margin:0 0 8px">Para que salgan en el mapa, pega su enlace largo de Google Maps. Si tienes uno corto: ábrelo en Safari y copia la dirección de la barra.</p><ul class="rows">'+un.map(function(p){return reviewRow(p,why(p))}).join("")+'</ul></section>':"")+
+  (bn.length?'<section class="adrg"><h3 class="lab">Ubicados por su nombre <small>'+bn.length+'</small></h3><p class="foot" style="margin:0 0 8px">Google los buscó por nombre: comprueba en el mapa que estén bien (borde punteado). Si alguno no, tócalo en el mapa → «No es aquí».</p><ul class="rows">'+bn.map(function(p){return reviewRow(p,listTitle(p.cat)+(p.city?" · "+nm(p.city):""))}).join("")+'</ul></section>':"")+
+  (un.length||bn.length?"":'<p class="foot">Todo está ubicado con su enlace.</p>'));
+}
 function mapRow(p,num){
- return '<li class="pl mrow tap" data-act="mcard" data-id="'+p.id+'"><span class="adri'+(num?" mnum":"")+'" style="--t:'+mapColor(p)+'">'+(num?num:svg(mapIcon(p),18))+'</span><div class="adrt"><b>'+esc(p.name)+'</b><p>'+esc(mapSub(p))+'</p>'+(p.ll?"":'<p class="adrw">Sin ubicar</p>')+'</div>'+mapBtn(mapHref(p))+'</li>';
+ return '<li class="pl mrow tap" data-act="mcard" data-id="'+p.id+'"><span class="adri'+(num?" mnum":"")+(p.geo?" bn":"")+'" style="--t:'+mapColor(p)+'">'+(num?num:svg(mapIcon(p),18))+'</span><div class="adrt"><b>'+esc(p.name)+'</b><p>'+esc(mapSub(p))+'</p>'+(p.ll?"":'<p class="adrw">Sin ubicar</p>')+'</div>'+mapBtn(mapHref(p))+'</li>';
 }
 function fixedPlacesHTML(used,order){
  var l=PLACES.filter(function(x){return !used.some(function(n){return normName(n)===normName(x.n)})})
@@ -1505,7 +1533,7 @@ function renderMap(){
   '<div class="mday"><button type="button" class="mstep" data-act="mstep" data-d="-1" aria-label="Día anterior"'+(atFirst?" disabled":"")+'>'+svg("back",20)+'</button>'+
   '<label class="mdsel"><span class="mdl">'+dlab+'</span>'+svg("chev",16)+'<select id="m-day" aria-label="Día">'+dayOpts+'</select></label>'+
   '<button type="button" class="mstep" data-act="mstep" data-d="1" aria-label="Día siguiente"'+(atLast?" disabled":"")+'>'+svg("chev",20)+'</button></div>'+
-  '<p class="mcount">'+vis.length+(vis.length===1?" lugar":" lugares")+(unloc?" · "+unloc+" sin ubicar":"")+'</p>'+
+  '<p class="mcount">'+vis.length+(vis.length===1?" lugar":" lugares")+(unloc?' · <button type="button" class="mrev" data-act="mreview">'+unloc+' sin ubicar</button>':vis.some(function(p){return p.geo})?' · <button type="button" class="mrev" data-act="mreview">Revisar ubicaciones</button>':"")+'</p>'+
   '<div class="dgroups">'+body+'</div>'+(isMap?"":'<div class="fabspace"></div>')+'</div>';
  mapFull();
  if(isMap&&V.map.querySelector(".mapbox"))mountMap(vis,nums,line);
@@ -1517,8 +1545,11 @@ function openMapCard(id){
  var dd=mapDayId()||inTripToday(),h=vType(mapIcon(p),mapColor(p),p.kind==="place"?listTitle(p.cat):(TYPES[p.type]||TYPES.otro).l,p.city?nm(p.city):"");
  if(p.ll){
   var an=dayAnchors(dd,all).filter(function(a){return a.p!==p});
-  if(an.length)h+='<ul class="mdist">'+an.map(function(a,i){var km=distKm(p.ll,a.p.ll);return '<li>'+svg("clock",15)+'<span><b>'+distText(km)+' '+esc(a.l)+'</b> · <span class="wk" data-i="'+i+'">≈ '+walkText(walkMin(km))+' a pie</span></span></li>'}).join("")+'</ul><p class="foot" id="md-note" style="margin:0">Estimado en línea recta'+(isOnline()?"":" (sin internet)")+'.</p>';
- }else h+='<p class="adrw" style="align-self:flex-start">Sin ubicar: '+(GM_ON&&!gFail?(isOnline()?"Google no lo encontró por su nombre. Pega su enlace largo de Google Maps en el documento o la lista.":"se ubicará al volver la conexión."):(p.url?"el enlace no trae coordenadas.":"no tiene enlace de Google Maps."))+'</p>';
+  // a más de 3 km no se pone tiempo a pie (nadie va andando): solo la distancia en línea recta
+  var anyW=an.some(function(a){return distKm(p.ll,a.p.ll)<=WALK_KM});
+  if(an.length)h+='<ul class="mdist">'+an.map(function(a,i){var km=distKm(p.ll,a.p.ll),w=km<=WALK_KM;return '<li>'+svg(w?"clock":"pin",15)+'<span><b><span class="dk" data-i="'+i+'">'+distText(km)+'</span> '+esc(a.l)+'</b>'+(w?' · <span class="wk" data-i="'+i+'">≈ '+walkText(walkMin(km))+' a pie</span>':' <span class="dlr">en línea recta</span>')+'</span></li>'}).join("")+'</ul>'+(anyW?'<p class="foot" id="md-note" style="margin:0">Estimado en línea recta'+(isOnline()?"":" (sin internet)")+'.</p>':"");
+  if(p.geo)h+='<p class="adrw bn" style="align-self:flex-start">Ubicado buscando el nombre: puede no ser exacto. <button type="button" class="mini" data-act="geo-no" data-gk="'+esc(p.gk)+'">No es aquí</button></p>';
+ }else h+='<p class="adrw" style="align-self:flex-start">Sin ubicar: '+unlocWhy(p)+'</p>';
  if(p.kind==="place")h+=vField("Estado",statSel(p.pk));
  var pdy=dayById(dd);
  if(p.kind==="place"&&pdy&&p.city&&pdy.stops.indexOf(p.city)>=0){
@@ -1528,12 +1559,12 @@ function openMapCard(id){
  }
  if(p.docIds.length)h+=vField(p.docIds.length>1?"Documentos":"Documento",'<ul class="adru">'+p.docIds.map(function(did){var d=docs.filter(function(x){return x.id===did})[0];if(!d)return "";var dy=dayById(d.dayId);return '<li><button type="button" class="mini" data-act="view" data-id="'+d.id+'">'+esc(d.title||(TYPES[d.type]||TYPES.otro).l)+(dy?' · '+esc(shortDay(dy)):"")+'</button></li>'}).join("")+'</ul>');
  if(p.evIds.length)h+=vField("En el calendario",'<ul class="adru">'+p.evIds.map(function(eid){var e=evList().filter(function(x){return x.id===eid})[0];var dy=e&&dayById(e.day);return e?'<li><button type="button" class="mini" data-act="ev-view" data-id="'+e.id+'">'+esc(dy?cap(shortDay(dy)):"")+(e.t1?' · '+esc(e.t1):"")+'</button></li>':""}).join("")+'</ul>');
- var dest=p.ll?p.ll.join(","):p.name+(p.city?", "+nm(p.city):"");
  openSheet('<div class="sh-head"><h2 id="sh-title">'+esc(p.name)+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+h,
-  '<div class="actions"><a class="btn" href="'+esc(mapHref(p))+'" target="_blank" rel="noopener">Abrir en Maps</a><a class="btn primary" style="--c1:var(--accent)" href="'+esc("https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(dest)+(p.pid?"&destination_place_id="+encodeURIComponent(p.pid):""))+'" target="_blank" rel="noopener">Cómo llegar</a></div>');
+  '<div class="actions"><a class="btn" href="'+esc(mapHref(p))+'" target="_blank" rel="noopener">Abrir en Maps</a><a class="btn primary" style="--c1:var(--accent)" href="'+esc(dirHref(p))+'" target="_blank" rel="noopener">Cómo llegar</a></div>');
  // con internet, el tiempo a pie real de Google reemplaza al estimado
  if(GM_ON&&!gFail&&isOnline()&&p.ll){var an2=dayAnchors(dd,all).filter(function(a){return a.p!==p});
-  an2.forEach(function(a,i){routesWalk(a.p.ll,p.ll).then(function(min){var w=sheetBody.querySelector('.wk[data-i="'+i+'"]');if(!w)return;w.textContent=walkText(min)+" a pie";var nt=$("#md-note");if(nt)nt.textContent="Tiempo a pie según Google Maps."}).catch(function(){})})}
+  an2.forEach(function(a,i){if(distKm(p.ll,a.p.ll)>WALK_KM)return;routesWalk(a.p.ll,p.ll).then(function(r){var w=sheetBody.querySelector('.wk[data-i="'+i+'"]');if(!w)return;w.textContent=walkText(r.min)+" a pie";
+   var dk=sheetBody.querySelector('.dk[data-i="'+i+'"]');if(dk&&r.km)dk.textContent=distText(r.km);var nt=$("#md-note");if(nt)nt.textContent="Distancia y tiempo a pie según Google Maps."}).catch(function(){})})}
 }
 if(typeof window!=="undefined"){window.addEventListener("online",function(){if(view==="map")renderMap()});window.addEventListener("offline",function(){if(view==="map")renderMap()})}
 /* ---- Google Maps: mapa, coordenadas por nombre y tiempo a pie ----
@@ -1561,7 +1592,9 @@ function loadGM(){
 var GEO_DAYS=30,geoTried={},geoBusy=false;
 function geoOf(k){var g=kv.geo&&kv.geo[k];return g||null}
 function geoFresh(g){return !!g&&Date.now()-(g.t||0)<GEO_DAYS*864e5}
-function applyGeo(list){list.forEach(function(p){if(p.ll)return;var g=geoOf(p.gk);if(geoFresh(g)&&g.ll){p.ll=g.ll;p.pid=g.pid||"";p.geo=true}})}
+function applyGeo(list){list.forEach(function(p){if(p.ll||p.kind==="doc")return;var g=geoOf(p.gk);if(g&&g.no)return;if(geoFresh(g)&&g.ll){p.ll=g.ll;p.pid=g.pid||"";p.geo=true}})}
+/* «No es aquí»: el sitio queda sin ubicar (y no se vuelve a buscar) hasta que se le pegue un enlace */
+async function geoNo(gk){var geo=Object.assign({},kv.geo||{});geo[gk]={no:1,t:Date.now()};await setKV("geo",geo);closeSheet();if(view==="map")renderMap();toast("Quitado del mapa. Pega su enlace largo para ubicarlo.")}
 function geoQuery(p){
  var city=p.city&&CITIES[p.city]?CITIES[p.city]:null;
  return p.name+(city?", "+city.name+(p.city==="medellin"?", Colombia":", España"):"");
@@ -1569,7 +1602,7 @@ function geoQuery(p){
 function nearCity(p,ll){var c=p.city&&CCOORD[p.city];if(!c)return true;return distKm([c[0],c[1]],ll)<=c[2]*1.5}
 async function geoRun(list){
  if(!GM_ON||gFail||geoBusy||!isOnline())return;
- var todo=list.filter(function(p){var g=geoOf(p.gk);return !p.ll&&!geoTried[p.gk]&&!(geoFresh(g)&&g.bad)}).slice(0,40);
+ var todo=list.filter(function(p){var g=geoOf(p.gk);return p.kind==="place"&&!p.ll&&!geoTried[p.gk]&&!(g&&g.no)&&!(geoFresh(g)&&g.bad)}).slice(0,40);
  if(!todo.length)return;
  geoBusy=true;
  try{
@@ -1593,7 +1626,7 @@ async function geoRun(list){
  geoBusy=false;
 }
 function gmPin(p,num){
- var el=document.createElement("div");el.className="gpin"+(num?" num":"");el.style.setProperty("--t",mapColor(p));
+ var el=document.createElement("div");el.className="gpin"+(num?" num":"")+(p.geo?" byname":"");el.style.setProperty("--t",mapColor(p));
  el.innerHTML=num?String(num):svg(mapIcon(p),15);return el;
 }
 function mapFull(){document.body.classList.toggle("mapfull",view==="map"&&mapState.mode==="map")}
@@ -1641,13 +1674,13 @@ function gmLocate(){
  },function(){toast("No se pudo obtener tu ubicación")},{enableHighAccuracy:true,timeout:10000});
 }
 /* Tiempo a pie real (Routes API); si falla o no hay internet, queda el estimado */
-var walkCache={};
+var walkCache={},WALK_KM=3;
 function routesWalk(a,b){
  var k=a.join(",")+">"+b.join(",");if(walkCache[k])return Promise.resolve(walkCache[k]);
- return fetch("https://routes.googleapis.com/directions/v2:computeRoutes",{method:"POST",referrerPolicy:"no-referrer-when-downgrade",headers:{"Content-Type":"application/json","X-Goog-Api-Key":GM_KEY,"X-Goog-FieldMask":"routes.duration"},
+ return fetch("https://routes.googleapis.com/directions/v2:computeRoutes",{method:"POST",referrerPolicy:"no-referrer-when-downgrade",headers:{"Content-Type":"application/json","X-Goog-Api-Key":GM_KEY,"X-Goog-FieldMask":"routes.duration,routes.distanceMeters"},
   body:JSON.stringify({origin:{location:{latLng:{latitude:a[0],longitude:a[1]}}},destination:{location:{latLng:{latitude:b[0],longitude:b[1]}}},travelMode:"WALK"})})
   .then(function(r){return r.ok?r.json():Promise.reject(r.status)})
-  .then(function(j){var s=j&&j.routes&&j.routes[0]&&parseInt(j.routes[0].duration,10);if(!s)throw 0;walkCache[k]=Math.max(1,Math.round(s/60));return walkCache[k]});
+  .then(function(j){var r0=j&&j.routes&&j.routes[0],s=r0&&parseInt(r0.duration,10);if(!s)throw 0;walkCache[k]={min:Math.max(1,Math.round(s/60)),km:r0.distanceMeters?r0.distanceMeters/1000:0};return walkCache[k]});
 }
 
 
@@ -2176,11 +2209,12 @@ document.addEventListener("click",function(e){
  else if(a==="settings"){openSettings()}
  else if(a==="mmode"){mapState.mode=b.dataset.v;renderMap()}
  else if(a==="mfilt"){openMapFilters()}
- else if(a==="mpre"){var pr=MPRESETS.filter(function(x){return x[0]===b.dataset.v})[0];mapState.cats={};pr[2].forEach(function(c){mapState.cats[c]=1});renderMap();openMapFilters()}
  else if(a==="mgrp"){var gl=MGROUPS[b.dataset.g],gon=gl.every(function(c){return mapState.cats[c]});gl.forEach(function(c){if(gon)delete mapState.cats[c];else mapState.cats[c]=1});renderMap();openMapFilters()}
  else if(a==="mst"){mapState.st=b.dataset.v;renderMap();openMapFilters()}
  else if(a==="mreset"){mapState.cats={hotel:1,trans:1,see:1,eat:1,other:1};mapState.st="nodone";renderMap();openMapFilters()}
  else if(a==="mstep"){mapStep(+b.dataset.d)}
+ else if(a==="mreview"){openReview()}
+ else if(a==="geo-no"){geoNo(b.dataset.gk)}
  else if(a==="plan-add"){openPlanPicker()}
  else if(a==="plan-pick"){var pb=b;planToggle(pb.dataset.pk,mapDayId()).then(function(){var on=planEvs(pb.dataset.pk,mapDayId()).length>0;pb.setAttribute("aria-pressed",on);pb.querySelector(".mchk").innerHTML=on?svg("check",16):""})}
  else if(a==="plan-one"){planToggle(b.dataset.pk,b.dataset.day).then(closeSheet)}

@@ -579,13 +579,19 @@ body.mapfull .app{padding-bottom:0}
 .mdsel>.i{flex:none;transform:rotate(90deg);color:var(--muted)}
 .mdsel select{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px}
 .mday+.mcount{margin-top:10px}
-.mgh{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.mgs+.mgs{margin-top:26px;padding-top:22px;border-top:1px solid var(--line)}
+.mgh{display:flex;align-items:center;gap:12px;width:100%;min-height:44px;margin-bottom:10px;border:0;background:none;padding:0;text-align:left;font-family:var(--f);color:var(--ink)}
 .mgh .lab{margin:0}
 .mchk{flex:none;width:28px;height:28px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);color:var(--bg);display:inline-flex;align-items:center;justify-content:center;padding:0}
-.mchk[aria-pressed="true"],.ppick[aria-pressed="true"] .mchk{background:var(--ink);border-color:var(--ink)}
+.mgh[aria-pressed="true"] .mchk,.ppick[aria-pressed="true"] .mchk{background:var(--ink);border-color:var(--ink)}
 .mstl{font-size:13px;color:var(--muted);margin:14px 0 8px}
 .ppick{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;padding:0;text-align:left;font-family:var(--f);color:var(--ink)}
 .ppick b{display:block;font-weight:600}
 .ppick small{display:block;color:var(--muted);font-size:13px}
 .ppick:disabled{opacity:.6}
 .pl.mrow .ptm{flex:none;width:36px;display:inline-flex;justify-content:center;color:var(--muted)}
+.gpin.byname{border-style:dashed}
+.adri.bn{outline:2px dashed var(--t);outline-offset:2px}
+.mrev{border:0;background:none;padding:0;font:inherit;color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+.mdist .dlr{color:var(--muted);font-weight:400}
+.adrw.bn .mini{margin-left:4px}

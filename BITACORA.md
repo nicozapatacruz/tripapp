@@ -14,6 +14,33 @@ Reglas:
 
 ## 2026-11-10
 
+- Routes (tiempo a pie) ya funciona: Safari recorta siempre la dirección
+  que manda a otros sitios a `https://nicozapatacruz.github.io/`, así que
+  Nicolas añadió `https://nicozapatacruz.github.io/*` en la clave (solo él
+  publica en ese dominio).
+- Mapa, ubicaciones:
+  - Los documentos ya **no se ubican buscando el nombre**: "Casa Tote" (con
+    enlace corto) salió como "Bodega Casas". Sin enlace largo quedan "Sin
+    ubicar"; la ubicación por nombre guardada de antes se ignora.
+  - Los sitios de Qué ver / Comer (no traen enlace) se siguen buscando por
+    nombre, con borde punteado y en la tarjeta "puede no ser exacto · No es
+    aquí" (lo deja sin ubicar y no se vuelve a buscar).
+  - "Abrir en Maps" y "Cómo llegar" usan siempre el enlace del usuario (con
+    uno corto, "Cómo llegar" abre su ficha de Google).
+  - Al pegar un enlace sin coordenadas (los cortos del iPhone) se avisa
+    cómo conseguir el largo (abrirlo en Safari y copiar la barra). Se
+    decidió avisar en vez de bloquear: el enlace corto abre bien y ya no
+    hay riesgo de punto equivocado.
+  - "N sin ubicar" se toca y abre "Revisar ubicaciones" (sin ubicar con su
+    motivo, y los ubicados por nombre); cada fila lleva al documento o a la
+    lista para corregirlo.
+  - Tarjeta: a más de 3 km solo la distancia en línea recta (de Atocha a
+    Barajas salía 7 h 24 min a pie). Hasta 3 km, distancia y tiempo reales
+    de Google.
+  - Filtros: sin los atajos Todo / Lo esencial / Planes (las casillas de
+    Logística y Planes hacen lo mismo); casilla a la izquierda del título y
+    más espacio entre grupos.
+
 - Mapa, después de probarlo en el iPhone:
   - Cabecera nueva para que el mapa sea más grande: "Mapa" con dos botones
     a la derecha (Lista/Mapa y Filtros, con un puntito si hay algo
