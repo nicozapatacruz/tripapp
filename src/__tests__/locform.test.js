@@ -1023,11 +1023,16 @@ describe("formulario: ubicaciones", () => {
     click($("#v-docs .sumbox [data-act=sumtog]"));
     expect($("#v-docs .sumbox .sumrows")).not.toBeNull();
     expect($("#v-docs .sumbox [data-act=sumtog]").getAttribute("aria-expanded")).toBe("true");
+    expect($("#v-docs .sumbox").textContent).not.toContain("+");        // varias monedas: en columna, sin «+»
+    expect($("#v-docs .page-h p")).toBeNull();                          // sin subtítulo
     location.hash = "#inicio"; window.dispatchEvent(new HashChangeEvent("hashchange"));
     location.hash = "#documentos"; window.dispatchEvent(new HashChangeEvent("hashchange"));
     expect($("#v-docs .sumbox .sumrows")).not.toBeNull();             // sigue abierta
     click($("#v-docs .sumbox [data-act=sumtog]"));
     expect($("#v-docs .sumbox .sumrows")).toBeNull();
+    click($('#v-docs [data-act=filter][data-f="entrada"]'));             // filtrado: sin imprimir, mismo margen a ambos lados
+    expect($("#v-docs .sumbox").classList.contains("noprt")).toBe(true);
+    click($('#v-docs [data-act=filter][data-f="all"]'));
   });
 
   it("48) durante el viaje, los días anteriores se pliegan en una línea", () => {

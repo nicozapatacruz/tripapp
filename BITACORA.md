@@ -32,6 +32,12 @@ Reglas:
     espacio entre grupos.
   - Durante el viaje, los días ya pasados se pliegan en una línea "Días
     anteriores · N documentos" (se abre al tocarla; no se recuerda).
+  - Ajustes tras verlo en el iPhone: los importes en varias monedas van uno
+    debajo de otro y sin "+" (barra, desglose por tipo, total del día y
+    totales del resumen), siempre en el orden EUR · COP · USD; la flecha de
+    la barra va a la izquierda del todo, antes de "Gastado en el viaje"; sin el botón de imprimir
+    (con un filtro) el margen derecho es igual al izquierdo. El subtítulo
+    seguía en Documentos (se había quitado el de Pendientes por error).
 
 - Resumen de gastos para imprimir: botón con ícono de imprimir arriba a la
   derecha del recuadro negro "Gastado en el viaje" (solo con el filtro

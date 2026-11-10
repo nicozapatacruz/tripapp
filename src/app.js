@@ -560,10 +560,12 @@ function parsePrice(s){
 function fmtMoney(v,c){var z=c==="COP"?0:2;try{return new Intl.NumberFormat("es-ES",{style:"currency",currency:c,minimumFractionDigits:z,maximumFractionDigits:z}).format(v)}catch(e){return v+" "+c}}
 function sumDocs(list){var m={};list.forEach(function(d){if(d.price!=null){var c=d.cur||"EUR";m[c]=(m[c]||0)+d.price}});return m}
 function sumText(m){return CURS.filter(function(c){return m[c]!=null}).map(function(c){return fmtMoney(m[c],c)}).join(" + ")}
+/* Varias monedas: una debajo de otra (sin "+"), siempre en el mismo orden */
+function sumHTML(m){return '<span class="amts">'+CURS.filter(function(c){return m[c]!=null}).map(function(c){return '<span>'+esc(fmtMoney(m[c],c))+'</span>'}).join("")+'</span>'}
 function priceHTML(d){return d.price!=null?'<div class="price">'+esc(fmtMoney(d.price,d.cur||"EUR"))+(paidOf(d)?'<small> · cobrado '+esc(fmtMoney(d.paid.v,d.paid.c))+'</small>':"")+'</div>':""}
 /* Lo cobrado de verdad cuando se pagó en otra moneda (campo opcional d.paid={v,c}; las copias viejas siguen valiendo) */
 function paidOf(d){return d.price!=null&&d.paid&&d.paid.v!=null&&CURS.indexOf(d.paid.c)>=0?d.paid:null}
-function daySum(list){var t=sumText(sumDocs(list));return t?'<div class="sum"><span>Total del día</span><b>'+esc(t)+'</b></div>':""}
+function daySum(list){var m=sumDocs(list);return Object.keys(m).length?'<div class="sum"><span>Total del día</span><b>'+sumHTML(m)+'</b></div>':""}
 function priceField(d){
  var cur=d?(d.cur||"EUR"):(kv.lastCur||"EUR");
  return '<div class="field"><label for="f-price">Precio</label><div class="pricerow"><input id="f-price" type="text" inputmode="decimal" placeholder="0,00" value="'+(d&&d.price!=null?String(d.price).replace(".",","):"")+'" autocomplete="off"><select id="f-cur" aria-label="Moneda">'+CURS.map(function(c){return '<option value="'+c+'"'+(c===cur?" selected":"")+'>'+c+'</option>'}).join("")+'</select></div></div>';
@@ -575,12 +577,12 @@ function summaryHTML(shown){
  var all=docFilter==="all",inner="";
  if(all){
   var by={};pr.forEach(function(d){(by[d.type]=by[d.type]||[]).push(d)});
-  inner+='<ul class="sumrows">'+Object.keys(TYPES).filter(function(k){return by[k]}).map(function(k){return '<li style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],18)+'<span>'+TYPES[k].l+' <small>'+by[k].length+'</small></span><b>'+esc(sumText(sumDocs(by[k])))+'</b></li>'}).join("")+'</ul>';
+  inner+='<ul class="sumrows">'+Object.keys(TYPES).filter(function(k){return by[k]}).map(function(k){return '<li style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],18)+'<span>'+TYPES[k].l+' <small>'+by[k].length+'</small></span><b>'+sumHTML(sumDocs(by[k]))+'</b></li>'}).join("")+'</ul>';
  }
  var np=shown.length-pr.length;
  if(np>0)inner+='<p class="foot">'+np+(np===1?" documento sin precio.":" documentos sin precio.")+'</p>';
  var open=!!kv.sumOpen&&!!inner;
- return '<section class="sumbox'+(open?" open":"")+'"><div class="sbrow"><button type="button" class="sbtog"'+(inner?' data-act="sumtog" aria-expanded="'+open+'"':' disabled')+'><span>'+(all?"Gastado en el viaje":"Gastado en "+TYPES[docFilter].l.toLowerCase())+'</span><b>'+esc(sumText(sumDocs(pr)))+'</b>'+(inner?'<i class="sbcv">'+svg("chev",18)+'</i>':"")+'</button>'+
+ return '<section class="sumbox'+(open?" open":"")+(all?"":" noprt")+'"><div class="sbrow"><button type="button" class="sbtog"'+(inner?' data-act="sumtog" aria-expanded="'+open+'"':' disabled')+'>'+(inner?'<i class="sbcv">'+svg("chev",18)+'</i>':"")+'<span>'+(all?"Gastado en el viaje":"Gastado en "+TYPES[docFilter].l.toLowerCase())+'</span><b>'+sumHTML(sumDocs(pr))+'</b></button>'+
   (all?'<button type="button" class="prt" data-act="spend" aria-label="Resumen de gastos para imprimir">'+svg("print",20)+'</button>':"")+'</div>'+
   (open?'<div class="sbin">'+inner+'</div>':"")+'</section>';
 }
@@ -930,7 +932,7 @@ function renderDocsView(){
  if(past&&!pastOpen)body=['<button type="button" class="pastbar" data-act="pastdocs" aria-expanded="false"><span>Días anteriores</span><small>'+np0+(np0===1?" documento":" documentos")+'</small>'+svg("chev",18)+'</button>'].concat(body.slice(past));
  else if(past)body=['<button type="button" class="pastbar open" data-act="pastdocs" aria-expanded="true"><span>Ocultar días anteriores</span>'+svg("chev",18)+'</button>'].concat(body);
  body=body.join("");
- V.docs.innerHTML='<div class="in"><div class="page-h"><h1>Documentos</h1><p>Reservas, billetes y códigos, ordenados por día.</p></div>'+segHTML()+summaryHTML(shown)+'<div class="filters">'+chips+'</div><div class="dgroups">'+(body||'<div class="empty"><b>Todavía no hay documentos</b><span>Añade el primero y asígnalo a un día del viaje.</span></div>')+'</div><div class="fabspace"></div></div>';
+ V.docs.innerHTML='<div class="in"><div class="page-h"><h1>Documentos</h1></div>'+segHTML()+summaryHTML(shown)+'<div class="filters">'+chips+'</div><div class="dgroups">'+(body||'<div class="empty"><b>Todavía no hay documentos</b><span>Añade el primero y asígnalo a un día del viaje.</span></div>')+'</div><div class="fabspace"></div></div>';
  updateFab();
 }
 
@@ -1361,7 +1363,7 @@ function spendTotals(l){var pr={},pd={},np=0;l.forEach(function(d){var c=d.cur||
  if(p){pd[p.c]=(pd[p.c]||0)+p.v;np++}else pd[c]=(pd[c]||0)+d.price});return {pr:pr,pd:pd,np:np}}
 function spendIncl(){return spendDocs().filter(function(d){return !d.noPrint})}
 function spendTotHTML(){var l=spendIncl(),t=spendTotals(l),ex=spendDocs().length-l.length;if(!l.length)return '<div class="sptot"><p>No hay nada marcado para imprimir.</p></div>';
- return '<div class="sptot"><div><span>Total de precios</span><b>'+esc(sumText(t.pr))+'</b></div><div><span>Total cobrado</span><b>'+esc(sumText(t.pd))+'</b></div>'+
+ return '<div class="sptot"><div><span>Total de precios</span><b>'+sumHTML(t.pr)+'</b></div><div><span>Total cobrado</span><b>'+sumHTML(t.pd)+'</b></div>'+
   '<p>'+(t.np?"En el total cobrado, lo que no tiene «Cobrado» se suma con su precio.":"Aún no hay cobros en otra moneda: el total cobrado es igual al de precios.")+'</p>'+(ex?'<p>'+ex+(ex===1?" gasto desmarcado no se incluye.":" gastos desmarcados no se incluyen.")+'</p>':"")+'</div>'}
 function openSpend(){
  var l=spendDocs();
