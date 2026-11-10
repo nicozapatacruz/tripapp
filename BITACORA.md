@@ -40,7 +40,8 @@ Reglas:
     seguía en Documentos (se había quitado el de Pendientes por error).
     La barra se muestra siempre, con 0,00 € si en ese filtro no hay
     precios, para que la lista no salte arriba y abajo al cambiar de filtro.
-    Misma altura con y sin el botón de imprimir (alto mínimo de 38 px). Los
+    Misma altura con y sin el botón de imprimir y con o sin la línea de
+    "sin precio" (alto mínimo de 44 px). Los
     documentos sin precio ya no van en el desplegable: se ven en pequeño
     bajo el título ("Gastado en hotel / 2 sin precio"); el desplegable queda
     solo para el desglose por tipo en "Todos".
