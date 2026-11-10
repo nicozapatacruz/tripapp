@@ -929,6 +929,8 @@ describe("formulario: ubicaciones", () => {
     expect(fx.querySelector("summary").textContent).toMatch(/aeropuertos de la app/);
     expect(fx.querySelectorAll(".pl.adr").length).toBe(+fx.querySelector("summary small").textContent);
     expect(fx.textContent).toContain("Sevilla Santa Justa");
+    // enlaces exactos de Google Maps (ficha del lugar), no búsquedas por texto
+    expect([...fx.querySelectorAll("a.map")].every((x) => x.getAttribute("href").includes("/maps/place/"))).toBe(true);
     click(li.querySelector('[data-act="view"]'));                       // abre la ficha del documento
     expect($("#sh-title").textContent).not.toBe("Direcciones guardadas");
     click($('[data-act="close"]'));

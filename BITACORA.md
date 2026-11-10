@@ -41,6 +41,19 @@ Reglas:
   cuenta con su precio", que no se entendía); los gastos desmarcados van en
   otra línea. En el PDF: "«—» = sin «Cobrado»: en el total cobrado se suma
   con su precio."
+- Estaciones y aeropuertos de la app: de 20 a 12. Se quitaron los que no
+  se van a usar (Chamartín, buses de Pamplona, Córdoba y Sevilla, aeropuerto
+  de Sevilla, María Zambrano, Tenerife Sur, Olaya Herrera). Los documentos
+  que los hubieran elegido no cambian: conservan su nombre y enlace.
+- Las 12 + el aeropuerto de Bilbao (13) llevan ahora los nombres de Nicolas
+  ("Madrid Atocha (Tren)", "Aeropuerto Madrid Barajas (MAD)"…) y enlaces de
+  Google Maps a la ficha exacta (antes eran búsquedas por texto, que en
+  Santa Justa mostraban una lista). Se quitaron los parámetros de rastreo
+  del enlace de Atocha. Los documentos que eligieron un nombre anterior se
+  muestran con el nombre y enlace nuevos (en memoria al cargar o importar;
+  lo guardado cambia solo si se vuelve a guardar el documento). Se probó
+  añadir el aeropuerto de Bilbao, pero se quitó: no es ciudad de la ruta y
+  se habría sugerido en cualquier documento.
 
 - Nueva hoja "Direcciones guardadas" (Ajustes → fila con el número de
   direcciones). Solo consulta: muestra las ubicaciones de los documentos

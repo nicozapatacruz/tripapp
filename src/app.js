@@ -220,7 +220,29 @@ function detectCity(t,u){
  for(var i=0;i<KEYS.length;i++)if(KEYS[i][1].test(n))return KEYS[i][0];
  return null;
 }
-var PLACES=["Madrid Puerta de Atocha","Madrid Chamartín-Clara Campoamor","Aeropuerto Adolfo Suárez Madrid-Barajas","Estación de Pamplona-Iruña","Estación de autobuses de Pamplona","Aeropuerto de Pamplona","Sevilla Santa Justa","Estación de autobuses Plaza de Armas, Sevilla","Aeropuerto de Sevilla San Pablo","Córdoba Central (estación de tren)","Estación de autobuses de Córdoba","Estación de tren de Granada","Estación de autobuses de Granada","Málaga María Zambrano","Estación de autobuses de Málaga","Aeropuerto de Málaga-Costa del Sol","Aeropuerto Tenerife Sur","Aeropuerto Tenerife Norte-Ciudad de La Laguna","Aeropuerto José María Córdova (MDE), Rionegro","Aeropuerto Olaya Herrera (EOH), Medellín"];
+/* Estaciones y aeropuertos que trae la app (solo sugerencias; no se guardan ni van en la copia).
+   Enlaces de "Compartir" de Google Maps elegidos por Nicolas: abren la ficha exacta. */
+var PLACES=[
+ {n:"Madrid Atocha (Tren)",u:"https://www.google.com/maps/place/Estaci%C3%B3n+de+Madrid+Puerta+de+Atocha+-+Almudena+Grandes/@40.4069141,-3.6923449,17z/data=!3m1!5s0xd422625b3ebd039:0x89c3dfacdaf28ac5!4m6!3m5!1s0xd42262445cdd817:0x3947f9c28d65035b!8m2!3d40.4064905!4d-3.6909091!16zL20vMDFyYmxx"},
+ {n:"Aeropuerto Madrid Barajas (MAD)",u:"https://www.google.com/maps/place/Aeropuerto+Adolfo+Su%C3%A1rez+Madrid-Barajas/@40.4795876,-3.599887,14z/data=!3m1!4b1!4m6!3m5!1s0xd4231d000000001:0x6e7725ea0f85ceef!8m2!3d40.4895147!4d-3.5642764!16zL20vMHBrcmo"},
+ {n:"Estación de Pamplona (Tren)",u:"https://www.google.com/maps/place/Pamplona+-+Iru%C3%B1a/@42.8249839,-1.6640049,17z/data=!3m1!4b1!4m6!3m5!1s0xd509291870e07df:0xa154ba7ce5e93e22!8m2!3d42.82498!4d-1.66143!16s%2Fg%2F120t9g0s"},
+ {n:"Aeropuerto de Pamplona (PNA)",u:"https://www.google.com/maps/place/Aeropuerto+de+Pamplona/@42.7709108,-1.6485773,17z/data=!3m1!4b1!4m6!3m5!1s0xd50917687e2e18d:0xc4cf0faa2c4304cb!8m2!3d42.7709069!4d-1.6460024!16s%2Fm%2F0285vs8"},
+ {n:"Sevilla Santa Justa (Tren)",u:"https://www.google.com/maps/place/Estaci%C3%B3n+de+Sevilla-Santa+Justa/@37.3911381,-5.9802344,17z/data=!4m6!3m5!1s0xd126ea5eadbb441:0xb43691b52174bd9c!8m2!3d37.3911385!4d-5.9754708!16s%2Fg%2F12396ty2"},
+ {n:"Córdoba Julio Anguita (Tren)",u:"https://www.google.com/maps/place/C%C3%B3rdoba+-+Julio+Anguita/@37.8880307,-4.7930227,17z/data=!4m6!3m5!1s0xd6cdf5dc668cf43:0x1f57f1bd6ec38beb!8m2!3d37.8876002!4d-4.7918133!16s%2Fg%2F11yyj16b08"},
+ {n:"Estación de Granada (Tren)",u:"https://www.google.com/maps/place/Granada/@37.184038,-3.609154,17z/data=!3m1!4b1!4m6!3m5!1s0xd71fcee8787bf51:0x5b1309cc74400c31!8m2!3d37.184038!4d-3.609154!16s%2Fg%2F122d89hf"},
+ {n:"Estación de autobuses de Granada",u:"https://www.google.com/maps/place/Granada+ALSA/@37.1955445,-3.613025,14.99z/data=!4m6!3m5!1s0xd71fd0279855c2f:0xd9e4fc21251b1386!8m2!3d37.1997172!4d-3.613667!16s%2Fg%2F11b6vbxbbc"},
+ {n:"Estación de autobuses de Málaga",u:"https://www.google.com/maps/place/Alsa/@36.7132431,-4.4342625,18.7z/data=!3m1!5s0x8f5d22d12154761:0x69cc2b7d62325894!4m6!3m5!1s0xd72f79c540dcd6b:0x6592a4d2b5bb7ade!8m2!3d36.7126136!4d-4.4344971!16s%2Fg%2F1tdjsh95"},
+ {n:"Aeropuerto de Málaga (AGP)",u:"https://www.google.com/maps/place/Aeropuerto+de+M%C3%A1laga+-+Costa+del+Sol/@36.6767487,-4.5169338,13z/data=!4m6!3m5!1s0xd72fa1876ba30a5:0x57b5ad2f47de3e9a!8m2!3d36.6767427!4d-4.4938696!16zL20vMDlseWNn"},
+ {n:"Aeropuerto Tenerife Norte (TFN)",u:"https://www.google.com/maps/place/Aeropuerto+de+Tenerife+Norte-Ciudad+de+La+Laguna/@28.483812,-16.3453422,16z/data=!3m1!4b1!4m6!3m5!1s0xc41cdf4feec1d6f:0x1c5c91797353b078!8m2!3d28.4838073!4d-16.3427673!16zL20vMDV2M3hx"},
+ {n:"Aeropuerto José María Córdova (MDE)",u:"https://www.google.com/maps/place/Aeropuerto+Internacional+Jos%C3%A9+Mar%C3%ADa+C%C3%B3rdova/@6.1714903,-75.4279447,16z/data=!3m1!4b1!4m6!3m5!1s0x8e469e78b840720f:0x9263a9a2a8b8e1b8!8m2!3d6.1714903!4d-75.4279447!16zL20vMDNuc2Nt"}
+];
+/* Nombres anteriores (con enlace de búsqueda): los documentos que eligieron uno se muestran con
+   el nombre y el enlace nuevos. Solo en memoria; lo guardado cambia si se vuelve a guardar el documento. */
+var OLD_PLACES={"Madrid Puerta de Atocha":0,"Aeropuerto Adolfo Suárez Madrid-Barajas":1,"Estación de Pamplona-Iruña":2,"Aeropuerto de Pamplona":3,"Sevilla Santa Justa":4,"Córdoba Central (estación de tren)":5,"Estación de tren de Granada":6,"Estación de autobuses de Granada":7,"Estación de autobuses de Málaga":8,"Aeropuerto de Málaga-Costa del Sol":9,"Aeropuerto Tenerife Norte-Ciudad de La Laguna":10,"Aeropuerto José María Córdova (MDE), Rionegro":11};
+function upgradeOldPlaces(list){list.forEach(function(d){[1,2].forEach(function(n){
+ var t=d["loc"+n],k=t!=null&&OLD_PLACES.hasOwnProperty(t)?OLD_PLACES[t]:-1;
+ if(k>=0&&d["loc"+n+"u"]===gmap(t)){d["loc"+n]=PLACES[k].n;d["loc"+n+"u"]=PLACES[k].u}
+})})}
 /* Lugares guardados (reglas en places.js). Cada ubicación pertenece a la(s) ciudad(es)
    de su día: hotel = donde se duerme; transporte = origen/destino del tramo; resto =
    ciudad detectada por el enlace o el nombre, la elegida por el usuario, o las del día. */
@@ -249,7 +271,7 @@ function placeIndex(){
   var s={t:t,u:(n===1?d.loc1u:d.loc2u)||"",c:n===1?d.loc1c:d.loc2c};
   out.push({name:t,url:s.u,cities:slotCities(ctxOf(d.dayId,d.type,n,docLegVal(d),s)),docId:d.id});
  })});
- PLACES.forEach(function(p){var c=detectCity(p,"");out.push({name:p,url:gmap(p),cities:c?[c]:null,docId:"_places"})});
+ PLACES.forEach(function(p){var c=detectCity(p.n,p.u);out.push({name:p.n,url:p.u,cities:c?[c]:null,docId:"_places"})});
  return out;
 }
 function mapBtn(u){return '<a class="map" href="'+esc(u)+'" target="_blank" rel="noopener" aria-label="Abrir en Google Maps">'+svg("pin",18)+'</a>'}
@@ -676,7 +698,7 @@ function tx(store,mode,fn){return new Promise(function(res,rej){var t=db.transac
 async function loadAll(){
  db=await openDB();
  if(!db)return;
- try{docs=(await tx("docs","readonly",function(s){return s.getAll()}))||[];
+ try{docs=(await tx("docs","readonly",function(s){return s.getAll()}))||[];upgradeOldPlaces(docs);
   var rows=(await tx("kv","readonly",function(s){return s.getAll()}))||[];rows.forEach(function(r){kv[r.k]=r.v})}catch(e){docs=[]}
 }
 async function saveDoc(d){
@@ -1286,19 +1308,19 @@ function openPlaces(){
  var keys=order.filter(function(k){return groups[k]}).concat(groups._?["_"]:[]);
  var body=keys.map(function(k){var g=groups[k].sort(function(a,b){return a.first<b.first?-1:a.first>b.first?1:0});
   return '<section class="adrg"><h3 class="lab">'+(k==="_"?"Sin ciudad definida":esc(nm(k)))+' <small>'+g.length+'</small></h3><ul class="rows">'+g.map(function(p){return row(p,k)}).join("")+'</ul></section>'}).join("");
- var usedFixed=PLACES.filter(function(n){return list.some(function(p){return normName(p.name)===normName(n)})}).length;
+ var usedFixed=PLACES.filter(function(x){return list.some(function(p){return normName(p.name)===normName(x.n)})}).length;
  openSheet('<div class="sh-head"><h2 id="sh-title">Direcciones guardadas</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
   (body||'<p class="foot">Todavía no hay direcciones. Se guardan al poner una ubicación en un documento.</p>')+
   fixedHTML());
  function fixedHTML(){
-  var l=PLACES.filter(function(n){return !list.some(function(p){return normName(p.name)===normName(n)})})
-   .map(function(n){return {n:n,c:detectCity(n,"")}})
-   .sort(function(a,b){return order.indexOf(a.c)-order.indexOf(b.c)});
+  var l=PLACES.filter(function(x){return !list.some(function(p){return normName(p.name)===normName(x.n)})})
+   .map(function(x){return {n:x.n,u:x.u,c:detectCity(x.n,x.u)}})
+   .sort(function(a,b){var ia=order.indexOf(a.c),ib=order.indexOf(b.c);return (ia<0?1e3:ia)-(ib<0?1e3:ib)});
   if(!l.length)return "";
   return '<details class="adrx"><summary>'+(usedFixed?"Otras estaciones":"Estaciones")+' y aeropuertos de la app <small>'+l.length+'</small><span class="cv">'+svg("chev",18)+'</span></summary>'+
    '<p class="foot">Se sugieren al escribir una ubicación. No se guardan ni van en la copia.</p><ul class="rows">'+l.map(function(x){
     var ty=/aeropuerto/i.test(x.n)?"vuelo":/autobuses/i.test(x.n)?"bus":"tren";
-    return '<li class="pl adr"><span class="adri" style="--t:'+TYPES[ty].t+'">'+svg(TYPE_ICON[ty],18)+'</span><div class="adrt"><b>'+esc(x.n)+'</b>'+(x.c?'<p>'+esc(nm(x.c))+'</p>':"")+'</div>'+mapBtn(gmap(x.n))+'</li>'}).join("")+'</ul></details>';
+    return '<li class="pl adr"><span class="adri" style="--t:'+TYPES[ty].t+'">'+svg(TYPE_ICON[ty],18)+'</span><div class="adrt"><b>'+esc(x.n)+'</b>'+(x.c?'<p>'+esc(nm(x.c))+'</p>':"")+'</div>'+mapBtn(x.u)+'</li>'}).join("")+'</ul></details>';
  }
 }
 
@@ -1542,7 +1564,7 @@ async function applyImport(mode,btn){
  all.forEach(function(x){x.disabled=true});busy(btn,"Importando…");
  try{
   var plan=importPlan(impBackup,mode);
-  for(var i=0;i<plan.docs.length;i++){if(plan.docs.length>1)progress("Importando documentos · "+(i+1)+" de "+plan.docs.length);var d=Object.assign({},plan.docs[i]);plan.docs[i].data=null;if(d.data){d.blob=dataURLtoBlob(d.data);delete d.data}await saveDoc(d);d=null}
+  for(var i=0;i<plan.docs.length;i++){if(plan.docs.length>1)progress("Importando documentos · "+(i+1)+" de "+plan.docs.length);var d=Object.assign({},plan.docs[i]);plan.docs[i].data=null;upgradeOldPlaces([d]);if(d.data){d.blob=dataURLtoBlob(d.data);delete d.data}await saveDoc(d);d=null}
   var ks=Object.keys(plan.kv);for(var k=0;k<ks.length;k++)await setKV(ks[k],plan.kv[ks[k]]);
   impBackup=null;closeSheet();applyTheme();refresh();
   toast(plan.docs.length?"Importados "+plan.docs.length+(plan.docs.length===1?" documento":" documentos"):"Itinerario importado");
