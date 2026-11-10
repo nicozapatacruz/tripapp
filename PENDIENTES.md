@@ -21,6 +21,11 @@ En este orden:
    - Quizás: agrupar los puntos cercanos cuando el mapa está alejado (un
      círculo con el número de sitios que se abre al acercarse). Hoy, en
      "Todo el viaje", los sitios de una ciudad quedan uno encima del otro.
+   - Volver a probar en el iPhone (10 nov, después de la cabecera nueva):
+     tiempo a pie real de Google (sin "≈"), sin scroll de sobra en el
+     mapa, arrastrar en el Plan del día, y el día 1 que se abría con un poco
+     de scroll y a veces no respondía el ‹. Si el tiempo a pie sigue
+     estimado: revisar en Google Cloud que "Routes API" esté habilitada.
    - Quizás: corregir un punto moviéndolo en el mapa (hoy se corrige
      pegando el enlace largo de Google Maps en el documento o la lista).
 
@@ -31,10 +36,15 @@ Para planear el orden de cada día y no alejarse de los puntos de traslado.
 - **Barra de abajo** solo con íconos (hecho); se añade "Mapa" (ícono del
   mapa doblado) como quinto botón. Si se aprieta, Ajustes pasaría a un
   engranaje en la cabecera de Ruta.
-- **Pestaña Mapa** con modos Mapa | Lista.
-  - Selector de día: Todo el viaje / Hoy (durante el viaje) / un día.
-  - Filtros combinables: Hoteles, Traslados, Qué ver, Comer, Otros
-    documentos. Estado: por defecto se esconde "Ya fui".
+- **Pestaña Mapa** con modos Mapa | Lista (botón arriba a la derecha).
+  - Día fuera de los filtros, con ‹ ›: Todo el viaje / Hoy (durante el
+    viaje) / un día.
+  - Filtros en una hoja (botón con puntito si hay algo filtrado):
+    Logística (Hoteles, Traslados, Otros documentos) y Planes (Qué ver,
+    Comer, Estado). Atajos Todo / Lo esencial / Planes. Por defecto se
+    esconde "Ya fui".
+  - **Plan del día** (ver bitácora 10 nov): numerado; lo que tiene hora no
+    se mueve, lo sin hora se arrastra; línea punteada en el mapa.
   - Puntos con el color e ícono de su tipo. "Todo el viaje" encuadra
     España (sin Medellín). Botones "estoy aquí" y "encuadrar".
 - **Un día concreto**: sus documentos con ubicación (numerados ①②③ los

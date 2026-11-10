@@ -1,7 +1,7 @@
 /* Mapa: lógica pura (sin DOM) para poder probarla.
  *  - Coordenadas sacadas de los enlaces de Google Maps.
  *  - Distancia y tiempo a pie estimado (sin internet).
- *  - Qué días sale un sitio y numeración por hora de un día.
+ *  - Qué días sale un sitio y orden/numeración del plan de un día.
  */
 
 /** Coordenadas de un enlace de Google Maps → [lat, lng] o null.
@@ -48,13 +48,43 @@ export function placeDays(cityDays, eventDays) {
   return eventDays && eventDays.length ? eventDays.slice() : cityDays.slice();
 }
 
-/** Numeración de un día: items [{pid, t}] (t = "HH:MM" o vacío). Solo los que tienen hora, en
- *  orden; un mismo punto toma el número de su primera hora. → {pid: número} */
-export function numberDay(items) {
-  const tm = (t) => (/^\d{1,2}:\d{2}$/.test(t || "") ? Number(t.split(":")[0]) * 60 + Number(t.split(":")[1]) : null);
-  const timed = items.filter((x) => tm(x.t) != null).sort((a, b) => tm(a.t) - tm(b.t));
+const tmOf = (t) => (/^\d{1,2}:\d{2}$/.test(t || "") ? Number(t.split(":")[0]) * 60 + Number(t.split(":")[1]) : null);
+
+/** Plan de un día: items [{k, t, ...}] (k = clave estable, t = "HH:MM" o vacío) y `saved`, las
+ *  claves en el último orden que dejó el usuario.
+ *  - Lo que tiene hora va siempre en orden de hora: no se puede mover.
+ *  - Lo que no tiene hora va detrás del elemento con hora que tenía antes en `saved` (o al
+ *    principio si no tenía ninguno delante), en el orden de `saved`.
+ *  - Lo que no está en `saved` (nuevo), al final. */
+export function planOrder(items, saved) {
+  const sv = Array.isArray(saved) ? saved : [];
+  const timed = items.map((x, i) => ({ x, i })).filter((o) => tmOf(o.x.t) != null)
+    .sort((a, b) => tmOf(a.x.t) - tmOf(b.x.t) || a.i - b.i).map((o) => o.x);
+  const isTimed = {};
+  timed.forEach((x) => { isTimed[x.k] = 1; });
+  const anchor = {}, pos = {};
+  let last = "";
+  sv.forEach((k, i) => {
+    if (isTimed[k]) last = k;
+    else if (!(k in anchor)) { anchor[k] = last; pos[k] = i; }
+  });
+  const groups = {}, tail = [];
+  items.forEach((x) => {
+    if (isTimed[x.k]) return;
+    if (x.k in anchor) (groups[anchor[x.k]] = groups[anchor[x.k]] || []).push(x);
+    else tail.push(x);
+  });
+  Object.keys(groups).forEach((a) => groups[a].sort((p, q) => pos[p.k] - pos[q.k]));
+  const out = (groups[""] || []).slice();
+  timed.forEach((t) => { out.push(t); (groups[t.k] || []).forEach((x) => out.push(x)); });
+  return out.concat(tail);
+}
+
+/** Números del mapa a partir del plan ordenado: un mismo punto (pid) toma el de su primera
+ *  aparición. → {pid: número} */
+export function planNumbers(order) {
   const out = {};
   let n = 0;
-  timed.forEach((x) => { if (out[x.pid] == null) out[x.pid] = ++n; });
+  order.forEach((x) => { if (out[x.pid] == null) out[x.pid] = ++n; });
   return out;
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { coordsOf, distKm, walkMin, distText, minText, placeDays, numberDay } from "../mapdata.js";
+import { coordsOf, distKm, walkMin, distText, minText, placeDays, planOrder, planNumbers } from "../mapdata.js";
 
 const ATOCHA = "https://www.google.com/maps/place/Estaci%C3%B3n+de+Madrid+Puerta+de+Atocha/@40.4069141,-3.6923449,17z/data=!3m1!4m6!3m5!1s0x0:0x1!8m2!3d40.4064905!4d-3.6909091!16zL20vMDFyYmxx";
 
@@ -43,11 +43,28 @@ describe("qué días sale un sitio y numeración", () => {
     expect(placeDays(madrid, [])).toEqual(madrid);
     expect(placeDays(madrid, ["2026-12-29"])).toEqual(["2026-12-29"]);
   });
-  it("numera solo lo que tiene hora, en orden; un punto toma su primera hora", () => {
-    const n = numberDay([
-      { pid: "cena", t: "21:00" }, { pid: "hotel", t: "" }, { pid: "tren", t: "08:08" },
-      { pid: "museo", t: "11:00" }, { pid: "tren", t: "12:00" },
-    ]);
-    expect(n).toEqual({ tren: 1, museo: 2, cena: 3 });
+  it("sin orden guardado: lo que tiene hora por hora, lo que no, al final", () => {
+    const o = planOrder([
+      { k: "cena", t: "21:00" }, { k: "sol", t: "" }, { k: "tren", t: "08:08" }, { k: "museo", t: "11:00" },
+    ], null);
+    expect(o.map((x) => x.k)).toEqual(["tren", "museo", "cena", "sol"]);
+  });
+  it("lo sin hora queda donde lo dejó el usuario, entre los que tienen hora", () => {
+    const items = [
+      { k: "tren", t: "08:08" }, { k: "museo", t: "11:00" }, { k: "cena", t: "21:00" },
+      { k: "sol", t: "" }, { k: "granvia", t: "" }, { k: "pza", t: "" },
+    ];
+    const saved = ["pza", "tren", "sol", "granvia", "museo", "cena"];
+    expect(planOrder(items, saved).map((x) => x.k)).toEqual(["pza", "tren", "sol", "granvia", "museo", "cena"]);
+  });
+  it("lo que tiene hora no se mueve aunque el orden guardado diga otra cosa; lo nuevo va al final", () => {
+    const items = [{ k: "a", t: "10:00" }, { k: "b", t: "09:00" }, { k: "x", t: "" }, { k: "nuevo", t: "" }];
+    // "a" pasó a tener hora 10:00 (antes iba primero): x sigue detrás de "a"
+    expect(planOrder(items, ["a", "x", "b"]).map((i) => i.k)).toEqual(["b", "a", "x", "nuevo"]);
+    // si el de hora al que seguía ya no existe, se queda detrás del anterior que sí exista
+    expect(planOrder([{ k: "b", t: "09:00" }, { k: "x", t: "" }], ["b", "borrado", "x"]).map((i) => i.k)).toEqual(["b", "x"]);
+  });
+  it("numeración: un mismo punto toma el número de su primera aparición", () => {
+    expect(planNumbers([{ pid: "tren" }, { pid: "sol" }, { pid: "tren" }, { pid: "cena" }])).toEqual({ tren: 1, sol: 2, cena: 3 });
   });
 });

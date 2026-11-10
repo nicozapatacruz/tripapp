@@ -14,6 +14,36 @@ Reglas:
 
 ## 2026-11-10
 
+- Mapa, después de probarlo en el iPhone:
+  - Cabecera nueva para que el mapa sea más grande: "Mapa" con dos botones
+    a la derecha (Lista/Mapa y Filtros, con un puntito si hay algo
+    filtrado). El día queda fuera de la hoja de filtros, en una fila con
+    ‹ › (Todo el viaje → día 1 → …); tocar el texto abre la lista de días.
+  - Filtros en una hoja, en dos grupos según para qué sirven: Logística
+    (Hoteles, Traslados, Otros documentos) y Planes (Qué ver, Comer, y su
+    Estado: Pendientes / Todos / Ya fui, porque solo afecta a los sitios).
+    Atajos arriba: Todo / Lo esencial (Logística) / Planes; la casilla de
+    cada grupo lo pone o lo quita entero. Se quitan "Quiero ir" y
+    "Reservado" como filtro.
+  - Plan del día (en Lista, con un día elegido): lo de ese día numerado en
+    orden. Lo que tiene hora (traslados, eventos con hora) va en su hora y
+    no se puede mover; lo sin hora se ordena arrastrando desde ≡ y puede
+    quedar antes o después de lo que tiene hora. "Añadir sitio" (o el botón
+    de la tarjeta) mete un sitio de Qué ver / Comer de ese día como evento
+    sin hora vinculado; se quita desde la tarjeta o la misma lista. El
+    orden se guarda en `plan` (va en la copia del itinerario; las copias
+    viejas sin él siguen valiendo). En el mapa, línea punteada 1 → 2 → 3.
+    Los números ya no cambian al filtrar.
+  - Tiempo a pie: siempre salía "en línea recta" porque el iPhone, al
+    llamar a Google desde la app, solo dice que viene de
+    `nicozapatacruz.github.io/` (sin `/tripapp/`) y la clave lo rechazaba.
+    Ahora la petición manda la dirección completa.
+  - Sobraba scroll en modo Mapa (el relleno de abajo de las otras
+    pestañas). Quitado: el mapa llega justo encima de la barra.
+  - Día 1 que se abría con un poco de scroll: no se pudo reproducir; la app
+    ahora fija ella misma el scroll (el navegador no lo recoloca) y, al
+    entrar a un día, lo vuelve a poner arriba un instante después.
+
 - Google Maps conectado (clave y Map ID creados por Nicolas; clave
   restringida a la web y a localhost, solo Maps JavaScript, Geocoding y
   Routes, alerta de presupuesto de 1 €). La clave va en el código a

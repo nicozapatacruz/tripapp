@@ -947,18 +947,43 @@ describe("formulario: ubicaciones", () => {
     const rows = () => [...document.querySelectorAll("#v-map .mrow")];
     const plaza = () => rows().find((x) => x.querySelector("b").textContent === "Plaza Mayor y Puerta del Sol");
     expect(plaza()).toBeTruthy();
-    click($('#v-map [data-act=mcat][data-c="see"]'));                   // quitar Qué ver
+    expect($("#v-map .mdot")).toBeNull();                               // sin filtros: sin puntito
+    // los filtros están en una hoja (botón arriba a la derecha)
+    click($("#v-map [data-act=mfilt]"));
+    click($('#sheet-body [data-act=mcat][data-c="see"]'));              // quitar Qué ver
     expect(plaza()).toBeFalsy();
-    click($('#v-map [data-act=mcat][data-c="see"]'));
-    // marcar «Ya fui» la esconde; «Todos los estados» la muestra
+    expect($("#v-map .mdot")).toBeTruthy();                             // avisa que hay filtros puestos
+    expect($('#sheet-body [data-act=mgrp][data-g="plan"]').getAttribute("aria-pressed")).toBe("false");
+    click($('#sheet-body [data-act=mcat][data-c="see"]'));
+    // «Lo esencial»: solo hoteles, traslados y otros documentos
+    click($('#sheet-body [data-act=mpre][data-v="ess"]'));
+    expect(plaza()).toBeFalsy();
+    expect(rows().some((x) => x.textContent.includes("Vermut"))).toBe(true);
+    expect($('#sheet-body [data-act=mpre][data-v="ess"]').getAttribute("aria-selected")).toBe("true");
+    click($('#sheet-body [data-act=mgrp][data-g="plan"]'));            // la casilla del grupo lo vuelve a poner
+    expect(plaza()).toBeTruthy();
+    expect($('#sheet-body [data-act=mpre][data-v="all"]').getAttribute("aria-selected")).toBe("true");
+    click($('[data-act="close"]'));
+    // marcar «Ya fui» la esconde; Estado «Todos» la muestra
     click(plaza()); const sel = $("#sheet-body select.statsel");
     sel.value = "3"; sel.dispatchEvent(new Event("change", { bubbles: true }));
     click($('[data-act="close"]'));
     location.hash = "#inicio"; window.dispatchEvent(new HashChangeEvent("hashchange"));
     location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
     expect(plaza()).toBeFalsy();
-    setSel("m-st", "all");
+    click($("#v-map [data-act=mfilt]"));
+    click($('#sheet-body [data-act=mst][data-v="all"]'));
     expect(plaza()).toBeTruthy();
+    click($('#sheet-foot [data-act=mreset]'));                          // Quitar filtros
+    expect(plaza()).toBeFalsy();
+    click($('#sheet-body [data-act=mst][data-v="all"]'));
+    click($('[data-act="close"]'));
+    // ‹ › del día: de Todo el viaje al día 1 y de vuelta
+    click($('#v-map [data-act=mstep][data-d="1"]'));
+    expect($("#m-day").value).toBe("2026-12-27");
+    click($('#v-map [data-act=mstep][data-d="-1"]'));
+    expect($("#m-day").value).toBe("all");
+    expect($('#v-map [data-act=mstep][data-d="-1"]').disabled).toBe(true);
     // día de Tenerife: no salen los sitios de Madrid
     setSel("m-day", TENERIFE);
     expect(plaza()).toBeFalsy();
@@ -982,6 +1007,45 @@ describe("formulario: ubicaciones", () => {
     expect(plaza()).toBeFalsy();                                         // ya no sale los otros días de Madrid
     setSel("m-day", "all");
     expect(plaza()).toBeTruthy();                                        // en todo el viaje, sí
+  });
+
+  it("45c2) plan del día: añadir sitios sin hora, ordenarlos arrastrando; lo que tiene hora no se mueve", async () => {
+    // (viene del 45c: Plaza Mayor tiene un evento el 29 a las 11:00)
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    setSel("m-day", "2026-12-29");
+    const names = () => [...document.querySelectorAll("#m-plan li")].map((li) => li.querySelector("b").textContent);
+    const row = (n) => [...document.querySelectorAll("#m-plan li")].find((li) => li.querySelector("b").textContent === n);
+    expect(row("Plaza Mayor y Puerta del Sol").querySelector(".hdl")).toBeNull();   // con hora: no se arrastra
+    click($("#v-map [data-act=plan-add]"));
+    const pick = (n) => [...document.querySelectorAll("#sheet-body .ppick")].find((b) => b.textContent.includes(n));
+    expect(pick("Plaza Mayor").disabled).toBe(true);                    // con hora: se cambia en el calendario
+    click(pick("Gran Vía")); await tick();
+    expect(pick("Gran Vía").getAttribute("aria-pressed")).toBe("true");
+    click(pick("Museo del Prado")); await tick();
+    click($('[data-act="close"]'));
+    let n = names();
+    expect(n.indexOf("Gran Vía y calle Preciados")).toBeGreaterThan(n.indexOf("Plaza Mayor y Puerta del Sol"));
+    expect(n[n.length - 1]).toBe("Museo del Prado");                    // lo nuevo, al final
+    // arrastrar el Prado arriba del todo (antes que lo que tiene hora)
+    const li = row("Museo del Prado"), h = li.querySelector(".hdl");
+    h.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, clientY: 500 }));
+    li.parentNode.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientY: -1 }));
+    li.parentNode.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
+    await tick();
+    n = names();
+    expect(n[0]).toBe("Museo del Prado");
+    expect(row("Museo del Prado").querySelector(".mnum").textContent).toBe("1");
+    // se guarda: al volver sigue igual; y sale como evento sin hora en el calendario
+    location.hash = "#inicio"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect(names()[0]).toBe("Museo del Prado");
+    // la tarjeta permite quitarlo del plan
+    click(row("Gran Vía y calle Preciados"));
+    const q = $('#sheet-body [data-act="plan-one"]');
+    expect(q.textContent).toContain("Quitar del plan");
+    click(q); await tick();
+    expect(names()).not.toContain("Gran Vía y calle Preciados");
+    setSel("m-day", "all");
   });
 
   it("45d) botón de mapa en el día: abre el mapa filtrado y ‹ vuelve al día", () => {
