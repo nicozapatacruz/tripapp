@@ -484,3 +484,43 @@ button.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-co
 .vwstage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;padding-bottom:env(safe-area-inset-bottom,0px)}
 .vwstage img{max-width:100%;max-height:100%;object-fit:contain;transform-origin:center;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .vthumb{display:block;padding:0;border:0;background:none;align-self:flex-start}
+
+/* ===== Resumen de gastos (botón en el recuadro negro, hoja y versión impresa) ===== */
+.sumbox{position:relative}
+.sumbox .prt{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:inherit;display:inline-flex;align-items:center;justify-content:center}
+.sumbox>div:first-of-type{padding-right:48px}
+.price small{font-weight:600;color:var(--muted)}
+.pl.sprow{flex-direction:column;align-items:stretch;gap:10px}
+.sptop{display:flex;align-items:flex-start;gap:12px}
+.sptop>div{flex:1;min-width:0}
+.sptop .spv{flex:none;font:700 15px var(--f);font-variant-numeric:tabular-nums;padding-top:1px}
+.sppaid{display:flex;align-items:center;gap:10px;padding-left:46px}
+.sppaid label{flex:none;font-size:13.5px;font-weight:650;color:var(--muted)}
+.sppaid .pricerow{flex:1;min-width:0}
+.sppaid input,.sppaid select{min-height:40px;border:1px solid var(--line);background:var(--surface2);border-radius:12px;padding:6px 12px;font-size:16px}
+.sppaid input{flex:1 1 0;min-width:0;width:auto;font-weight:700;font-variant-numeric:tabular-nums}
+.sppaid select{flex:none;width:78px;padding:6px 6px 6px 10px;font:650 14px var(--f);color:var(--muted)}
+.sppaid input.bad{border-color:var(--danger)}
+.sptot{display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:18px;background:var(--surface2)}
+.sptot>div{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.sptot span{font-size:14px;font-weight:600;color:var(--muted)}
+.sptot b{font:750 16px var(--f);font-variant-numeric:tabular-nums;text-align:right;overflow-wrap:anywhere}
+.sptot p{font-size:13px;color:var(--muted)}
+#print{display:none}
+@media print{
+  @page{margin:14mm}
+  html,body{background:#fff!important;color:#111!important}
+  body>*:not(#print){display:none!important}
+  #print{display:block;font:12px/1.4 var(--f);color:#111}
+  #print h1{font:800 22px/1.2 var(--f);margin:0 0 4px}
+  #print .psub{color:#555;margin:0 0 14px}
+  #print table{width:100%;border-collapse:collapse}
+  #print th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#555;border-bottom:1.5px solid #111;padding:6px 8px}
+  #print td{padding:7px 8px;border-bottom:1px solid #ddd;vertical-align:top}
+  #print td small{display:block;color:#777;font-size:10.5px}
+  #print .n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  #print .eq{color:#999}
+  #print tfoot td{font-weight:800;border-top:1.5px solid #111;border-bottom:0;padding-top:9px}
+  #print tr{break-inside:avoid}
+  #print .pnote{margin-top:12px;color:#666;font-size:10.5px}
+}

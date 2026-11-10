@@ -933,4 +933,44 @@ describe("formulario: ubicaciones", () => {
     expect($("#sh-title").textContent).not.toBe("Direcciones guardadas");
     click($('[data-act="close"]'));
   });
+
+  it("46) resumen de gastos: botón en el recuadro, cobrado en otra moneda guardado e impresión", async () => {
+    openNew(MADRID);
+    $("#f-title").value = "Museo caro";
+    $("#f-price").value = "100";
+    $("#f-cur").value = "EUR";
+    await save();
+    location.hash = "#documentos"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    click($('#v-docs .sumbox [data-act="spend"]'));
+    expect($("#sh-title").textContent).toBe("Resumen de gastos");
+    const inp = [...document.querySelectorAll("#sheet-body [data-paid]")].find((x) => x.closest(".sprow").textContent.includes("Museo caro"));
+    const id = inp.dataset.paid;
+    const sel = document.querySelector('[data-paidc="' + id + '"]');
+    expect(sel.value).toBe("USD");                                     // por defecto, otra moneda distinta del precio
+    inp.value = "abc,";
+    inp.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(inp.classList.contains("bad")).toBe(true);                  // monto inválido: no se guarda
+    inp.value = "109,50";
+    inp.dispatchEvent(new Event("change", { bubbles: true }));
+    await tick();
+    expect(inp.classList.contains("bad")).toBe(false);
+    expect($("#sp-tot").textContent).toContain("109,50");
+    let printed = 0;
+    window.print = () => { printed++; };
+    click($('[data-act="spend-print"]'));
+    await tick(); await tick();
+    expect(printed).toBe(1);
+    const row = [...document.querySelectorAll("#print tbody tr")].find((r) => r.textContent.includes("Museo caro"));
+    expect(row.textContent).toContain("100,00");
+    expect(row.textContent).toContain("109,50");
+    expect(document.title).toContain("Gastos del viaje");
+    window.dispatchEvent(new Event("afterprint"));
+    expect(document.title).not.toContain("Gastos del viaje");
+    click($('[data-act="close"]'));
+    // al volver a abrir, el cobro sigue ahí
+    click($('#v-docs .sumbox [data-act="spend"]'));
+    expect($("#pd-" + id).value).toBe("109,5");
+    expect(document.querySelector('[data-paidc="' + id + '"]').value).toBe("USD");
+    click($('[data-act="close"]'));
+  });
 });

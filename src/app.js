@@ -27,6 +27,7 @@ var ICON={
  flag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
  clip:'<path d="M20 11l-8.5 8.5a5 5 0 0 1-7-7L13 4a3.5 3.5 0 0 1 5 5l-8.6 8.6a2 2 0 0 1-2.8-2.8L14 8"/>',
  file:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>',
+ print:'<path d="M7 9V3.5h10V9"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v6.5H7z"/>',
  hotel:'<path d="M3 18V7M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="1.6"/>',
  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
  clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
@@ -536,7 +537,9 @@ function parsePrice(s){
 function fmtMoney(v,c){var z=c==="COP"?0:2;try{return new Intl.NumberFormat("es-ES",{style:"currency",currency:c,minimumFractionDigits:z,maximumFractionDigits:z}).format(v)}catch(e){return v+" "+c}}
 function sumDocs(list){var m={};list.forEach(function(d){if(d.price!=null){var c=d.cur||"EUR";m[c]=(m[c]||0)+d.price}});return m}
 function sumText(m){return CURS.filter(function(c){return m[c]!=null}).map(function(c){return fmtMoney(m[c],c)}).join(" + ")}
-function priceHTML(d){return d.price!=null?'<div class="price">'+esc(fmtMoney(d.price,d.cur||"EUR"))+'</div>':""}
+function priceHTML(d){return d.price!=null?'<div class="price">'+esc(fmtMoney(d.price,d.cur||"EUR"))+(paidOf(d)?'<small> · cobrado '+esc(fmtMoney(d.paid.v,d.paid.c))+'</small>':"")+'</div>':""}
+/* Lo cobrado de verdad cuando se pagó en otra moneda (campo opcional d.paid={v,c}; las copias viejas siguen valiendo) */
+function paidOf(d){return d.price!=null&&d.paid&&d.paid.v!=null&&CURS.indexOf(d.paid.c)>=0?d.paid:null}
 function daySum(list){var t=sumText(sumDocs(list));return t?'<div class="sum"><span>Total del día</span><b>'+esc(t)+'</b></div>':""}
 function priceField(d){
  var cur=d?(d.cur||"EUR"):(kv.lastCur||"EUR");
@@ -544,7 +547,7 @@ function priceField(d){
 }
 function summaryHTML(shown){
  var pr=shown.filter(function(d){return d.price!=null});if(!pr.length)return "";
- var h='<section class="sumbox"><div><span>'+(docFilter==="all"?"Gastado en el viaje":"Gastado en "+TYPES[docFilter].l.toLowerCase())+'</span><b>'+esc(sumText(sumDocs(pr)))+'</b></div>';
+ var h='<section class="sumbox">'+(docFilter==="all"?'<button type="button" class="prt" data-act="spend" aria-label="Resumen de gastos para imprimir">'+svg("print",20)+'</button>':"")+'<div><span>'+(docFilter==="all"?"Gastado en el viaje":"Gastado en "+TYPES[docFilter].l.toLowerCase())+'</span><b>'+esc(sumText(sumDocs(pr)))+'</b></div>';
  if(docFilter==="all"){
   var by={};pr.forEach(function(d){(by[d.type]=by[d.type]||[]).push(d)});
   h+='<ul class="sumrows">'+Object.keys(TYPES).filter(function(k){return by[k]}).map(function(k){return '<li style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],18)+'<span>'+TYPES[k].l+' <small>'+by[k].length+'</small></span><b>'+esc(sumText(sumDocs(by[k])))+'</b></li>'}).join("")+'</ul>';
@@ -896,7 +899,7 @@ var sheet=$("#sheet"),sheetBody=$("#sheet-body"),sheetFoot=$("#sheet-foot"),shee
 function openSheet(html,foot){sheetBody.innerHTML=html;sheetFoot.innerHTML=foot||"";sheetFoot.hidden=!foot;sheetBody.scrollTop=0;
  // cabecera (título y Cerrar/Cancelar) fuera del área que se desplaza: así nada se ve pasar por encima o por detrás
  var hd=sheetBody.querySelector(".sh-head");sheetHead.innerHTML="";if(hd&&hd.parentNode===sheetBody)sheetHead.appendChild(hd);sheetHead.hidden=!sheetHead.firstChild;sheetHead.classList.remove("scrolled");sheet.hidden=false;document.documentElement.style.overflow="hidden";var dlg=sheet.querySelector(".sheet");if(dlg)try{dlg.focus({preventScroll:true})}catch(e){}}
-function closeSheet(){evEditing=null;expFile=null;impWrapper=null;impBackup=null;sheet.hidden=true;sheetBody.innerHTML="";sheetHead.innerHTML="";sheetFoot.innerHTML="";sheetFoot.hidden=true;document.documentElement.style.overflow="";editing=null}
+function closeSheet(){if(docTitle0!==null){document.title=docTitle0;docTitle0=null}evEditing=null;expFile=null;impWrapper=null;impBackup=null;sheet.hidden=true;sheetBody.innerHTML="";sheetHead.innerHTML="";sheetFoot.innerHTML="";sheetFoot.hidden=true;document.documentElement.style.overflow="";editing=null}
 function dayOptions(sel){return DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===sel?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'<option value="trip"'+(sel==="trip"?" selected":"")+'>Todo el viaje (sin día)</option>'}
 /* Campo de hora con una × para borrarla (el selector de hora del iPhone no tiene cómo dejarla vacía) */
 function timeBox(id,v,l){return '<span class="tbox"><input id="'+id+'" type="time" value="'+esc(v||"")+'" aria-label="'+l+'"><button type="button" class="tclr" data-act="t-clr" data-for="'+id+'" aria-label="Quitar '+l.toLowerCase()+'"'+(v?"":" hidden")+'>'+svg("xmark",16)+'</button></span>'}
@@ -1298,6 +1301,66 @@ function openPlaces(){
     return '<li class="pl adr"><span class="adri" style="--t:'+TYPES[ty].t+'">'+svg(TYPE_ICON[ty],18)+'</span><div class="adrt"><b>'+esc(x.n)+'</b>'+(x.c?'<p>'+esc(nm(x.c))+'</p>':"")+'</div>'+mapBtn(gmap(x.n))+'</li>'}).join("")+'</ul></details>';
  }
 }
+
+/* ================= Resumen de gastos e impresión =================
+   Todos los documentos con precio, en el orden del viaje. En cada uno se puede poner lo
+   cobrado (si se pagó en otra moneda); se guarda en el documento al cambiarlo. */
+var docTitle0=null;  // título original mientras se imprime (el PDF toma el nombre del título)
+function spendDocs(){
+ var ix={};DAYS.forEach(function(d,i){ix[d.d]=i});
+ return docs.filter(function(d){return d.price!=null}).sort(function(a,b){
+  var ia=a.dayId in ix?ix[a.dayId]:1e4,ib=b.dayId in ix?ix[b.dayId]:1e4;
+  return ia-ib||String(a.t1||"99").localeCompare(String(b.t1||"99"))||(a.created||0)-(b.created||0)});
+}
+function spendWhen(d){var dy=dayById(d.dayId);return dy?cap(shortDay(dy)):"Todo el viaje"}
+function lastPaidCur(){var c="";docs.forEach(function(d){var p=paidOf(d);if(p&&(!c||d.created>c.t))c={c:p.c,t:d.created||0}});return c?c.c:""}
+function defPaidCur(d){var l=[lastPaidCur(),"USD","COP","EUR"],c=d.cur||"EUR";for(var i=0;i<l.length;i++)if(l[i]&&l[i]!==c)return l[i];return "USD"}
+/* Totales: precio por moneda; cobrado = lo cobrado o, si no se puso, el precio */
+function spendTotals(l){var pr={},pd={},np=0;l.forEach(function(d){var c=d.cur||"EUR",p=paidOf(d);pr[c]=(pr[c]||0)+d.price;
+ if(p){pd[p.c]=(pd[p.c]||0)+p.v;np++}else pd[c]=(pd[c]||0)+d.price});return {pr:pr,pd:pd,np:np}}
+function spendTotHTML(){var t=spendTotals(spendDocs());
+ return '<div class="sptot"><div><span>Total de precios</span><b>'+esc(sumText(t.pr))+'</b></div><div><span>Total cobrado</span><b>'+esc(sumText(t.pd))+'</b></div>'+
+  '<p>'+(t.np?"Lo que no tiene cobro aparte cuenta con su precio.":"Aún no hay cobros en otra moneda: el total cobrado es igual al de precios.")+'</p></div>'}
+function openSpend(){
+ var l=spendDocs();
+ var rows=l.map(function(d){var T=TYPES[d.type]||TYPES.otro,p=paidOf(d),pc=p?p.c:defPaidCur(d);
+  return '<li class="pl sprow"><div class="sptop"><span class="adri" style="--t:'+T.t+'">'+svg(TYPE_ICON[d.type]||"file",18)+'</span><div><b>'+esc(d.title||T.l)+'</b><p>'+esc(spendWhen(d))+' · '+T.l+'</p></div><b class="spv">'+esc(fmtMoney(d.price,d.cur||"EUR"))+'</b></div>'+
+   '<div class="sppaid"><label for="pd-'+d.id+'">Cobrado</label><div class="pricerow"><input id="pd-'+d.id+'" type="text" inputmode="decimal" data-paid="'+d.id+'" placeholder="Opcional" value="'+(p?String(p.v).replace(".",","):"")+'" autocomplete="off"><select data-paidc="'+d.id+'" aria-label="Moneda del cobro">'+CURS.map(function(c){return '<option value="'+c+'"'+(c===pc?" selected":"")+'>'+c+'</option>'}).join("")+'</select></div></div></li>'}).join("");
+ openSheet('<div class="sh-head"><h2 id="sh-title">Resumen de gastos</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
+  (l.length?'<p class="foot" style="margin:0">Si pagaste en otra moneda, pon lo que te cobraron (lo que sale en el extracto de la tarjeta). Se guarda en cada documento.</p><ul class="rows">'+rows+'</ul><div id="sp-tot">'+spendTotHTML()+'</div>'
+   :'<p class="foot">Todavía no hay documentos con precio.</p>'),
+  l.length?'<div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="spend-print">'+svg("print",20)+'Imprimir</button></div>':"");
+}
+async function savePaid(id){
+ var d=docs.filter(function(x){return x.id===id})[0],inp=$("#pd-"+id),sel=document.querySelector('[data-paidc="'+id+'"]');if(!d||!inp||!sel)return;
+ var v=parsePrice(inp.value);
+ if(v===undefined){inp.classList.add("bad");return}
+ inp.classList.remove("bad");
+ var n=Object.assign({},d);
+ if(v==null)delete n.paid;else n.paid={v:v,c:sel.value};
+ if(JSON.stringify(n.paid||null)===JSON.stringify(d.paid||null))return;
+ await saveDoc(n);
+ var t=$("#sp-tot");if(t)t.innerHTML=spendTotHTML();
+ if(view==="docs")renderDocsView();
+}
+async function printSpend(){
+ // por si se toca Imprimir sin salir del último campo
+ var ins=[].slice.call(document.querySelectorAll("[data-paid]"));
+ for(var i=0;i<ins.length;i++)await savePaid(ins[i].dataset.paid);
+ if(document.querySelector("[data-paid].bad")){toast("Revisa el monto marcado en rojo");return}
+ var l=spendDocs(),t=spendTotals(l),first=DAYS[0],last=DAYS[DAYS.length-1],now=new Date();
+ var rows=l.map(function(d){var T=TYPES[d.type]||TYPES.otro,p=paidOf(d);
+  return '<tr><td>'+esc(spendWhen(d))+'</td><td>'+esc(d.title||T.l)+'<small>'+T.l+'</small></td><td class="n">'+esc(fmtMoney(d.price,d.cur||"EUR"))+'</td><td class="n">'+(p?esc(fmtMoney(p.v,p.c)):'<span class="eq">—</span>')+'</td></tr>'}).join("");
+ var el=$("#print");if(!el){el=document.createElement("div");el.id="print";document.body.appendChild(el)}
+ el.innerHTML='<h1>Gastos del viaje</h1><p class="psub">Journest · '+first.dt.getDate()+' '+MO3[first.dt.getMonth()]+' '+first.dt.getFullYear()+' – '+last.dt.getDate()+' '+MO3[last.dt.getMonth()]+' '+last.dt.getFullYear()+' · impreso el '+now.getDate()+' '+MO3[now.getMonth()]+' '+now.getFullYear()+'</p>'+
+  '<table><thead><tr><th>Fecha</th><th>Concepto</th><th class="n">Precio</th><th class="n">Cobrado</th></tr></thead><tbody>'+rows+'</tbody>'+
+  '<tfoot><tr><td colspan="2">Total</td><td class="n">'+esc(sumText(t.pr)).replace(/ \+ /g,"<br>")+'</td><td class="n">'+esc(sumText(t.pd)).replace(/ \+ /g,"<br>")+'</td></tr></tfoot></table>'+
+  '<p class="pnote">Cobrado: lo que se cobró en otra moneda (extracto de la tarjeta). «—» = sin cobro aparte; en el total cuenta con su precio.</p>';
+ if(docTitle0===null)docTitle0=document.title;
+ document.title="Journest - Gastos del viaje";
+ try{window.print()}catch(e){toast("Este navegador no permite imprimir")}
+}
+window.addEventListener("afterprint",function(){if(docTitle0!==null){document.title=docTitle0;docTitle0=null}});
 
 /* ================= Ajustes y copia de seguridad ================= */
 function openSettings(){
@@ -1742,6 +1805,8 @@ document.addEventListener("click",function(e){
  else if(a==="filter"){docFilter=b.dataset.f;renderDocsView()}
  else if(a==="settings"){openSettings()}
  else if(a==="places"){openPlaces()}
+ else if(a==="spend"){openSpend()}
+ else if(a==="spend-print"){printSpend()}
  else if(a==="export"){openExportSheet()}
  else if(a==="exp-kind"){expKindChanged(b)}
  else if(a==="exp-make"){makeExport(b)}
@@ -1755,6 +1820,7 @@ document.addEventListener("change",function(e){
  clearBad(e.target);
  if(e.target.id==="f-day"){var fe0=$("#f-err");if(fe0&&fe0.dataset.k==="type")formErr("")}
  if(e.target.type==="time")syncTimeClr(e.target);
+ if(e.target.dataset&&(e.target.dataset.paid||e.target.dataset.paidc)){savePaid(e.target.dataset.paid||e.target.dataset.paidc);return}
  if(e.target.classList&&e.target.classList.contains("statsel")){var sv=+e.target.value;e.target.className="stat statsel s"+sv;setKV(e.target.dataset.k,sv);return}
  if(e.target.id==="f-file"){var f=e.target.files[0];if(f){var fd=$("#f-filedel");if(fd)fd.hidden=false;$("#f-name").innerHTML=esc(f.name)+"<small>"+fmtSize(f.size)+"</small>";var ft=$("#f-title");if(ft&&!ft.value)ft.value=f.name.replace(/\.[^.]+$/,"");
   var bn=$("#f-bignote");if(bn){bn.hidden=f.size<=BIG_FILE;bn.textContent=f.size>BIG_FILE?"Este archivo pesa "+fmtSize(f.size)+". Las copias de seguridad tardarán y pueden fallar en iPhone o iPad. Si puedes, usa un PDF más liviano o una captura.":""}}}

@@ -14,6 +14,21 @@ Reglas:
 
 ## 2026-11-10
 
+- Resumen de gastos para imprimir: botón con ícono de imprimir arriba a la
+  derecha del recuadro negro "Gastado en el viaje" (solo con el filtro
+  "Todos"). Abre una hoja con todos los documentos con precio en el orden
+  del viaje; en cada uno se puede poner lo **Cobrado** (monto y moneda),
+  para cuando algo costó 100 € y la tarjeta cobró 109 USD. Se guarda en el
+  documento al salir del campo (campo nuevo opcional `paid:{v,c}`; viaja en
+  la copia completa; las copias viejas siguen valiendo) y también se ve en
+  la ficha ("100,00 € · cobrado 109,00 US$"). Totales: precios por moneda y
+  total cobrado (lo que no tiene cobro aparte cuenta con su precio).
+  "Imprimir" arma una tabla Fecha | Concepto | Precio | Cobrado con totales y
+  abre el diálogo de impresión del sistema (desde ahí se guarda como PDF);
+  el PDF se llama "Journest - Gastos del viaje". Nombres de columnas
+  elegidos: "Precio" y "Cobrado" (más cortos y claros que "costo real /
+  costo facturado").
+
 - Nueva hoja "Direcciones guardadas" (Ajustes → fila con el número de
   direcciones). Solo consulta: muestra las ubicaciones de los documentos
   agrupadas por ciudad en el orden del viaje (las de ciudad dudosa o de
