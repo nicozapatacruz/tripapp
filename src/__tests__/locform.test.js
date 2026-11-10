@@ -940,6 +940,10 @@ describe("formulario: ubicaciones", () => {
     $("#f-price").value = "100";
     $("#f-cur").value = "EUR";
     await save();
+    openNew(MADRID);
+    $("#f-title").value = "Taxi";
+    $("#f-price").value = "20";
+    await save();
     location.hash = "#documentos"; window.dispatchEvent(new HashChangeEvent("hashchange"));
     click($('#v-docs .sumbox [data-act="spend"]'));
     expect($("#sh-title").textContent).toBe("Resumen de gastos");
@@ -967,6 +971,24 @@ describe("formulario: ubicaciones", () => {
     window.dispatchEvent(new Event("afterprint"));
     expect(document.title).not.toContain("Gastos del viaje");
     click($('[data-act="close"]'));
+    // desmarcar: no se imprime ni suma, y queda guardado
+    click($('#v-docs .sumbox [data-act="spend"]'));
+    const cb = $('[data-spinc="' + id + '"]');
+    expect(cb.checked).toBe(true);
+    cb.checked = false;
+    cb.dispatchEvent(new Event("change", { bubbles: true }));
+    await tick();
+    expect(cb.closest(".sprow").classList.contains("off")).toBe(true);
+    expect($("#sp-tot").textContent).not.toContain("109,50");
+    click($('[data-act="spend-print"]'));
+    for (let k = 0; k < 50 && printed < 2; k++) await tick();
+    expect(printed).toBe(2);
+    expect($("#print").textContent).not.toContain("Museo caro");
+    expect($("#print").textContent).toContain("Taxi");
+    window.dispatchEvent(new Event("afterprint"));
+    cb.checked = true;
+    cb.dispatchEvent(new Event("change", { bubbles: true }));
+    await tick();
     // al volver a abrir, el cobro sigue ahí
     click($('#v-docs .sumbox [data-act="spend"]'));
     expect($("#pd-" + id).value).toBe("109,5");

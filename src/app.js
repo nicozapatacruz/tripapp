@@ -1318,16 +1318,17 @@ function defPaidCur(d){var l=[lastPaidCur(),"USD","COP","EUR"],c=d.cur||"EUR";fo
 /* Totales: precio por moneda; cobrado = lo cobrado o, si no se puso, el precio */
 function spendTotals(l){var pr={},pd={},np=0;l.forEach(function(d){var c=d.cur||"EUR",p=paidOf(d);pr[c]=(pr[c]||0)+d.price;
  if(p){pd[p.c]=(pd[p.c]||0)+p.v;np++}else pd[c]=(pd[c]||0)+d.price});return {pr:pr,pd:pd,np:np}}
-function spendTotHTML(){var t=spendTotals(spendDocs());
+function spendIncl(){return spendDocs().filter(function(d){return !d.noPrint})}
+function spendTotHTML(){var l=spendIncl(),t=spendTotals(l),ex=spendDocs().length-l.length;if(!l.length)return '<div class="sptot"><p>No hay nada marcado para imprimir.</p></div>';
  return '<div class="sptot"><div><span>Total de precios</span><b>'+esc(sumText(t.pr))+'</b></div><div><span>Total cobrado</span><b>'+esc(sumText(t.pd))+'</b></div>'+
-  '<p>'+(t.np?"Lo que no tiene cobro aparte cuenta con su precio.":"Aún no hay cobros en otra moneda: el total cobrado es igual al de precios.")+'</p></div>'}
+  '<p>'+(t.np?"Lo que no tiene cobro aparte cuenta con su precio.":"Aún no hay cobros en otra moneda: el total cobrado es igual al de precios.")+(ex?" "+ex+(ex===1?" gasto desmarcado no se incluye.":" gastos desmarcados no se incluyen."):"")+'</p></div>'}
 function openSpend(){
  var l=spendDocs();
  var rows=l.map(function(d){var T=TYPES[d.type]||TYPES.otro,p=paidOf(d),pc=p?p.c:defPaidCur(d);
-  return '<li class="pl sprow"><div class="sptop"><span class="adri" style="--t:'+T.t+'">'+svg(TYPE_ICON[d.type]||"file",18)+'</span><div><b>'+esc(d.title||T.l)+'</b><p>'+esc(spendWhen(d))+' · '+T.l+'</p></div><b class="spv">'+esc(fmtMoney(d.price,d.cur||"EUR"))+'</b></div>'+
+  return '<li class="pl sprow'+(d.noPrint?" off":"")+'"><div class="sptop"><input type="checkbox" class="spchk" data-spinc="'+d.id+'"'+(d.noPrint?"":" checked")+' aria-label="Incluir '+esc(d.title||T.l)+' en el resumen"><div><b>'+esc(d.title||T.l)+'</b><p>'+esc(spendWhen(d))+' · '+T.l+'</p></div><b class="spv">'+esc(fmtMoney(d.price,d.cur||"EUR"))+'</b></div>'+
    '<div class="sppaid"><label for="pd-'+d.id+'">Cobrado</label><div class="pricerow"><input id="pd-'+d.id+'" type="text" inputmode="decimal" data-paid="'+d.id+'" placeholder="Opcional" value="'+(p?String(p.v).replace(".",","):"")+'" autocomplete="off"><select data-paidc="'+d.id+'" aria-label="Moneda del cobro">'+CURS.map(function(c){return '<option value="'+c+'"'+(c===pc?" selected":"")+'>'+c+'</option>'}).join("")+'</select></div></div></li>'}).join("");
  openSheet('<div class="sh-head"><h2 id="sh-title">Resumen de gastos</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
-  (l.length?'<p class="foot" style="margin:0">Si pagaste en otra moneda, pon lo que te cobraron (lo que sale en el extracto de la tarjeta). Se guarda en cada documento.</p><ul class="rows">'+rows+'</ul><div id="sp-tot">'+spendTotHTML()+'</div>'
+  (l.length?'<p class="foot" style="margin:0">Desmarca lo que no quieras incluir. Si pagaste en otra moneda, pon lo que te cobraron (lo que sale en el extracto de la tarjeta). Todo se guarda en cada documento.</p><ul class="rows">'+rows+'</ul><div id="sp-tot">'+spendTotHTML()+'</div>'
    :'<p class="foot">Todavía no hay documentos con precio.</p>'),
   l.length?'<div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="spend-print">'+svg("print",20)+'Imprimir</button></div>':"");
 }
@@ -1343,12 +1344,21 @@ async function savePaid(id){
  var t=$("#sp-tot");if(t)t.innerHTML=spendTotHTML();
  if(view==="docs")renderDocsView();
 }
+/* Casilla "incluir": campo opcional noPrint en el documento (solo afecta al resumen para imprimir) */
+async function saveIncl(cb){
+ var d=docs.filter(function(x){return x.id===cb.dataset.spinc})[0];if(!d)return;
+ var n=Object.assign({},d);if(cb.checked)delete n.noPrint;else n.noPrint=true;
+ var li=cb.closest(".sprow");if(li)li.classList.toggle("off",!cb.checked);
+ await saveDoc(n);
+ var t=$("#sp-tot");if(t)t.innerHTML=spendTotHTML();
+}
 async function printSpend(){
  // por si se toca Imprimir sin salir del último campo
  var ins=[].slice.call(document.querySelectorAll("[data-paid]"));
  for(var i=0;i<ins.length;i++)await savePaid(ins[i].dataset.paid);
  if(document.querySelector("[data-paid].bad")){toast("Revisa el monto marcado en rojo");return}
- var l=spendDocs(),t=spendTotals(l),first=DAYS[0],last=DAYS[DAYS.length-1],now=new Date();
+ var l=spendIncl();if(!l.length){toast("Marca al menos un gasto para imprimir");return}
+ var t=spendTotals(l),first=DAYS[0],last=DAYS[DAYS.length-1],now=new Date();
  var rows=l.map(function(d){var T=TYPES[d.type]||TYPES.otro,p=paidOf(d);
   return '<tr><td>'+esc(spendWhen(d))+'</td><td>'+esc(d.title||T.l)+'<small>'+T.l+'</small></td><td class="n">'+esc(fmtMoney(d.price,d.cur||"EUR"))+'</td><td class="n">'+(p?esc(fmtMoney(p.v,p.c)):'<span class="eq">—</span>')+'</td></tr>'}).join("");
  var el=$("#print");if(!el){el=document.createElement("div");el.id="print";document.body.appendChild(el)}
@@ -1820,6 +1830,7 @@ document.addEventListener("change",function(e){
  clearBad(e.target);
  if(e.target.id==="f-day"){var fe0=$("#f-err");if(fe0&&fe0.dataset.k==="type")formErr("")}
  if(e.target.type==="time")syncTimeClr(e.target);
+ if(e.target.dataset&&e.target.dataset.spinc){saveIncl(e.target);return}
  if(e.target.dataset&&(e.target.dataset.paid||e.target.dataset.paidc)){savePaid(e.target.dataset.paid||e.target.dataset.paidc);return}
  if(e.target.classList&&e.target.classList.contains("statsel")){var sv=+e.target.value;e.target.className="stat statsel s"+sv;setKV(e.target.dataset.k,sv);return}
  if(e.target.id==="f-file"){var f=e.target.files[0];if(f){var fd=$("#f-filedel");if(fd)fd.hidden=false;$("#f-name").innerHTML=esc(f.name)+"<small>"+fmtSize(f.size)+"</small>";var ft=$("#f-title");if(ft&&!ft.value)ft.value=f.name.replace(/\.[^.]+$/,"");

@@ -28,6 +28,11 @@ Reglas:
   el PDF se llama "Journest - Gastos del viaje". Nombres de columnas
   elegidos: "Precio" y "Cobrado" (más cortos y claros que "costo real /
   costo facturado").
+  Cada fila lleva a la izquierda una casilla para incluirla o no en el
+  resumen (reemplaza el ícono del tipo, que ya va en el subtítulo). Lo
+  desmarcado se ve atenuado, no suma en los totales de la hoja ni sale en
+  la impresión, y queda guardado en el documento (campo opcional
+  `noPrint`). No cambia el "Gastado en el viaje" del recuadro negro.
 
 - Nueva hoja "Direcciones guardadas" (Ajustes → fila con el número de
   direcciones). Solo consulta: muestra las ubicaciones de los documentos
