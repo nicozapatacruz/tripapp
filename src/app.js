@@ -28,6 +28,8 @@ var ICON={
  flag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
  clip:'<path d="M20 11l-8.5 8.5a5 5 0 0 1-7-7L13 4a3.5 3.5 0 0 1 5 5l-8.6 8.6a2 2 0 0 1-2.8-2.8L14 8"/>',
  file:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>',
+ locate:'<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="7"/>',
+ fit:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
  star:'<path d="M12 3.8l2.5 5.1 5.6.8-4 3.9.9 5.6L12 16.6l-5 2.6.9-5.6-4-3.9 5.6-.8z"/>',
  way:'<circle cx="5.5" cy="18.5" r="2"/><path d="M7.5 18.5H16a3 3 0 0 0 0-6H8a3 3 0 0 1 0-6h4.5"/><path d="M18 10.5s3-2.6 3-5a3 3 0 0 0-6 0c0 2.4 3 5 3 5z"/>',
  print:'<path d="M7 9V3.5h10V9"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v6.5H7z"/>',
@@ -1327,7 +1329,7 @@ function mapDayId(){return mapState.day==="all"?null:mapState.day==="today"?inTr
 function placeByKey(pk){var m=/^([sr]):([a-z]+):(.+)$/.exec(pk||"");if(!m||!CITIES[m[2]])return null;var kind=m[1]==="s"?"see":"eat",p=listOf(m[2],kind).filter(function(x){return x.id===m[3]})[0];return p?{cid:m[2],kind:kind,p:p}:null}
 function mapPoints(){
  var by={},list=[];
- function add(key,base){if(!by[key]){base.id="mp"+list.length;by[key]=base;list.push(base)}return by[key]}
+ function add(key,base){if(!by[key]){base.id="mp"+list.length;base.gk=key;by[key]=base;list.push(base)}return by[key]}
  docs.forEach(function(d){[1,2].forEach(function(n){
   if(n===2&&!TRIPT[d.type])return;
   var t=d["loc"+n];if(!t)return;
@@ -1350,6 +1352,7 @@ function mapPoints(){
    evs.forEach(function(e){p.refs.push({day:e.day,t:e.t1||""})});
   })});
  });
+ applyGeo(list);
  return list;
 }
 function mapVisible(list){
@@ -1368,7 +1371,7 @@ function mapNumbers(list){
 }
 function mapColor(p){return p.kind==="place"?MCOL[p.cat]:(TYPES[p.type]||TYPES.otro).t}
 function mapIcon(p){return p.kind==="place"?MICO[p.cat]:(TYPE_ICON[p.type]||"file")}
-function mapHref(p){return p.url||gmap(p.name+(p.city?", "+nm(p.city):""))}
+function mapHref(p){if(p.pid)return gmap(p.name)+"&query_place_id="+encodeURIComponent(p.pid);return p.url||gmap(p.name+(p.city?", "+nm(p.city):""))}
 /* Hotel de la noche y estaciones del día (para las distancias de la tarjeta) */
 function dayAnchors(dd,list){
  var out=[];if(!dd)return out;
@@ -1408,7 +1411,8 @@ function renderMap(){
  var body;
  if(mapState.mode==="map"){
   var off=!isOnline();
-  body='<div class="mapph">'+svg("route",34)+'<b>'+(off?"Sin internet: el mapa no se puede mostrar":"Aquí irá el mapa")+'</b><span>'+(off?"La lista funciona igual sin conexión.":"Falta conectar Google Maps (la clave está pendiente). Mientras, usa la lista.")+'</span><button type="button" class="btn" data-act="mmode" data-v="list">Ver como lista</button></div>';
+  if(GM_ON&&!off&&!gFail)body='<div class="mapbox"><div class="mapctl"><button type="button" class="mctl" data-act="m-me" aria-label="Mi ubicación">'+svg("locate",20)+'</button><button type="button" class="mctl" data-act="m-fit" aria-label="Encuadrar todo">'+svg("fit",20)+'</button></div></div>';
+  else body='<div class="mapph">'+svg("route",34)+'<b>'+(off?"Sin internet: el mapa no se puede mostrar":gFail?"No se pudo cargar el mapa de Google":"Aquí irá el mapa")+'</b><span>'+(off?"La lista funciona igual sin conexión.":gFail?"Prueba más tarde. Mientras, la lista funciona igual.":"Falta conectar Google Maps. Mientras, usa la lista.")+'</span><button type="button" class="btn" data-act="mmode" data-v="list">Ver como lista</button></div>';
  }else{
   vis.forEach(function(p){var k=p.city&&order.indexOf(p.city)>=0?p.city:"_";(groups[k]=groups[k]||[]).push(p)});
   var co={hotel:0,trans:1,other:2,see:3,eat:4};
@@ -1423,22 +1427,136 @@ function renderMap(){
   '<div class="filters">'+chips+'</div>'+
   '<p class="mcount">'+vis.length+(vis.length===1?" lugar":" lugares")+(unloc?" · "+unloc+" sin ubicar":"")+'</p>'+
   '<div class="dgroups">'+body+'</div><div class="fabspace"></div></div>';
+ if(mapState.mode==="map"&&V.map.querySelector(".mapbox"))mountMap(vis,nums);
+ geoRun(all);   // ubica por nombre lo que falte (con internet y con Google conectado)
 }
 function openMapCard(id){
  var all=mapPoints(),p=all.filter(function(x){return x.id===id})[0];if(!p)return;
  var dd=mapDayId()||inTripToday(),h=vType(mapIcon(p),mapColor(p),p.kind==="place"?listTitle(p.cat):(TYPES[p.type]||TYPES.otro).l,p.city?nm(p.city):"");
  if(p.ll){
   var an=dayAnchors(dd,all).filter(function(a){return a.p!==p});
-  if(an.length)h+='<ul class="mdist">'+an.map(function(a){var km=distKm(p.ll,a.p.ll);return '<li>'+svg("clock",15)+'<span><b>'+distText(km)+' '+esc(a.l)+'</b> · ≈ '+walkText(walkMin(km))+' a pie</span></li>'}).join("")+'</ul><p class="foot" style="margin:0">Estimado en línea recta'+(isOnline()?"":" (sin internet)")+'.</p>';
- }else h+='<p class="adrw" style="align-self:flex-start">Sin ubicar: '+(p.url?"el enlace no trae coordenadas":"no tiene enlace de Google Maps")+'. Se ubicará al conectar Google.</p>';
+  if(an.length)h+='<ul class="mdist">'+an.map(function(a,i){var km=distKm(p.ll,a.p.ll);return '<li>'+svg("clock",15)+'<span><b>'+distText(km)+' '+esc(a.l)+'</b> · <span class="wk" data-i="'+i+'">≈ '+walkText(walkMin(km))+' a pie</span></span></li>'}).join("")+'</ul><p class="foot" id="md-note" style="margin:0">Estimado en línea recta'+(isOnline()?"":" (sin internet)")+'.</p>';
+ }else h+='<p class="adrw" style="align-self:flex-start">Sin ubicar: '+(GM_ON&&!gFail?(isOnline()?"Google no lo encontró por su nombre. Pega su enlace largo de Google Maps en el documento o la lista.":"se ubicará al volver la conexión."):(p.url?"el enlace no trae coordenadas.":"no tiene enlace de Google Maps."))+'</p>';
  if(p.kind==="place")h+=vField("Estado",statSel(p.pk));
  if(p.docIds.length)h+=vField(p.docIds.length>1?"Documentos":"Documento",'<ul class="adru">'+p.docIds.map(function(did){var d=docs.filter(function(x){return x.id===did})[0];if(!d)return "";var dy=dayById(d.dayId);return '<li><button type="button" class="mini" data-act="view" data-id="'+d.id+'">'+esc(d.title||(TYPES[d.type]||TYPES.otro).l)+(dy?' · '+esc(shortDay(dy)):"")+'</button></li>'}).join("")+'</ul>');
  if(p.evIds.length)h+=vField("En el calendario",'<ul class="adru">'+p.evIds.map(function(eid){var e=evList().filter(function(x){return x.id===eid})[0];var dy=e&&dayById(e.day);return e?'<li><button type="button" class="mini" data-act="ev-view" data-id="'+e.id+'">'+esc(dy?cap(shortDay(dy)):"")+(e.t1?' · '+esc(e.t1):"")+'</button></li>':""}).join("")+'</ul>');
  var dest=p.ll?p.ll.join(","):p.name+(p.city?", "+nm(p.city):"");
  openSheet('<div class="sh-head"><h2 id="sh-title">'+esc(p.name)+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+h,
-  '<div class="actions"><a class="btn" href="'+esc(mapHref(p))+'" target="_blank" rel="noopener">Abrir en Maps</a><a class="btn primary" style="--c1:var(--accent)" href="'+esc("https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(dest))+'" target="_blank" rel="noopener">Cómo llegar</a></div>');
+  '<div class="actions"><a class="btn" href="'+esc(mapHref(p))+'" target="_blank" rel="noopener">Abrir en Maps</a><a class="btn primary" style="--c1:var(--accent)" href="'+esc("https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(dest)+(p.pid?"&destination_place_id="+encodeURIComponent(p.pid):""))+'" target="_blank" rel="noopener">Cómo llegar</a></div>');
+ // con internet, el tiempo a pie real de Google reemplaza al estimado
+ if(GM_ON&&!gFail&&isOnline()&&p.ll){var an2=dayAnchors(dd,all).filter(function(a){return a.p!==p});
+  an2.forEach(function(a,i){routesWalk(a.p.ll,p.ll).then(function(min){var w=sheetBody.querySelector('.wk[data-i="'+i+'"]');if(!w)return;w.textContent=walkText(min)+" a pie";var nt=$("#md-note");if(nt)nt.textContent="Tiempo a pie según Google Maps."}).catch(function(){})})}
 }
 if(typeof window!=="undefined"){window.addEventListener("online",function(){if(view==="map")renderMap()});window.addEventListener("offline",function(){if(view==="map")renderMap()})}
+/* ---- Google Maps: mapa, coordenadas por nombre y tiempo a pie ----
+   La clave va en el código a propósito: el mapa se dibuja en el navegador. Está restringida en
+   Google Cloud a nicozapatacruz.github.io/tripapp/* y localhost, y solo a Maps JavaScript,
+   Geocoding y Routes (en prueba gratuita hasta ~8 feb 2027: no cobra; ver PENDIENTES.md). */
+var GM_KEY="AIzaSyAE46uJ7JtkDkKJY9nN7OARfz0qlcKkXDc",GM_MAPID="83a25be103270202f5082791";
+var GM_ON=!!GM_KEY&&!(typeof navigator!=="undefined"&&/jsdom/i.test(navigator.userAgent||""));   // en los tests no se carga Google
+var gmP=null,gm=null,gmEl=null,gmMarkers=[],gmMe=null,gFail=false,gmFitKey="";
+if(GM_ON)mapState.mode="map";
+window.gm_authFailure=function(){gFail=true;if(view==="map")renderMap()};   // clave rechazada por Google
+function loadGM(){
+ if(gmP)return gmP;
+ gmP=new Promise(function(res,rej){
+  window.__gmReady=function(){res()};
+  var s=document.createElement("script");
+  s.src="https://maps.googleapis.com/maps/api/js?key="+GM_KEY+"&v=weekly&language=es&region=ES&loading=async&callback=__gmReady";
+  s.async=true;s.onerror=function(){gmP=null;rej(new Error("maps"))};
+  document.head.appendChild(s);
+ });
+ return gmP;
+}
+/* Coordenadas buscadas por nombre: Google solo permite guardarlas 30 días (el place_id, sin
+   límite), así que se renuevan pasado ese tiempo. Clave de dispositivo: no va en el itinerario. */
+var GEO_DAYS=30,geoTried={},geoBusy=false;
+function geoOf(k){var g=kv.geo&&kv.geo[k];return g||null}
+function geoFresh(g){return !!g&&Date.now()-(g.t||0)<GEO_DAYS*864e5}
+function applyGeo(list){list.forEach(function(p){if(p.ll)return;var g=geoOf(p.gk);if(geoFresh(g)&&g.ll){p.ll=g.ll;p.pid=g.pid||"";p.geo=true}})}
+function geoQuery(p){
+ var city=p.city&&CITIES[p.city]?CITIES[p.city]:null;
+ return p.name+(city?", "+city.name+(p.city==="medellin"?", Colombia":", España"):"");
+}
+function nearCity(p,ll){var c=p.city&&CCOORD[p.city];if(!c)return true;return distKm([c[0],c[1]],ll)<=c[2]*1.5}
+async function geoRun(list){
+ if(!GM_ON||gFail||geoBusy||!isOnline())return;
+ var todo=list.filter(function(p){var g=geoOf(p.gk);return !p.ll&&!geoTried[p.gk]&&!(geoFresh(g)&&g.bad)}).slice(0,40);
+ if(!todo.length)return;
+ geoBusy=true;
+ try{
+  await loadGM();
+  var lib=await google.maps.importLibrary("geocoding"),geocoder=new lib.Geocoder(),geo=Object.assign({},kv.geo||{}),changed=0;
+  for(var i=0;i<todo.length;i++){
+   var p=todo[i],old=geo[p.gk];geoTried[p.gk]=1;
+   var req=old&&old.pid?{placeId:old.pid}:{address:geoQuery(p)};
+   try{
+    var r=await geocoder.geocode(req),res=r&&r.results&&r.results[0];
+    if(res){var ll=[res.geometry.location.lat(),res.geometry.location.lng()];
+     // un resultado genérico (la ciudad, la región, el país) no sirve: con nombres propios como
+     // «Casa» Google devuelve el centro de la ciudad, y el punto quedaría mal puesto
+     var gen=(res.types||[]).some(function(t){return /^(locality|political|country|administrative_area_level_\d|postal_code|sublocality.*)$/.test(t)});
+     geo[p.gk]=!gen&&nearCity(p,ll)?{ll:ll,pid:res.place_id||"",t:Date.now()}:{bad:1,t:Date.now()};changed++}
+   }catch(e){ if(String(e&&e.code||e).indexOf("ZERO_RESULTS")>=0){geo[p.gk]={bad:1,t:Date.now()};changed++} }
+   await new Promise(function(r){setTimeout(r,120)});   // sin prisa: no saturar el cupo
+  }
+  if(changed){await setKV("geo",geo);if(view==="map")renderMap()}
+ }catch(e){}
+ geoBusy=false;
+}
+function gmPin(p,num){
+ var el=document.createElement("div");el.className="gpin"+(num?" num":"");el.style.setProperty("--t",mapColor(p));
+ el.innerHTML=num?String(num):svg(mapIcon(p),15);return el;
+}
+async function mountMap(vis,nums){
+ var box=V.map.querySelector(".mapbox");if(!box)return;
+ // alto: hasta justo encima de la barra de abajo (así los botones y el logo de Google no quedan tapados)
+ var nb=$("#bnav"),top=box.getBoundingClientRect().top+window.scrollY,navH=nb&&!nb.hidden?nb.offsetHeight:0;
+ if(window.innerHeight)box.style.height=Math.max(320,Math.round(window.innerHeight-top-navH-12))+"px";
+ if(!gmEl){gmEl=document.createElement("div");gmEl.className="gmap"}
+ box.insertBefore(gmEl,box.firstChild);
+ try{
+  await loadGM();
+  var maps=await google.maps.importLibrary("maps"),mk=await google.maps.importLibrary("marker");
+  if(!gm)gm=new maps.Map(gmEl,{mapId:GM_MAPID,center:{lat:40.2,lng:-3.7},zoom:6,disableDefaultUI:true,zoomControl:true,clickableIcons:false,gestureHandling:"greedy"});
+  gmMarkers.forEach(function(m){m.map=null});gmMarkers=[];
+  vis.filter(function(p){return p.ll}).forEach(function(p){
+   var m=new mk.AdvancedMarkerElement({map:gm,position:{lat:p.ll[0],lng:p.ll[1]},content:gmPin(p,nums[p.id]),title:p.name,zIndex:nums[p.id]?100-nums[p.id]:1,gmpClickable:true});
+   m.addListener("click",function(){openMapCard(p.id)});gmMarkers.push(m);
+  });
+  var fk=mapState.day+"|"+Object.keys(mapState.cats).join(",")+"|"+mapState.st+"|"+gmMarkers.length;
+  if(fk!==gmFitKey){gmFitKey=fk;gmFit(vis)}
+ }catch(e){gFail=true;renderMap()}
+}
+/* Encuadrar: todo lo visible; en "Todo el viaje" sin Medellín (si no, España se ve diminuta) */
+function gmFit(vis){
+ if(!gm||typeof google==="undefined")return;
+ var pts=vis.filter(function(p){return p.ll});
+ if(mapState.day==="all"){var es=pts.filter(function(p){return p.city!=="medellin"});if(es.length)pts=es}
+ if(!pts.length){gm.setCenter({lat:40.2,lng:-3.7});gm.setZoom(6);return}
+ if(pts.length===1){gm.setCenter({lat:pts[0].ll[0],lng:pts[0].ll[1]});gm.setZoom(15);return}
+ var b=new google.maps.LatLngBounds();pts.forEach(function(p){b.extend({lat:p.ll[0],lng:p.ll[1]})});gm.fitBounds(b,48);
+}
+function gmLocate(){
+ if(!navigator.geolocation){toast("Este teléfono no permite ver tu ubicación");return}
+ navigator.geolocation.getCurrentPosition(async function(pos){
+  if(!gm)return;var ll={lat:pos.coords.latitude,lng:pos.coords.longitude};
+  var mk=await google.maps.importLibrary("marker");
+  if(gmMe)gmMe.map=null;var el=document.createElement("div");el.className="gme";
+  gmMe=new mk.AdvancedMarkerElement({map:gm,position:ll,content:el,title:"Estás aquí",zIndex:200});
+  gm.panTo(ll);if(gm.getZoom()<14)gm.setZoom(15);
+ },function(){toast("No se pudo obtener tu ubicación")},{enableHighAccuracy:true,timeout:10000});
+}
+/* Tiempo a pie real (Routes API); si falla o no hay internet, queda el estimado */
+var walkCache={};
+function routesWalk(a,b){
+ var k=a.join(",")+">"+b.join(",");if(walkCache[k])return Promise.resolve(walkCache[k]);
+ return fetch("https://routes.googleapis.com/directions/v2:computeRoutes",{method:"POST",headers:{"Content-Type":"application/json","X-Goog-Api-Key":GM_KEY,"X-Goog-FieldMask":"routes.duration"},
+  body:JSON.stringify({origin:{location:{latLng:{latitude:a[0],longitude:a[1]}}},destination:{location:{latLng:{latitude:b[0],longitude:b[1]}}},travelMode:"WALK"})})
+  .then(function(r){return r.ok?r.json():Promise.reject(r.status)})
+  .then(function(j){var s=j&&j.routes&&j.routes[0]&&parseInt(j.routes[0].duration,10);if(!s)throw 0;walkCache[k]=Math.max(1,Math.round(s/60));return walkCache[k]});
+}
+
 
 /* ================= Resumen de gastos e impresión =================
    Todos los documentos con precio, en el orden del viaje. En cada uno se puede poner lo
@@ -1963,6 +2081,8 @@ document.addEventListener("click",function(e){
  else if(a==="mmode"){mapState.mode=b.dataset.v;renderMap()}
  else if(a==="mcat"){var mc=b.dataset.c;if(mapState.cats[mc])delete mapState.cats[mc];else mapState.cats[mc]=1;renderMap()}
  else if(a==="mcard"){openMapCard(b.dataset.id)}
+ else if(a==="m-me"){gmLocate()}
+ else if(a==="m-fit"){gmFit(mapVisible(mapPoints()))}
  else if(a==="map-day"){mapState.day=b.dataset.day;mapFrom=location.hash||"#inicio";location.hash="#mapa"}
  else if(a==="spend"){openSpend()}
  else if(a==="sumtog"){setKV("sumOpen",!kv.sumOpen);renderDocsView()}

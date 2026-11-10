@@ -10,25 +10,19 @@ Antes de seguir con las fases 2 y 3, Nicolas quiere pulir la app.
 En este orden:
 
 1. [x] Diseño del mapa acordado (10 nov), ver abajo "Diseño del mapa".
-2. [ ] Nicolas: proyecto en Google Cloud con facturación, Maps JavaScript
-       API + Geocoding API + Routes API (tiempo a pie), clave restringida a
-       `nicozapatacruz.github.io/tripapp/*` y `localhost:5180/*`, límites
-       diarios y alerta de presupuesto. Claude guía paso a paso.
-3. [ ] Conectar Google Maps (el resto de la pestaña Mapa ya está hecho,
-       ver bitácora 10 nov): dibujar el mapa con los puntos y sus números,
-       "estoy aquí", "encuadrar", tarjeta al tocar un punto, tiempo a pie
-       real con Google (sin internet sigue el estimado) y abrir el modo Mapa
-       por defecto.
-   - Construir el mapa. Coordenadas: se buscan una vez por nombre + ciudad
-       y se guardan; las dudosas se marcan para corregir (mover el punto o
-       pegar el enlace largo). Los enlaces cortos (maps.app.goo.gl) no se
-       pueden abrir desde la app sin servidor.
-   - Abrir la ficha exacta en Google Maps (no una lista de resultados) en
-     lo que hoy es búsqueda por nombre (sitios de Qué ver / Comer y
-     direcciones sin enlace): guardar el `place_id` y usar
-     `query_place_id` en el enlace. Las 13 estaciones y aeropuertos de la
-     app ya tienen enlace exacto (ver bitácora 10 nov) y sus coordenadas
-     están en el enlace (`!3d…!4d…`).
+2. [ ] Probar el mapa en el iPhone y en el computador (`npm run dev` →
+       http://localhost:5180/tripapp/#mapa). Revisar en Google Cloud que
+       los sitios de la clave terminen en `*`.
+   - Google Cloud está en **prueba gratuita** (300 USD ≈ 269 € de crédito):
+     no cobra y no deja poner límites diarios. Termina hacia el **8 feb
+     2027** (90 días desde el 10 nov), después del viaje. Desde entonces el
+     mapa deja de funcionar hasta activar la cuenta completa; si se quiere
+     seguir usando, activarla y poner límites diarios de ~500 por servicio.
+   - Quizás: agrupar los puntos cercanos cuando el mapa está alejado (un
+     círculo con el número de sitios que se abre al acercarse). Hoy, en
+     "Todo el viaje", los sitios de una ciudad quedan uno encima del otro.
+   - Quizás: corregir un punto moviéndolo en el mapa (hoy se corrige
+     pegando el enlace largo de Google Maps en el documento o la lista).
 
 ### Diseño del mapa (acordado con Nicolas, 10 nov)
 

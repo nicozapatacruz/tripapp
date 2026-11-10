@@ -14,6 +14,28 @@ Reglas:
 
 ## 2026-11-10
 
+- Google Maps conectado (clave y Map ID creados por Nicolas; clave
+  restringida a la web y a localhost, solo Maps JavaScript, Geocoding y
+  Routes, alerta de presupuesto de 1 €). La clave va en el código a
+  propósito: el mapa se dibuja en el navegador.
+  - Modo Mapa por defecto: puntos con el color e ícono de su tipo (o su
+    número en un día), "Mi ubicación" (punto azul) y "Encuadrar" (en "Todo
+    el viaje" sin Medellín). Tocar un punto abre la tarjeta.
+  - Lo que no tiene coordenadas en su enlace se busca por nombre + ciudad
+    (Geocoder de Google), hasta 40 por vez, sin prisa. Se descartan los
+    resultados genéricos (ciudad, región, país: con "Casa" Google daría el
+    centro de la ciudad) y los que caen lejos de su ciudad; esos quedan
+    "Sin ubicar" con indicación de pegar el enlace largo. Se guardan en
+    `geo` (clave de dispositivo, no va en el itinerario) con su place_id;
+    las coordenadas se renuevan a los 30 días (condiciones de Google).
+  - Con place_id, "Abrir en Maps" y "Cómo llegar" abren la ficha exacta.
+  - Tarjeta: el tiempo a pie real de Google (Routes API) reemplaza al
+    estimado; sin internet o si falla, queda el estimado.
+  - Sin internet o si Google falla / rechaza la clave: aviso y "Ver como
+    lista". En los tests no se carga Google.
+  - El alto del mapa se calcula para terminar justo encima de la barra de
+    abajo (con un alto fijo, los botones quedaban tapados).
+
 - Pestaña **Mapa** (todo menos el mapa de Google, que espera la clave),
   según el diseño acordado:
   - Quinto botón en la barra de abajo (ícono del mapa doblado), ruta `#mapa`.
