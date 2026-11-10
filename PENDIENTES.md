@@ -26,11 +26,12 @@ En este orden:
        y se guardan; las dudosas se marcan para corregir (mover el punto o
        pegar el enlace largo). Los enlaces cortos (maps.app.goo.gl) no se
        pueden abrir desde la app sin servidor.
-   - Abrir la ficha exacta en Google Maps (no una lista de resultados):
-     guardar el `place_id` de cada lugar y usar `query_place_id` en el
-     enlace. Incluye las 20 estaciones y aeropuertos de la app y los
-     documentos que ya guardaron su enlace de búsqueda (corregirlo al
-     mostrarlo, sin reescribir los datos).
+   - Abrir la ficha exacta en Google Maps (no una lista de resultados) en
+     lo que hoy es búsqueda por nombre (sitios de Qué ver / Comer y
+     direcciones sin enlace): guardar el `place_id` y usar
+     `query_place_id` en el enlace. Las 13 estaciones y aeropuertos de la
+     app ya tienen enlace exacto (ver bitácora 10 nov) y sus coordenadas
+     están en el enlace (`!3d…!4d…`).
 
 
 ## Fase 3 · Compartir con Supabase (en pausa; idea original: 20 nov – 15 dic)
