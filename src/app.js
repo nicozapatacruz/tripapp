@@ -1275,10 +1275,10 @@ function openPlaces(){
  function row(p,city){
   var d0=byId[p.docIds[0]],ty=d0&&TYPES[d0.type]?d0.type:"otro";
   var used=p.docIds.map(function(id){var d=byId[id];if(!d)return "";var dy=dayById(d.dayId);
-   return '<button type="button" class="mini" data-act="view" data-id="'+d.id+'">'+esc(d.title||TYPES[ty].l)+(dy?' · '+esc(shortDay(dy)):"")+'</button>'}).filter(Boolean).join(" · ");
+   return '<li><button type="button" class="mini" data-act="view" data-id="'+d.id+'">'+esc(d.title||TYPES[ty].l)+(dy?' · '+esc(shortDay(dy)):"")+'</button></li>'}).filter(Boolean).join("");
   var where=city==="_"&&p.cities?'<p>'+esc(p.cities.map(nm).join(" o "))+'</p>':"";
   var u=p.url||gmap(p.name+(city!=="_"?", "+nm(city):""));
-  return '<li class="pl adr"><span class="adri" style="--t:'+TYPES[ty].t+'">'+svg(TYPE_ICON[ty]||"file",18)+'</span><div class="adrt"><b>'+esc(p.name)+'</b>'+where+'<p>'+used+'</p>'+(p.url?"":'<p class="adrw">Sin enlace al mapa · se buscará por el nombre</p>')+'</div>'+mapBtn(u)+'</li>';
+  return '<li class="pl adr"><span class="adri" style="--t:'+TYPES[ty].t+'">'+svg(TYPE_ICON[ty]||"file",18)+'</span><div class="adrt"><b>'+esc(p.name)+'</b>'+where+'<ul class="adru">'+used+'</ul>'+(p.url?"":'<p class="adrw">Sin enlace al mapa · se buscará por el nombre</p>')+'</div>'+mapBtn(u)+'</li>';
  }
  var keys=order.filter(function(k){return groups[k]}).concat(groups._?["_"]:[]);
  var body=keys.map(function(k){var g=groups[k].sort(function(a,b){return a.first<b.first?-1:a.first>b.first?1:0});

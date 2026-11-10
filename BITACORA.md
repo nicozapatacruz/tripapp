@@ -26,6 +26,8 @@ Reglas:
   para más adelante si hace falta). Las 20 estaciones y aeropuertos que trae
   la app (solo sugerencias, no se guardan ni van en la copia) no se listan;
   solo se cuentan al final. Lógica de agrupado en `savedPlaces` (places.js).
+  Los documentos que usan cada dirección van como lista con viñetas, uno por
+  línea (antes iban seguidos y separados por "·").
 
 ## 2026-11-09
 
