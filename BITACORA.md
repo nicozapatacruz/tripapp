@@ -40,6 +40,12 @@ Reglas:
     seguía en Documentos (se había quitado el de Pendientes por error).
     La barra se muestra siempre, con 0,00 € si en ese filtro no hay
     precios, para que la lista no salte arriba y abajo al cambiar de filtro.
+    Misma altura con y sin el botón de imprimir (alto mínimo de 38 px). Los
+    documentos sin precio ya no van en el desplegable: se ven en pequeño
+    bajo el título ("Gastado en hotel / 2 sin precio"); el desplegable queda
+    solo para el desglose por tipo en "Todos".
+  - La fila de filtros ya no vuelve al inicio al tocar uno (al redibujar
+    se conserva su posición y el filtro elegido queda siempre a la vista).
 
 - Resumen de gastos para imprimir: botón con ícono de imprimir arriba a la
   derecha del recuadro negro "Gastado en el viaje" (solo con el filtro

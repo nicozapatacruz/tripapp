@@ -581,10 +581,10 @@ function summaryHTML(shown){
   var by={};pr.forEach(function(d){(by[d.type]=by[d.type]||[]).push(d)});
   inner+='<ul class="sumrows">'+Object.keys(TYPES).filter(function(k){return by[k]}).map(function(k){return '<li style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],18)+'<span>'+TYPES[k].l+' <small>'+by[k].length+'</small></span><b>'+sumHTML(sumDocs(by[k]))+'</b></li>'}).join("")+'</ul>';
  }
- var np=shown.length-pr.length;
- if(np>0)inner+='<p class="foot">'+np+(np===1?" documento sin precio.":" documentos sin precio.")+'</p>';
+ // cuántos no tienen precio: en pequeño bajo el título (no escondido en el desplegable)
+ var np=shown.length-pr.length,npT=np>0?'<small>'+np+' sin precio</small>':"";
  var open=!!kv.sumOpen&&!!inner;
- return '<section class="sumbox'+(open?" open":"")+(all?"":" noprt")+'"><div class="sbrow"><button type="button" class="sbtog"'+(inner?' data-act="sumtog" aria-expanded="'+open+'"':' disabled')+'>'+(inner?'<i class="sbcv">'+svg("chev",18)+'</i>':"")+'<span>'+(all?"Gastado en el viaje":"Gastado en "+TYPES[docFilter].l.toLowerCase())+'</span><b>'+(pr.length?sumHTML(sumDocs(pr)):esc(fmtMoney(0,"EUR")))+'</b></button>'+
+ return '<section class="sumbox'+(open?" open":"")+(all?"":" noprt")+'"><div class="sbrow"><button type="button" class="sbtog"'+(inner?' data-act="sumtog" aria-expanded="'+open+'"':' disabled')+'>'+(inner?'<i class="sbcv">'+svg("chev",18)+'</i>':"")+'<span class="sbl">'+(all?"Gastado en el viaje":"Gastado en "+TYPES[docFilter].l.toLowerCase())+npT+'</span><b>'+(pr.length?sumHTML(sumDocs(pr)):esc(fmtMoney(0,"EUR")))+'</b></button>'+
   (all?'<button type="button" class="prt" data-act="spend" aria-label="Resumen de gastos para imprimir">'+svg("print",20)+'</button>':"")+'</div>'+
   (open?'<div class="sbin">'+inner+'</div>':"")+'</section>';
 }
@@ -921,6 +921,7 @@ function renderPend(){
 }
 function renderDocsView(){
  if(docsTab==="pend"){renderPend();updateFab();return}
+ var fl0=V.docs.querySelector(".filters"),fsl=fl0?fl0.scrollLeft:0;   // la fila de filtros no vuelve al inicio al redibujar
  var counts={};docs.forEach(function(d){counts[d.type]=(counts[d.type]||0)+1});
  var chips='<button type="button" class="chip" data-act="filter" data-f="all" aria-pressed="'+(docFilter==="all")+'">Todos '+docs.length+'</button>'+Object.keys(TYPES).filter(function(k){return counts[k]}).map(function(k){return '<button type="button" class="chip" data-act="filter" data-f="'+k+'" aria-pressed="'+(docFilter===k)+'">'+TYPES[k].l+' '+counts[k]+'</button>'}).join("");
  var shown=docs.filter(function(d){return docFilter==="all"||d.type===docFilter});
@@ -935,6 +936,10 @@ function renderDocsView(){
  else if(past)body=['<button type="button" class="pastbar open" data-act="pastdocs" aria-expanded="true"><span>Ocultar días anteriores</span>'+svg("chev",18)+'</button>'].concat(body);
  body=body.join("");
  V.docs.innerHTML='<div class="in"><div class="page-h"><h1>Documentos</h1></div>'+segHTML()+summaryHTML(shown)+'<div class="filters">'+chips+'</div><div class="dgroups">'+(body||'<div class="empty"><b>Todavía no hay documentos</b><span>Añade el primero y asígnalo a un día del viaje.</span></div>')+'</div><div class="fabspace"></div></div>';
+ // misma posición de la fila de filtros, y el elegido siempre a la vista
+ var fl=V.docs.querySelector(".filters");
+ if(fl){fl.scrollLeft=fsl;var on=fl.querySelector('[aria-pressed="true"]');
+  if(on){var l=on.offsetLeft-fl.offsetLeft,r=l+on.offsetWidth;if(l<fl.scrollLeft)fl.scrollLeft=l-16;else if(r>fl.scrollLeft+fl.clientWidth)fl.scrollLeft=r-fl.clientWidth+16}}
  updateFab();
 }
 

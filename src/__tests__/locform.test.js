@@ -1034,7 +1034,12 @@ describe("formulario: ubicaciones", () => {
     expect($("#v-docs .sumbox").classList.contains("noprt")).toBe(true);
     // en todos los filtros la barra sigue ahí (con 0 si no hay precios): la lista no salta
     const fs = [...document.querySelectorAll("#v-docs [data-act=filter]")].map((b) => b.dataset.f);
-    fs.forEach((f) => { click($('#v-docs [data-act=filter][data-f="' + f + '"]')); expect($("#v-docs .sumbox")).not.toBeNull(); });
+    fs.forEach((f) => {
+      click($('#v-docs [data-act=filter][data-f="' + f + '"]'));
+      expect($("#v-docs .sumbox")).not.toBeNull();
+      if (f !== "all") expect($("#v-docs .sumbox [data-act=sumtog]")).toBeNull();   // con filtro no hay desplegable
+    });
+    expect($("#v-docs .sumbox .foot")).toBeNull();                      // «sin precio» va bajo el título, no desplegado
     click($('#v-docs [data-act=filter][data-f="all"]'));
   });
 
