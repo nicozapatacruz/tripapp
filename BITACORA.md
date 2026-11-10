@@ -14,6 +14,13 @@ Reglas:
 
 ## 2026-11-10
 
+- Diseño del mapa acordado (detalle en `PENDIENTES.md` → "Diseño del
+  mapa"): pestaña Mapa | Lista, filtros por día, tipo y estado (sin "Ya
+  fui" por defecto), numeración por hora en un día, eventos creados desde un
+  sitio quedan vinculados a él y lo muestran solo ese día, tiempo a pie con
+  Google y estimado sin internet, "Direcciones guardadas" sale de Ajustes,
+  botón de mapa en cada día y plan B para todo lo que necesite internet.
+
 - Barra de abajo solo con íconos (decisión de Nicolas: el título de cada
   página ya dice dónde se está; así cabe un quinto botón, "Mapa"). El
   nombre sigue en `aria-label` para lectores de pantalla. Ruta tiene un

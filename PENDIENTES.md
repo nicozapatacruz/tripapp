@@ -9,16 +9,9 @@ Antes de seguir con las fases 2 y 3, Nicolas quiere pulir la app.
 
 En este orden:
 
-1. [ ] Mapa dentro de la app (para planear el orden de cada día y no
-       alejarse de los puntos de traslado). Primero decidir juntos el diseño:
-       pestaña "Mapa" en la barra de abajo con modos Mapa | Lista (la lista
-       reemplaza "Direcciones guardadas" de Ajustes); filtros por día (Todo
-       el viaje / Hoy / un día), tipo (Hoteles, Traslados, Qué ver, Comer,
-       Otros) y estado; puntos numerados en el orden del día; "estoy aquí";
-       tarjeta al tocar un punto con estado, documentos y "Cómo llegar";
-       botón de mapa en cada día que lo abre filtrado.
+1. [x] Diseño del mapa acordado (10 nov), ver abajo "Diseño del mapa".
 2. [ ] Nicolas: proyecto en Google Cloud con facturación, Maps JavaScript
-       API + Geocoding API (+ Places si hace falta), clave restringida a
+       API + Geocoding API + Routes API (tiempo a pie), clave restringida a
        `nicozapatacruz.github.io/tripapp/*` y `localhost:5180/*`, límites
        diarios y alerta de presupuesto. Claude guía paso a paso.
 3. [ ] Construir el mapa. Coordenadas: se buscan una vez por nombre + ciudad
@@ -31,6 +24,51 @@ En este orden:
      `query_place_id` en el enlace. Las 13 estaciones y aeropuertos de la
      app ya tienen enlace exacto (ver bitácora 10 nov) y sus coordenadas
      están en el enlace (`!3d…!4d…`).
+
+### Diseño del mapa (acordado con Nicolas, 10 nov)
+
+Para planear el orden de cada día y no alejarse de los puntos de traslado.
+
+- **Barra de abajo** solo con íconos (hecho); se añade "Mapa" (ícono del
+  mapa doblado) como quinto botón. Si se aprieta, Ajustes pasaría a un
+  engranaje en la cabecera de Ruta.
+- **Pestaña Mapa** con modos Mapa | Lista.
+  - Selector de día: Todo el viaje / Hoy (durante el viaje) / un día.
+  - Filtros combinables: Hoteles, Traslados, Qué ver, Comer, Otros
+    documentos. Estado: por defecto se esconde "Ya fui".
+  - Puntos con el color e ícono de su tipo. "Todo el viaje" encuadra
+    España (sin Medellín). Botones "estoy aquí" y "encuadrar".
+- **Un día concreto**: sus documentos con ubicación (numerados ①②③ los
+  que tienen hora, en el orden del día; el hotel sin número) + los sitios
+  de Qué ver y Comer de sus ciudades (sin número, salen todos los días en
+  esa ciudad).
+- **Eventos vinculados a un lugar**: al crear un evento con el 📅+ de un
+  sitio de Qué ver / Comer, el evento recuerda el lugar (campo nuevo
+  opcional en el evento). Ese sitio sale en el mapa solo los días de sus
+  eventos (con número si tiene hora), no todos los días de la ciudad; en
+  "Todo el viaje" sale siempre. Los eventos creados a mano sin lugar no
+  salen en el mapa.
+- **Tarjeta al tocar un punto**: nombre y tipo; distancia al hotel del día
+  y, si hay traslado, a la estación, con tiempo a pie de Google ("18 min a
+  pie"); sin internet, estimado ("≈ 20 min a pie · estimado en línea recta,
+  sin internet"). Selector de estado. Documentos: título y "Ver ficha".
+  Botones "Cómo llegar" (ruta en Google Maps) y "Abrir en Maps".
+- **Modo Lista**: mismos puntos y filtros, agrupados por ciudad; tocar una
+  fila abre el mapa centrado con su tarjeta. Grupo "Sin ubicar" al final
+  para corregir. Reemplaza "Direcciones guardadas", que sale del todo de
+  Ajustes.
+- **Desde cada día**: ícono de mapa en la barra fija del día (junto a "Día
+  X de Y") que abre el mapa filtrado en ese día; ‹ vuelve al día.
+- **Sin internet** (plan B en todo lo que dependa de la red; también se
+  trata como sin internet si una petición a Google falla, p. ej. wifi de
+  hotel sin acceso):
+  - El mapa no carga → aviso "Sin internet: el mapa no se puede mostrar"
+    con botón "Ver como lista".
+  - Tiempo a pie → estimado, avisando que lo es.
+  - Sitio nuevo sin coordenadas → queda "Pendiente de ubicar" y se ubica
+    solo al volver la conexión.
+  - "Cómo llegar" / "Abrir en Maps" → abren Google Maps (usa sus mapas
+    descargados).
 
 
 ## Fase 3 · Compartir con Supabase (en pausa; idea original: 20 nov – 15 dic)
