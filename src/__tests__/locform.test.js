@@ -924,7 +924,11 @@ describe("formulario: ubicaciones", () => {
     const linked = casas.find((x) => x.querySelector("a.map").getAttribute("href") === A);  // la Casa con enlace
     expect(linked.querySelector(".adrw")).toBeNull();
     expect(linked.querySelectorAll('[data-act="view"]').length).toBeGreaterThan(0);
-    expect($("#sheet-body").textContent).toMatch(/estaciones y aeropuertos/);
+    const fx = $("#sheet-body details.adrx");                           // las de la app: plegadas
+    expect(fx.open).toBe(false);
+    expect(fx.querySelector("summary").textContent).toMatch(/aeropuertos de la app/);
+    expect(fx.querySelectorAll(".pl.adr").length).toBe(+fx.querySelector("summary small").textContent);
+    expect(fx.textContent).toContain("Sevilla Santa Justa");
     click(li.querySelector('[data-act="view"]'));                       // abre la ficha del documento
     expect($("#sh-title").textContent).not.toBe("Direcciones guardadas");
     click($('[data-act="close"]'));

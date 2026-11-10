@@ -1283,10 +1283,20 @@ function openPlaces(){
  var keys=order.filter(function(k){return groups[k]}).concat(groups._?["_"]:[]);
  var body=keys.map(function(k){var g=groups[k].sort(function(a,b){return a.first<b.first?-1:a.first>b.first?1:0});
   return '<section class="adrg"><h3 class="lab">'+(k==="_"?"Sin ciudad definida":esc(nm(k)))+' <small>'+g.length+'</small></h3><ul class="rows">'+g.map(function(p){return row(p,k)}).join("")+'</ul></section>'}).join("");
- var usedFixed=PLACES.filter(function(n){return list.some(function(p){return normName(p.name)===normName(n)})}).length,rest=PLACES.length-usedFixed;
+ var usedFixed=PLACES.filter(function(n){return list.some(function(p){return normName(p.name)===normName(n)})}).length;
  openSheet('<div class="sh-head"><h2 id="sh-title">Direcciones guardadas</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
   (body||'<p class="foot">Todavía no hay direcciones. Se guardan al poner una ubicación en un documento.</p>')+
-  (rest?'<p class="foot">Además, la app trae '+(usedFixed?"otras ":"")+rest+' estaciones y aeropuertos que se sugieren al escribir una ubicación.</p>':""));
+  fixedHTML());
+ function fixedHTML(){
+  var l=PLACES.filter(function(n){return !list.some(function(p){return normName(p.name)===normName(n)})})
+   .map(function(n){return {n:n,c:detectCity(n,"")}})
+   .sort(function(a,b){return order.indexOf(a.c)-order.indexOf(b.c)});
+  if(!l.length)return "";
+  return '<details class="adrx"><summary>'+(usedFixed?"Otras estaciones":"Estaciones")+' y aeropuertos de la app <small>'+l.length+'</small><span class="cv">'+svg("chev",18)+'</span></summary>'+
+   '<p class="foot">Se sugieren al escribir una ubicación. No se guardan ni van en la copia.</p><ul class="rows">'+l.map(function(x){
+    var ty=/aeropuerto/i.test(x.n)?"vuelo":/autobuses/i.test(x.n)?"bus":"tren";
+    return '<li class="pl adr"><span class="adri" style="--t:'+TYPES[ty].t+'">'+svg(TYPE_ICON[ty],18)+'</span><div class="adrt"><b>'+esc(x.n)+'</b>'+(x.c?'<p>'+esc(nm(x.c))+'</p>':"")+'</div>'+mapBtn(gmap(x.n))+'</li>'}).join("")+'</ul></details>';
+ }
 }
 
 /* ================= Ajustes y copia de seguridad ================= */

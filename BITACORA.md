@@ -27,7 +27,12 @@ Reglas:
   la app (solo sugerencias, no se guardan ni van en la copia) no se listan;
   solo se cuentan al final. Lógica de agrupado en `savedPlaces` (places.js).
   Los documentos que usan cada dirección van como lista con viñetas, uno por
-  línea (antes iban seguidos y separados por "·").
+  línea (antes iban seguidos y separados por "·"). La viñeta va con la
+  primera línea cuando el texto ocupa dos (el botón era un bloque en línea y
+  la viñeta se alineaba con su última línea). Las estaciones y aeropuertos
+  de la app que no se han usado ahora se pueden ver: lista plegada al final
+  ("Otras estaciones y aeropuertos de la app · 19"), en el orden del viaje,
+  con su ciudad y el botón de mapa.
 
 ## 2026-11-09
 
