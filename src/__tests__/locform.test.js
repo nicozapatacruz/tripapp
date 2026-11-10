@@ -1032,6 +1032,9 @@ describe("formulario: ubicaciones", () => {
     expect($("#v-docs .sumbox .sumrows")).toBeNull();
     click($('#v-docs [data-act=filter][data-f="entrada"]'));             // filtrado: sin imprimir, mismo margen a ambos lados
     expect($("#v-docs .sumbox").classList.contains("noprt")).toBe(true);
+    // en todos los filtros la barra sigue ahí (con 0 si no hay precios): la lista no salta
+    const fs = [...document.querySelectorAll("#v-docs [data-act=filter]")].map((b) => b.dataset.f);
+    fs.forEach((f) => { click($('#v-docs [data-act=filter][data-f="' + f + '"]')); expect($("#v-docs .sumbox")).not.toBeNull(); });
     click($('#v-docs [data-act=filter][data-f="all"]'));
   });
 

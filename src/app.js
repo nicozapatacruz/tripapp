@@ -573,16 +573,18 @@ function priceField(d){
 /* Barra de gastos: una línea con el total; al tocarla se despliega el desglose (se recuerda en
    este dispositivo). El ícono de imprimir abre el resumen para imprimir. */
 function summaryHTML(shown){
- var pr=shown.filter(function(d){return d.price!=null});if(!pr.length)return "";
+ // la barra se muestra siempre (con 0 si no hay precios), para que la lista no salte al cambiar de filtro
+ if(!shown.length)return "";
+ var pr=shown.filter(function(d){return d.price!=null});
  var all=docFilter==="all",inner="";
- if(all){
+ if(all&&pr.length){
   var by={};pr.forEach(function(d){(by[d.type]=by[d.type]||[]).push(d)});
   inner+='<ul class="sumrows">'+Object.keys(TYPES).filter(function(k){return by[k]}).map(function(k){return '<li style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],18)+'<span>'+TYPES[k].l+' <small>'+by[k].length+'</small></span><b>'+sumHTML(sumDocs(by[k]))+'</b></li>'}).join("")+'</ul>';
  }
  var np=shown.length-pr.length;
  if(np>0)inner+='<p class="foot">'+np+(np===1?" documento sin precio.":" documentos sin precio.")+'</p>';
  var open=!!kv.sumOpen&&!!inner;
- return '<section class="sumbox'+(open?" open":"")+(all?"":" noprt")+'"><div class="sbrow"><button type="button" class="sbtog"'+(inner?' data-act="sumtog" aria-expanded="'+open+'"':' disabled')+'>'+(inner?'<i class="sbcv">'+svg("chev",18)+'</i>':"")+'<span>'+(all?"Gastado en el viaje":"Gastado en "+TYPES[docFilter].l.toLowerCase())+'</span><b>'+sumHTML(sumDocs(pr))+'</b></button>'+
+ return '<section class="sumbox'+(open?" open":"")+(all?"":" noprt")+'"><div class="sbrow"><button type="button" class="sbtog"'+(inner?' data-act="sumtog" aria-expanded="'+open+'"':' disabled')+'>'+(inner?'<i class="sbcv">'+svg("chev",18)+'</i>':"")+'<span>'+(all?"Gastado en el viaje":"Gastado en "+TYPES[docFilter].l.toLowerCase())+'</span><b>'+(pr.length?sumHTML(sumDocs(pr)):esc(fmtMoney(0,"EUR")))+'</b></button>'+
   (all?'<button type="button" class="prt" data-act="spend" aria-label="Resumen de gastos para imprimir">'+svg("print",20)+'</button>':"")+'</div>'+
   (open?'<div class="sbin">'+inner+'</div>':"")+'</section>';
 }

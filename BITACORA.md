@@ -38,6 +38,8 @@ Reglas:
     la barra va a la izquierda del todo, antes de "Gastado en el viaje"; sin el botón de imprimir
     (con un filtro) el margen derecho es igual al izquierdo. El subtítulo
     seguía en Documentos (se había quitado el de Pendientes por error).
+    La barra se muestra siempre, con 0,00 € si en ese filtro no hay
+    precios, para que la lista no salte arriba y abajo al cambiar de filtro.
 
 - Resumen de gastos para imprimir: botón con ícono de imprimir arriba a la
   derecha del recuadro negro "Gastado en el viaje" (solo con el filtro
