@@ -33,6 +33,12 @@ Reglas:
   de la app que no se han usado ahora se pueden ver: lista plegada al final
   ("Otras estaciones y aeropuertos de la app · 19"), en el orden del viaje,
   con su ciudad y el botón de mapa.
+- Decidido: el mapa se hace antes del viaje, con Google Maps dentro de la
+  app (cupo gratis mensual de sobra para uso personal; pide tarjeta pero se
+  limita el uso). Para cuando la ruta se pueda crear, no se mantendrá una
+  tabla propia de estaciones del mundo: se usará un buscador de lugares al
+  crear la ruta y se guardará lo encontrado en el teléfono. Orden y detalle
+  en `PENDIENTES.md`.
 
 ## 2026-11-09
 

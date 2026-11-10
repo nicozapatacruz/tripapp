@@ -7,7 +7,30 @@ El viaje empieza el **27 de diciembre de 2026**.
 
 Antes de seguir con las fases 2 y 3, Nicolas quiere pulir la app.
 
-- [ ] Revisar la versión resumida en Documentos y optimizar el espacio.
+En este orden:
+
+1. [ ] Revisar la versión resumida en Documentos y optimizar el espacio.
+2. [ ] Mapa dentro de la app (para planear el orden de cada día y no
+       alejarse de los puntos de traslado). Primero decidir juntos el diseño:
+       pestaña "Mapa" en la barra de abajo con modos Mapa | Lista (la lista
+       reemplaza "Direcciones guardadas" de Ajustes); filtros por día (Todo
+       el viaje / Hoy / un día), tipo (Hoteles, Traslados, Qué ver, Comer,
+       Otros) y estado; puntos numerados en el orden del día; "estoy aquí";
+       tarjeta al tocar un punto con estado, documentos y "Cómo llegar";
+       botón de mapa en cada día que lo abre filtrado.
+3. [ ] Nicolas: proyecto en Google Cloud con facturación, Maps JavaScript
+       API + Geocoding API (+ Places si hace falta), clave restringida a
+       `nicozapatacruz.github.io/tripapp/*` y `localhost:5180/*`, límites
+       diarios y alerta de presupuesto. Claude guía paso a paso.
+4. [ ] Construir el mapa. Coordenadas: se buscan una vez por nombre + ciudad
+       y se guardan; las dudosas se marcan para corregir (mover el punto o
+       pegar el enlace largo). Los enlaces cortos (maps.app.goo.gl) no se
+       pueden abrir desde la app sin servidor.
+   - Abrir la ficha exacta en Google Maps (no una lista de resultados):
+     guardar el `place_id` de cada lugar y usar `query_place_id` en el
+     enlace. Incluye las 20 estaciones y aeropuertos de la app y los
+     documentos que ya guardaron su enlace de búsqueda (corregirlo al
+     mostrarlo, sin reescribir los datos).
 
 
 ## Fase 3 · Compartir con Supabase (en pausa; idea original: 20 nov – 15 dic)
