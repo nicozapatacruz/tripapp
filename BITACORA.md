@@ -33,6 +33,9 @@ Reglas:
   desmarcado se ve atenuado, no suma en los totales de la hoja ni sale en
   la impresión, y queda guardado en el documento (campo opcional
   `noPrint`). No cambia el "Gastado en el viaje" del recuadro negro.
+  Lo escrito en "Cobrado" también se guarda al cerrar la hoja sin haber
+  salido del campo (con el teclado abierto, iOS no siempre avisa del
+  cambio y se perdía).
 
 - Nueva hoja "Direcciones guardadas" (Ajustes → fila con el número de
   direcciones). Solo consulta: muestra las ubicaciones de los documentos

@@ -989,6 +989,14 @@ describe("formulario: ubicaciones", () => {
     cb.checked = true;
     cb.dispatchEvent(new Event("change", { bubbles: true }));
     await tick();
+    // escribir sin salir del campo y cerrar: también se guarda
+    const t2 = [...document.querySelectorAll("#sheet-body [data-paid]")].find((x) => x.closest(".sprow").textContent.includes("Taxi"));
+    t2.value = "22";
+    click($('[data-act="close"]'));
+    for (let k = 0; k < 20; k++) await tick();
+    click($('#v-docs .sumbox [data-act="spend"]'));
+    expect($("#pd-" + t2.dataset.paid).value).toBe("22");
+    click($('[data-act="close"]'));
     // al volver a abrir, el cobro sigue ahí
     click($('#v-docs .sumbox [data-act="spend"]'));
     expect($("#pd-" + id).value).toBe("109,5");
