@@ -14,6 +14,35 @@ Reglas:
 
 ## 2026-11-11
 
+- Trayecto "Ninguno · no es el traslado del día" en el formulario de
+  billetes, también en días con un solo trayecto (antes era fijo). El coche
+  viene con "Ninguno" por defecto (suele ser un alquiler para moverse); si
+  es el traslado, se elige el trayecto. Un billete con "Ninguno" no cuenta
+  en Pendientes. Campo nuevo opcional `noLeg` (copias viejas siguen valiendo).
+- El billete de un tramo después de una parada propone el mismo tipo que el
+  billete del tramo anterior (dos vuelos, dos trenes); si no hay, el medio
+  del trayecto del itinerario. Antes, siempre tren.
+- Bugs medianos de la revisión:
+  - Búsqueda por nombre: guarda solo lo encontrado sobre lo del momento, así
+    no deshace un "No es aquí" o un deshacer hecho mientras buscaba; y sigue
+    sola con el siguiente lote.
+  - Eliminar un sitio desde la edición de "No es aquí" ya no abre la tarjeta
+    de otro sitio (se busca por su clave; si no existe, se cierra).
+  - Cambiar el nombre o el enlace de un sitio olvida la ubicación buscada
+    por nombre y lo vuelve a buscar.
+  - "Quitar del plan": un evento con nota no se borra, solo se desliga del
+    sitio y sigue en el calendario.
+  - Un hotel guardado que después quedó en una noche en el avión se puede
+    editar (sin cambiar tipo ni día no se bloquea).
+  - Versión nueva: la app se recarga sola cuando se activa (si no hay una
+    hoja ni el visor abiertos) y la busca al volver a primer plano. Ya no
+    hace falta cerrarla dos veces.
+  - Documentos: si el filtro elegido se queda sin documentos, vuelve a Todos.
+  - Tarjeta del mapa: el tiempo a pie que llega tarde ya no se escribe en
+    otra tarjeta.
+  - Descartado: el selector de moneda no hace zoom en iPhone (la página no
+    deja ampliar más allá de su tamaño, y eso lo evita).
+
 - Revertida la regla del coche de alquiler: vuelve a poder asignarse a
   cualquier trayecto, como el tren o el bus. La app no tiene forma de saber
   qué tramos solo se pueden hacer en avión (habría que escribir a mano que

@@ -168,7 +168,7 @@ describe("formulario: ubicaciones", () => {
   it("9) vuelo del 17 ene: un solo trayecto, ya puesto; Salida = Madrid y Llegada = Medellín", () => {
     openNew(DEC17, "vuelo");
     expect($("#f-leg").value).toBe("0-0");
-    expect($("#f-leg").type).toBe("hidden");
+    expect([...$("#f-leg").options].map((x) => x.value)).toEqual(["0-0", "none"]);   // o «Ninguno»
     expect($("#sheet-body").textContent).toContain("Madrid → Medellín");
     const opts = (n) => [...document.querySelectorAll("#dl-loc" + n + " option")].map((o) => o.value);
     expect(opts(1)).toContain("Casa");
@@ -270,7 +270,7 @@ describe("formulario: ubicaciones", () => {
     click($('[data-act="leg-via-add"]'));
     for (let i = 0; i < 5; i++) await tick();
     const o = [...$("#f-leg").options].map((x) => x.textContent);
-    expect(o).toEqual(["Sin asignar", "Tenerife → Pamplona · vía Bilbao", "Tenerife → Bilbao", "Bilbao → Pamplona"]);
+    expect(o).toEqual(["Sin asignar", "Tenerife → Pamplona · vía Bilbao", "Tenerife → Bilbao", "Bilbao → Pamplona", "Ninguno · no es el traslado del día"]);
     expect($("#f-leg").value).toBe("0-0-1");                    // por defecto, un billete para todo
     // y se puede quitar desde el mismo formulario
     const del = $('[data-act="leg-via-del"][data-k="0"]');
@@ -279,7 +279,7 @@ describe("formulario: ubicaciones", () => {
     expect($("#f-leg").tagName).toBe("SELECT");
     click(del);                                  // segundo toque: quita
     for (let i = 0; i < 5; i++) await tick();
-    expect($("#f-leg").type).toBe("hidden");
+    expect([...$("#f-leg").options].map((x) => x.value)).toEqual(["0-0", "none"]);
     expect($("#sheet-body").textContent).toContain("Tenerife → Pamplona");
     click($('[data-act="close"]'));
   });
@@ -1363,5 +1363,22 @@ describe("formulario: ubicaciones", () => {
     openNew(MADRID, "entrada");
     click($("#sheet"));
     expect($("#sheet").hidden).toBe(true);
+  });
+  it("50) coche: trayecto «Ninguno» por defecto (no cuenta como billete); al pasar a tren, el del día", async () => {
+    openNew("2027-01-06", "coche");
+    expect($("#f-leg").value).toBe("none");
+    click($('.ty[data-type="tren"]'));
+    expect($("#f-leg").value).toBe("0-0");
+    click($('.ty[data-type="coche"]'));
+    expect($("#f-leg").value).toBe("none");
+    $("#f-co").value = "Hertz"; typeLoc("Aeropuerto Tenerife Sur");
+    await save();
+    expect($("#sheet").hidden).toBe(true);
+    // al editarlo sigue en «Ninguno»
+    location.hash = "#documentos"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const tk = [...document.querySelectorAll("#v-docs .ticket")].find((t) => t.textContent.includes("Hertz"));
+    click(tk.querySelector('[data-act="view"]')); click($('[data-act="edit"]'));
+    expect($("#f-leg").value).toBe("none");
+    click($('#sheet [data-act="view"], #sheet [data-act="close"]'));
   });
 });

@@ -254,7 +254,7 @@ function upgradeOldPlaces(list){list.forEach(function(d){[1,2].forEach(function(
    de su día: hotel = donde se duerme; transporte = origen/destino del tramo; resto =
    ciudad detectada por el enlace o el nombre, la elegida por el usuario, o las del día. */
 /* Valor del trayecto: "i-j" (un tramo) o "i-j-k" (del tramo j al k: un mismo billete con escalas) */
-function parseLeg(v){if(v==null||v==="")return null;var p=String(v).split("-").map(Number),a=p[1]||0,b=p.length>2?p[2]:a;return {leg:p[0],seg:a,to:Math.max(a,b)}}
+function parseLeg(v){if(v==null||v===""||v==="none")return null;var p=String(v).split("-").map(Number),a=p[1]||0,b=p.length>2?p[2]:a;return {leg:p[0],seg:a,to:Math.max(a,b)}}
 function docLegVal(d){if(d.leg==null)return "";var a=d.seg||0;return d.leg+"-"+a+(d.segTo>a?"-"+d.segTo:"")}
 function rangeSegs(day,lp){if(!day||!day.legs||!lp||!day.legs[lp.leg])return [];var sg=legSegs(day,lp.leg),a=Math.min(lp.seg,sg.length-1),b=Math.min(lp.to,sg.length-1);return sg.slice(a,b+1)}
 function segsText(ss){return ss.length?ss[0].f.n+" → "+ss[ss.length-1].t.n:""}
@@ -390,10 +390,18 @@ function legSegs(day,i){
  return o;
 }
 function segText(s){return s.f.n+" → "+s.t.n}
-function segType(l,j){return l.m==="vuelo"&&j===0?"vuelo":"tren"}
+/* Tipo que se propone para el billete de un tramo: el del billete del tramo anterior si ya está
+   (dos vuelos con escala, o dos trenes con transbordo); si no, el medio del trayecto del itinerario */
+function segType(l,j,day,i){
+ if(j>0&&day){var prev=docsOf(day.d).filter(function(d){if(!TRIPT[d.type]||d.noLeg||d.leg!==i)return false;var a=d.seg||0,b=d.segTo!=null?d.segTo:a;return a<=j-1&&j-1<=b})[0];if(prev)return prev.type}
+ return l.m==="vuelo"?"vuelo":"tren";
+}
 /* Trayecto por defecto: si el día tiene un solo traslado, ese entero ("0-0", o "0-0-1" con una parada:
    un billete para todo, que es lo más común). Si hay varios traslados, "" (se elige). */
 function onlyLeg(dayId){var day=dayById(dayId);if(!day||!day.legs||day.legs.length!==1)return "";var n=legSegs(day,0).length;return n===1?"0-0":"0-0-"+(n-1)}
+/* Trayecto por defecto según el tipo: el coche suele ser un alquiler para moverse, no el traslado («none») */
+function defLeg(dayId){return selType==="coche"?"none":onlyLeg(dayId)}
+var LEG_NONE='<option value="none">Ninguno · no es el traslado del día</option>';
 function fixedLeg(dayId){var day=dayById(dayId);return !!(day&&day.legs&&day.legs.length===1&&legSegs(day,0).length===1)}
 var viaOpen=false;
 function legField(dayId,type,sel){
@@ -406,13 +414,14 @@ function legField(dayId,type,sel){
   '<button type="button" class="mini" data-act="leg-via-open">'+svg("plus",14)+'Añadir parada</button>');
  if(fixedLeg(dayId)){
   var s0=legSegs(day,0)[0];
-  return '<div class="field"><span class="fl">Trayecto</span><div class="legfix"><b>'+esc(segText(s0))+'</b>'+via+'</div><input type="hidden" id="f-leg" value="0-0"></div>';
+  return '<div class="field"><label for="f-leg">Trayecto</label><select id="f-leg"><option value="0-0">'+esc(segText(s0))+'</option>'+LEG_NONE.replace('value="none"','value="none"'+(String(sel)==="none"?" selected":""))+'</select>'+(via?'<div class="legfix">'+via+'</div>':"")+'</div>';
  }
  var o='<option value="">Sin asignar</option>';
  day.legs.forEach(function(l,i){var ss=legSegs(day,i);
   // con paradas, primero el trayecto entero (un billete con escalas) y después cada tramo por separado
   if(ss.length>1){var vr=i+"-0-"+(ss.length-1);o+='<option value="'+vr+'"'+(String(sel)===vr?" selected":"")+'>'+esc(segsText(ss)+" · "+viaText(ss))+'</option>'}
   ss.forEach(function(s){var v=i+"-"+s.j;o+='<option value="'+v+'"'+(String(sel)===v?" selected":"")+'>'+esc(segText(s))+'</option>'})});
+ o+=LEG_NONE.replace('value="none"','value="none"'+(String(sel)==="none"?" selected":""));
  return '<div class="field"><label for="f-leg">Trayecto</label><select id="f-leg">'+o+'</select>'+(via?'<div class="legfix">'+via+'</div>':"")+'</div>';
 }
 /* Añade la parada al traslado del día (queda en el itinerario, igual que desde la hoja de paradas) */
@@ -424,7 +433,7 @@ async function addViaFromForm(){
  v.splice(j,0,nme);
  await shiftSegs(c,j+1,1);
  await setKV("via:"+c.d+":0",v);
- viaOpen=false;legSel=onlyLeg(c.d);legManual=!!legSel;formErr("");
+ viaOpen=false;legSel=defLeg(c.d);legManual=!!legSel;formErr("");
  refreshLegField();autoLeg();[1,2].forEach(autoLink);refreshLocFields();refresh();
  toast("Parada añadida");
 }
@@ -434,7 +443,7 @@ async function delViaFromForm(k){
  v.splice(k,1);
  await shiftSegs(c,k+1,-1);
  if(v.length)await setKV("via:"+c.d+":0",v);else await delKV("via:"+c.d+":0");
- legSel=onlyLeg(c.d);legManual=!!legSel;
+ legSel=defLeg(c.d);legManual=!!legSel;
  refreshLegField();autoLeg();[1,2].forEach(autoLink);refreshLocFields();refresh();
  toast("Parada quitada");
 }
@@ -507,14 +516,14 @@ function pendTickets(){
  var out=[];
  DAYS.forEach(function(day){
   if(!day.legs)return;
-  var own=docsOf(day.d).filter(function(d){return TRIPT[d.type]}),free=own.filter(function(d){return d.leg==null}).length;
+  var own=docsOf(day.d).filter(function(d){return TRIPT[d.type]&&!d.noLeg}),free=own.filter(function(d){return d.leg==null}).length;
   day.legs.forEach(function(l,i){
    var segs=legSegs(day,i);
    segs.forEach(function(sg){
     var has=own.some(function(d){if(d.leg!==i)return false;var a=Math.min(d.seg||0,segs.length-1),b=Math.min(d.segTo!=null?d.segTo:(d.seg||0),segs.length-1);return a<=sg.j&&sg.j<=b});
     if(has)return;
     if(free>0){free--;return}
-    out.push({day:day,leg:i,seg:sg,type:segType(l,sg.j)});
+    out.push({day:day,leg:i,seg:sg,type:segType(l,sg.j,day,i)});
    });
   });
  });
@@ -957,6 +966,7 @@ function renderDocsView(){
  if(docsTab==="pend"){renderPend();updateFab();return}
  var fl0=V.docs.querySelector(".filters"),fsl=fl0?fl0.scrollLeft:0;   // la fila de filtros no vuelve al inicio al redibujar
  var counts={};docs.forEach(function(d){counts[d.type]=(counts[d.type]||0)+1});
+ if(docFilter!=="all"&&!counts[docFilter])docFilter="all";
  var chips='<button type="button" class="chip" data-act="filter" data-f="all" aria-pressed="'+(docFilter==="all")+'">Todos '+docs.length+'</button>'+Object.keys(TYPES).filter(function(k){return counts[k]}).map(function(k){return '<button type="button" class="chip" data-act="filter" data-f="'+k+'" aria-pressed="'+(docFilter===k)+'">'+TYPES[k].l+' '+counts[k]+'</button>'}).join("");
  var shown=docs.filter(function(d){return docFilter==="all"||d.type===docFilter});
  var groups={};shown.forEach(function(d){(groups[d.dayId]=groups[d.dayId]||[]).push(d)});
@@ -986,7 +996,7 @@ function sheetCanDismiss(){if(sheetDirty&&sheetHasSave()){toast("Tienes cambios 
 function openSheet(html,foot){flushPaid();sheetDirty=false;sheetBody.innerHTML=html;sheetFoot.innerHTML=foot||"";sheetFoot.hidden=!foot;sheetBody.scrollTop=0;
  // cabecera (título y Cerrar/Cancelar) fuera del área que se desplaza: así nada se ve pasar por encima o por detrás
  var hd=sheetBody.querySelector(".sh-head");sheetHead.innerHTML="";if(hd&&hd.parentNode===sheetBody)sheetHead.appendChild(hd);sheetHead.hidden=!sheetHead.firstChild;sheetHead.classList.remove("scrolled");sheet.hidden=false;document.documentElement.style.overflow="hidden";var dlg=sheet.querySelector(".sheet");if(dlg)try{dlg.focus({preventScroll:true})}catch(e){}}
-function closeSheet(){flushPaid();revBack=false;if(docTitle0!==null){document.title=docTitle0;docTitle0=null}evEditing=null;expFile=null;impWrapper=null;impBackup=null;sheet.hidden=true;sheetBody.innerHTML="";sheetHead.innerHTML="";sheetFoot.innerHTML="";sheetFoot.hidden=true;document.documentElement.style.overflow="";editing=null}
+function closeSheet(){flushPaid();revBack=false;if(swReload)setTimeout(swMaybeReload,0);if(docTitle0!==null){document.title=docTitle0;docTitle0=null}evEditing=null;expFile=null;impWrapper=null;impBackup=null;sheet.hidden=true;sheetBody.innerHTML="";sheetHead.innerHTML="";sheetFoot.innerHTML="";sheetFoot.hidden=true;document.documentElement.style.overflow="";editing=null}
 function dayOptions(sel){return DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===sel?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'<option value="trip"'+(sel==="trip"?" selected":"")+'>Todo el viaje (sin día)</option>'}
 /* Campo de hora con una × para borrarla (el selector de hora del iPhone no tiene cómo dejarla vacía) */
 function timeBox(id,v,l){return '<span class="tbox"><input id="'+id+'" type="time" value="'+esc(v||"")+'" aria-label="'+l+'"><button type="button" class="tclr" data-act="t-clr" data-for="'+id+'" aria-label="Quitar '+l.toLowerCase()+'"'+(v?"":" hidden")+'>'+svg("xmark",16)+'</button></span>'}
@@ -1001,7 +1011,8 @@ function openDocSheet(o){
  viaOpen=false;
  // tipo por defecto: el pedido si ese día se puede; si no, el primero disponible (el 27 no hay hotel: es en el avión)
  if(!d&&!typeOk(selType,dayId))selType=Object.keys(TYPES).filter(function(k){return typeOk(k,dayId)})[0]||"otro";
- if(!legSel&&!d){legSel=onlyLeg(dayId);if(legSel)legManual=true}
+ if(d&&d.noLeg)legSel="none";
+ if(!legSel&&!d){legSel=defLeg(dayId);if(legSel)legManual=true}
  fx={co:d&&d.company||"",no:d&&d.no||"",t1:d&&d.t1||"",t2:d&&d.t2||"",hops:d&&d.hops?d.hops.map(function(h){return Object.assign({},h)}):[],arr:d?docArr(d):0,arrManual:false,title:d?(d.titleAuto?"":d.title||""):(o.title||"")};
  if(d&&ARRT[d.type])fx.arrManual=fx.arr!==autoArr(d);   // lo ajustó a mano (p. ej. +2): se respeta
  syncFxShape();
@@ -1150,7 +1161,7 @@ function dupTicketText(t,dayId){
  if(editing||(t!=="vuelo"&&t!=="tren"&&t!=="bus"))return "";
  var day=dayById(dayId);if(!day||!day.legs)return "";
  if(pendTickets().some(function(p){return p.day.d===dayId}))return "";
- var own=docsOf(dayId).filter(function(d){return TRIPT[d.type]});if(!own.length)return "";
+ var own=docsOf(dayId).filter(function(d){return TRIPT[d.type]&&!d.noLeg});if(!own.length)return "";
  var segs=[];day.legs.forEach(function(l,i){segs=segs.concat(legSegs(day,i))});
  var what=segs.length===1?"Ya tienes "+(own[0].type==="bus"?"el bus":own[0].type==="tren"?"el tren":own[0].type==="coche"?"el traslado":"el vuelo")+" "+segText(segs[0])+".":"Ya hay billete para todos los trayectos de este día.";
  return what+" Si es otro billete del mismo viaje (por ejemplo, de otra persona), puedes añadirlo.";
@@ -1166,7 +1177,8 @@ function autoTitle(d,dy){
 async function saveFromSheet(){
  captureFx();
  var tEl=$("#f-title"),title=tEl?tEl.value.trim():"",code=$("#f-code").value.trim(),note=$("#f-note").value.trim(),day=$("#f-day").value,file=$("#f-file").files[0];
- if(!typeOk(selType,day)){formErr(typeNote(selType,day),"type",$('.ty[aria-checked="true"]'));return}
+ // al editar sin cambiar tipo ni día no se bloquea (p. ej. un hotel que después quedó en una noche en el avión)
+ if(!typeOk(selType,day)&&!(editing&&editing.type===selType&&editing.dayId===day)){formErr(typeNote(selType,day),"type",$('.ty[aria-checked="true"]'));return}
  var pr=parsePrice($("#f-price").value);
  if(pr===undefined){formErr("El precio no es válido. Usa solo números, por ejemplo 125,50.","",$("#f-price"));return}
  var cur=$("#f-cur").value;
@@ -1190,6 +1202,7 @@ async function saveFromSheet(){
  [1,2].forEach(function(n){var k="loc"+n+"c",c=locS[n].c;if((n===1||tr)&&c&&needsCityChoice(ctxFor(n))&&d["loc"+n])d[k]=c;else delete d[k]});
  var lp=parseLeg(ls&&ls.value);
  d.leg=(tr&&dy&&dy.legs&&lp)?lp.leg:null;
+ if(tr&&ls&&ls.value==="none")d.noLeg=true;else delete d.noLeg;   // campo nuevo opcional: «no es el traslado del día»
  d.seg=d.leg!=null?lp.seg:0;
  if(d.leg!=null&&lp.to>lp.seg)d.segTo=lp.to;else delete d.segTo;
  // vuelo/tren/bus con escalas: horario y número por tramo; la salida y la llegada del billete son las de los extremos
@@ -1345,7 +1358,8 @@ async function saveItem(){
  if(!n){$("#i-err").textContent="Escribe un nombre.";return}
  if(u&&!/^https?:\/\/\S+$/i.test(u)){$("#i-err").textContent="El enlace debe empezar por https://";return}
  var l=listOf(c.cid,c.kind).map(function(x){return {id:x.id,n:x.n,d:x.d,u:x.u||""}});
- if(itemEd){l.forEach(function(x){if(x.id===itemEd.id){x.n=n;x.d=d;x.u=u}})}
+ if(itemEd){l.forEach(function(x){if(x.id===itemEd.id){x.n=n;x.d=d;x.u=u}})
+  if(n!==itemEd.n||u!==(itemEd.u||"")){var gk="pl|"+itemKey(c.kind,c.cid,itemEd);if(kv.geo&&kv.geo[gk]){var g0=Object.assign({},kv.geo);delete g0[gk];await setKV("geo",g0)}delete geoTried[gk]}}
  else l.push({id:"u"+Date.now().toString(36),n:n,d:d,u:u});
  await setKV("pl:"+c.cid+":"+c.kind,l);refresh();if(!revReturn())openListSheet(c.cid,c.kind);toast("Guardado");
 }
@@ -1474,7 +1488,9 @@ async function planToggle(pk,dd){
  var evs=planEvs(pk,dd),list=evList().slice(),dy=dayById(dd);
  if(evs.length){
   if(evs.some(function(e){return e.t1}))return;   // con hora: se cambia desde el calendario
-  list=list.filter(function(e){return !(e.pk===pk&&e.day===dd)});await setKV("events",list);toast("Quitado del plan del "+shortDay(dy));
+  var kept=0;
+  list=list.filter(function(e){return !(e.pk===pk&&e.day===dd&&!e.note)}).map(function(e){if(e.pk===pk&&e.day===dd){kept++;var c=Object.assign({},e);delete c.pk;return c}return e});
+  await setKV("events",list);toast(kept?"Quitado del plan (el evento sigue en el calendario por su nota)":"Quitado del plan del "+shortDay(dy));
  }else{
   list.push({id:uid(),title:lp.p.n,day:dd,t1:"",t2:"",note:"",pk:pk});await setKV("events",list);toast("Añadido al plan del "+shortDay(dy));
  }
@@ -1657,8 +1673,9 @@ function openMapCard(id){
  openSheet('<div class="sh-head"><h2 id="sh-title">'+esc(p.name)+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+h,
   '<div class="actions"><a class="btn" href="'+esc(mapHref(p))+'" target="_blank" rel="noopener">Abrir en Maps</a><a class="btn primary" style="--c1:var(--accent)" href="'+esc(dirHref(p))+'" target="_blank" rel="noopener">Cómo llegar</a></div>');
  // con internet, el tiempo a pie real de Google reemplaza al estimado
+ var tok=++cardTok;   // si se abre otra tarjeta antes de que llegue la respuesta, no se escribe en ella
  if(GM_ON&&!gFail&&isOnline()&&p.ll){var an2=dayAnchors(dd,all).filter(function(a){return a.p!==p});
-  an2.forEach(function(a,i){if(distKm(p.ll,a.p.ll)>WALK_KM)return;routesWalk(a.p.ll,p.ll).then(function(r){var w=sheetBody.querySelector('.wk[data-i="'+i+'"]');if(!w)return;w.textContent=walkText(r.min)+" a pie";
+  an2.forEach(function(a,i){if(distKm(p.ll,a.p.ll)>WALK_KM)return;routesWalk(a.p.ll,p.ll).then(function(r){if(tok!==cardTok)return;var w=sheetBody.querySelector('.wk[data-i="'+i+'"]');if(!w)return;w.textContent=walkText(r.min)+" a pie";
    var dk=sheetBody.querySelector('.dk[data-i="'+i+'"]');if(dk&&r.km)dk.textContent=distText(r.km);var nt=$("#md-note");if(nt)nt.textContent="Distancia y tiempo a pie según Google Maps."}).catch(function(){})})}
 }
 if(typeof window!=="undefined"){window.addEventListener("online",function(){gRetry();if(view==="map")renderMap()});window.addEventListener("offline",function(){if(view==="map")renderMap()})}
@@ -1697,7 +1714,8 @@ async function geoNo(gk,pk,id){
  if(view==="map")renderMap();
  var lp=placeByKey(pk);if(!lp){closeSheet();toast("Quitado del mapa");return}
  listCtx={cid:lp.cid,kind:lp.kind};openItemForm(lp.p.id);
- revBack=function(){openMapCard(id)};   // al guardar, deshacer o «Más tarde», de vuelta a la tarjeta
+ // al guardar, deshacer o «Más tarde», de vuelta a la tarjeta (buscada por su clave: si se eliminó, se cierra)
+ revBack=function(){var q=mapPoints().filter(function(x){return x.gk===gk})[0];if(q)openMapCard(q.id);else closeSheet()};
 }
 /* Deshacer «No es aquí»: vuelve al punto de antes; si no se guardó (quitado antes de esto), se busca otra vez */
 async function geoUndo(gk){
@@ -1720,7 +1738,7 @@ async function geoRun(list){
  geoBusy=true;
  try{
   await loadGM();
-  var lib=await google.maps.importLibrary("geocoding"),geocoder=new lib.Geocoder(),geo=Object.assign({},kv.geo||{}),changed=0;
+  var lib=await google.maps.importLibrary("geocoding"),geocoder=new lib.Geocoder(),geo=Object.assign({},kv.geo||{}),found={},changed=0;
   for(var i=0;i<todo.length;i++){
    var p=todo[i],old=geo[p.gk];geoTried[p.gk]=1;
    var req=old&&old.pid?{placeId:old.pid}:{address:geoQuery(p)};
@@ -1730,11 +1748,12 @@ async function geoRun(list){
      // un resultado genérico (la ciudad, la región, el país) no sirve: con nombres propios como
      // «Casa» Google devuelve el centro de la ciudad, y el punto quedaría mal puesto
      var gen=(res.types||[]).some(function(t){return /^(locality|political|country|administrative_area_level_\d|postal_code|sublocality.*)$/.test(t)});
-     geo[p.gk]=!gen&&nearCity(p,ll)?{ll:ll,pid:res.place_id||"",t:Date.now()}:{bad:1,t:Date.now()};changed++}
-   }catch(e){ if(String(e&&e.code||e).indexOf("ZERO_RESULTS")>=0){geo[p.gk]={bad:1,t:Date.now()};changed++} }
+     found[p.gk]=!gen&&nearCity(p,ll)?{ll:ll,pid:res.place_id||"",t:Date.now()}:{bad:1,t:Date.now()};changed++}
+   }catch(e){ if(String(e&&e.code||e).indexOf("ZERO_RESULTS")>=0){found[p.gk]={bad:1,t:Date.now()};changed++} }
    await new Promise(function(r){setTimeout(r,120)});   // sin prisa: no saturar el cupo
   }
-  if(changed){await setKV("geo",geo);if(view==="map")renderMap()}
+  // se guarda sobre kv.geo de ahora: lo que el usuario marcó mientras se buscaba («No es aquí», deshacer) manda
+  if(changed){var cur=Object.assign({},kv.geo||{});Object.keys(found).forEach(function(k){var c=cur[k];if(c&&c.no)return;cur[k]=found[k]});await setKV("geo",cur);geoBusy=false;if(view==="map")renderMap()}
  }catch(e){}
  geoBusy=false;
 }
@@ -1792,7 +1811,7 @@ function gmLocate(){
  },function(){toast("No se pudo obtener tu ubicación")},{enableHighAccuracy:true,timeout:10000});
 }
 /* Tiempo a pie real (Routes API); si falla o no hay internet, queda el estimado */
-var walkCache={},WALK_KM=3;
+var walkCache={},WALK_KM=3,cardTok=0;
 function routesWalk(a,b){
  var k=a.join(",")+">"+b.join(",");if(walkCache[k])return Promise.resolve(walkCache[k]);
  return fetch("https://routes.googleapis.com/directions/v2:computeRoutes",{method:"POST",referrerPolicy:"no-referrer-when-downgrade",headers:{"Content-Type":"application/json","X-Goog-Api-Key":GM_KEY,"X-Goog-FieldMask":"routes.duration,routes.distanceMeters"},
@@ -2278,7 +2297,11 @@ document.addEventListener("click",function(e){
   if(b.getAttribute("aria-disabled")==="true"){refreshTypes(b.dataset.type);return}
   selType=b.dataset.type;sheetBody.querySelectorAll(".ty").forEach(function(x){x.setAttribute("aria-checked",x===b?"true":"false")});
   refreshTypes(null);formErr("");
-  if(TRIPT[selType]&&!legSel){legSel=onlyLeg(curDay());legManual=!!legSel}
+  // al pasar a coche, sin trayecto (salvo que se eligiera a mano); al salir de coche, el del día
+  var ol=onlyLeg(curDay());
+  if(selType==="coche"&&(!legSel||legSel===ol)){legSel="none";legManual=true}
+  else if(selType!=="coche"&&legSel==="none"){legSel=ol;legManual=!!legSel}
+  if(TRIPT[selType]&&!legSel){legSel=defLeg(curDay());legManual=!!legSel}
   refreshLegField();autoLeg();dayChanged();refreshLocFields()}
  else if(a==="leg-via-open"){viaOpen=true;refreshLegField();var fv=$("#f-via");if(fv)try{fv.focus()}catch(_){}}
  else if(a==="leg-via-cancel"){viaOpen=false;refreshLegField()}
@@ -2381,7 +2404,7 @@ document.addEventListener("change",function(e){
  else if(e.target.id==="f-day"){
   // al cambiar la primera noche de un hotel ya guardado se conserva su última noche (si sigue valiendo)
   formDay=e.target.value;toSel=editing&&editing.type==="hotel"&&editing.nightTo?editing.nightTo:"";viaOpen=false;
-  legSel=onlyLeg(formDay);legManual=!!legSel;refreshLegField();autoLeg();
+  legSel=defLeg(formDay);legManual=!!legSel;refreshLegField();autoLeg();
   dayChanged();refreshLocFields();refreshTypes(null);
  }
  else if(e.target.id==="f-to"){toSel=e.target.value}
@@ -2431,9 +2454,16 @@ window.addEventListener("resize",updateFab);
 
 /* La app instalada casi nunca se recarga: al volver a primer plano, si cambió el día, se redibuja
    (Hoy, contador, día por defecto) y se vuelve a llevar a hoy. Si el mapa falló por la red, se reintenta. */
-var lastToday=todayStr();
+var lastToday=todayStr(),swReload=false;
+if(typeof navigator!=="undefined"&&navigator.serviceWorker){
+ var swHad=!!navigator.serviceWorker.controller;   // la primera instalación no recarga
+ navigator.serviceWorker.addEventListener("controllerchange",function(){if(!swHad){swHad=true;return}swReload=true;swMaybeReload()});
+}
+function swMaybeReload(){if(swReload&&sheet.hidden&&!vw)location.reload()}
 document.addEventListener("visibilitychange",function(){
  if(document.visibilityState!=="visible")return;
+ swMaybeReload();
+ try{if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(function(r){if(r)r.update()}).catch(function(){})}catch(e){}
  var t=todayStr();if(t!==lastToday){lastToday=t;homeScrolled=false;calScrolled=false;refresh()}
  else if(view==="map"&&gRetry())renderMap();
 });
