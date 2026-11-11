@@ -14,6 +14,25 @@ Reglas:
 
 ## 2026-11-11
 
+- Mapa, tercera ronda:
+  - Número del plan sin ubicar: círculo hueco fucsia (en el Plan del día,
+    en la lista y en Revisar ubicaciones). Fucsia = "falta algo": no se
+    parece a ningún color de los pines ni al amarillo de "Sin ubicar".
+  - El tramo de la línea que salta un número pasa a fucsia en puntos (el
+    gris medio seguía viéndose poco), y el ícono del aviso de arriba
+    también.
+  - "No es aquí" se puede deshacer: se guarda el punto anterior. En la
+    edición que se abre sale "Estaba bien, deshacer"; más tarde, en la
+    tarjeta del sitio, "Volver a ponerlo donde estaba" (o "Volver a
+    buscarlo por su nombre" si se quitó antes de este cambio).
+  - Con "Solo el plan" y el plan vacío, el contador dice "Nada en el plan
+    de este día" en vez de poner una franja encima del mapa (la franja
+    empujaba el mapa y lo hacía saltar). El aviso de un número sin ubicar
+    sí sigue como franja: ahí sí tiene que llamar la atención.
+  - Decidido: el 1 y el último número no cambian de color (verde/rojo).
+    El color ya dice la categoría, el rojo se reserva para avisos, el día
+    empieza en el hotel y el último cambia al reordenar.
+
 - Mapa, segunda ronda tras probarlo en el iPhone:
   - Revisar ubicaciones: el lápiz ya no activa el campo del enlace (el
     teclado tapaba la hoja). Lo que está en el plan del día sin ubicar (o

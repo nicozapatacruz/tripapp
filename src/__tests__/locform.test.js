@@ -1135,11 +1135,17 @@ describe("formulario: ubicaciones", () => {
     expect($("#v-map [data-act=monly]").getAttribute("aria-checked")).toBe("true");
     expect(rest()).toBe("");                                               // nada fuera del plan
     expect($("#v-map .mhot").textContent).toContain("Hotel Sol");
-    expect($("#v-map .mcount").textContent).toMatch(/^\d+ lugar/);
+    expect($("#v-map .mcount").textContent).toMatch(/^Nada en el plan de este día/);   // solo el hotel
     click($("#v-map [data-act=monly]"));
     click($("#v-map [data-act=mfilt]"));
     click($('#sheet-foot [data-act=mreset]'));
     click($('[data-act="close"]'));
+    // día sin nada en el plan con «Solo el plan»: dicho en el contador (sin franja que mueva el mapa)
+    setSel("m-day", "2027-01-10");
+    click($("#v-map [data-act=monly]"));
+    expect($("#v-map .mcount").textContent).toBe("Nada en el plan de este día");
+    click($("#v-map [data-act=monly]"));
+    expect($("#v-map .mcount").textContent).toMatch(/^\d+ lugar/);
     // en «Todo el viaje» no hay interruptor
     setSel("m-day", "all");
     expect($("#v-map [data-act=monly]")).toBeNull();
@@ -1159,6 +1165,7 @@ describe("formulario: ubicaciones", () => {
     expect(sp.querySelector(".lab").textContent).toMatch(/^En el plan del /);
     const row = [...sp.querySelectorAll("li")].find((li) => li.textContent.includes("Sitio Sin Enlace"));
     expect(row.querySelector(".mnum").textContent).toMatch(/^\d+$/);
+    expect(row.querySelector(".mnum").classList.contains("un")).toBe(true);   // hueco: sin ubicar
     click($('[data-act="close"]'));
     click($('#v-map [data-act=mmode][data-v="list"]'));
     expect($("#v-map .mgap")).toBeNull();                               // en la lista no hace falta: sale con «Sin ubicar»
