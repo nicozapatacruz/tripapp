@@ -618,3 +618,11 @@ body.mapfull .app{padding-bottom:0}
 /* Aviso fijo: el teléfono no está guardando (no se va solo) */
 .savewarn{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 8px);z-index:200;display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:14px;background:var(--danger);color:#fff;font:500 14px/1.35 var(--f);box-shadow:var(--shadow)}
 .savewarn b{font-weight:700}
+.sh-acts{display:flex;align-items:center;gap:8px;flex:none}
+#i-dup{margin-top:10px}   /* que no quede pegado al borde del campo activo */
+/* número del plan de algo sin lugar en el mapa (evento suelto): hueco y gris */
+.adri.mnum.free{color:var(--muted);background:var(--surface);box-shadow:inset 0 0 0 2px var(--line)}
+/* calendario: «+ N sitios en el plan ›» lleva al plan del día en el mapa */
+.agplan{display:flex;align-items:center;gap:8px;width:100%;margin:6px 0 2px;padding:10px 12px;border:0;border-radius:12px;background:var(--surface2);color:var(--ink);font:500 14px/1.3 var(--f);text-align:left}
+.agplan span{flex:1}
+.agplan .i{color:var(--muted)}

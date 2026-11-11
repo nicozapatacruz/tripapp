@@ -14,6 +14,42 @@ Reglas:
 
 ## 2026-11-11
 
+- Calendario menos cargado (decidido con Nicolas): salen los documentos,
+  todo lo que tenga hora (también un sitio de Qué ver o Comer con hora) y
+  los eventos sueltos. Los sitios del plan sin hora no salen uno a uno:
+  una línea "+ N sitios en el plan ›" lleva al plan de ese día en el mapa
+  (modo lista). Lo que sí sale mantiene el orden del plan.
+- Plan del día: los eventos sueltos y documentos sin ubicación también
+  llevan número (círculo hueco gris, sin pin en el mapa; la línea va
+  directa, sin tramo fucsia ni aviso). Etiqueta acortada a "Sin lugar".
+
+- Calendario y Plan del día pasan a ser la misma lista, en el mismo orden:
+  lo que tiene hora por su hora y lo que no, donde se dejó en el plan (o al
+  final, en el orden en que se añadió). Los eventos sueltos y los
+  documentos sin ubicación también salen en el Plan del mapa, sin número
+  ("Sin lugar en el mapa") y se pueden arrastrar; no cortan la línea del
+  mapa. Se reordena solo desde el Plan (decidido con Nicolas: en el
+  calendario no hace falta). El calendario ya no separa "Sin hora".
+- Calendario: los eventos de un sitio llevan el ícono y el color de Qué ver
+  o Comer (antes todos con el del evento).
+- Sitio con nombre repetido: se guarda al primer toque como «Nombre (2)»,
+  y el aviso lo dice mientras se escribe (más separado del campo). Al
+  buscarlo por nombre en Google se quita el "(2)".
+
+- Plan del día: lo que se añade sin hora va al final en el orden en que se
+  añadió (antes, en el orden de la lista de sitios). Quitar algo del plan
+  olvida su sitio en el orden: al volver a añadirlo va al final.
+- Calendario: los eventos sin hora salen en el mismo orden que el plan del
+  día del mapa.
+- Tarjeta del sitio: el lápiz va junto a Cerrar (antes quedaba en medio).
+- La nota de un evento del plan también se ve en su fila del plan ("Nota:
+  …"), no solo cuando se quita del plan. La nota es del evento (la visita
+  de ese día), no del sitio.
+- Añadir un sitio: el aviso de nombre repetido sale mientras se escribe,
+  debajo del nombre (antes solo al tocar Guardar).
+- Decidido: la app no busca versiones nuevas mientras está abierta (solo
+  al volver a primer plano). Basta con volver a ella un par de veces.
+
 - Trayecto: la opción pasa a llamarse "No es un traslado" (sin nota).
 - Tarjeta de un sitio en el mapa: botón con lápiz para editarlo; al guardar
   o cancelar se vuelve a la tarjeta.

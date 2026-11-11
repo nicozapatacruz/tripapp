@@ -66,5 +66,7 @@ describe("qué días sale un sitio y numeración", () => {
   });
   it("numeración: un mismo punto toma el número de su primera aparición", () => {
     expect(planNumbers([{ pid: "tren" }, { pid: "sol" }, { pid: "tren" }, { pid: "cena" }])).toEqual({ tren: 1, sol: 2, cena: 3 });
+    // sin lugar en el mapa (pid vacío): también numerado, por su clave
+    expect(planNumbers([{ pid: "sol", k: "e:1" }, { pid: "", k: "e:2" }, { pid: "cena", k: "e:3" }])).toEqual({ sol: 1, "e:2": 2, cena: 3 });
   });
 });

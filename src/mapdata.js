@@ -80,11 +80,12 @@ export function planOrder(items, saved) {
   return out.concat(tail);
 }
 
-/** Números del mapa a partir del plan ordenado: un mismo punto (pid) toma el de su primera
- *  aparición. → {pid: número} */
+/** Números del plan ordenado: un mismo punto (pid) toma el de su primera aparición; lo que no
+ *  tiene lugar en el mapa, el suyo (por su clave k). → {pid o k: número} */
 export function planNumbers(order) {
   const out = {};
   let n = 0;
-  order.forEach((x) => { if (out[x.pid] == null) out[x.pid] = ++n; });
+  // lo que no tiene lugar (pid vacío) también lleva número, por su clave
+  order.forEach((x) => { const id = x.pid || x.k; if (out[id] == null) out[id] = ++n; });
   return out;
 }

@@ -470,8 +470,8 @@ describe("formulario: ubicaciones", () => {
     const lists = el.querySelectorAll(".aglist");
     expect(lists[0].textContent).toContain("Check-out · Hotel Teide");  // en su hora
     expect(lists[0].textContent).toContain("11:00");
-    const sinHora = lists[lists.length - 1].querySelector(".ag");
-    expect(sinHora.textContent).toContain("Check-in · Hotel Siguiente"); // primero en «Sin hora»
+    const sinHora = [...lists[0].querySelectorAll(".ag")][1];
+    expect(sinHora.textContent).toContain("Check-in · Hotel Siguiente"); // justo después de lo que tiene hora
     expect(sinHora.classList.contains("nt")).toBe(true);
     expect(sinHora.querySelector(".agt")).toBeNull();                    // sin columna de hora
   });
@@ -1143,7 +1143,8 @@ describe("formulario: ubicaciones", () => {
     // día sin nada en el plan con «Solo el plan»: dicho en el contador (sin franja que mueva el mapa)
     setSel("m-day", "2027-01-10");
     click($("#v-map [data-act=monly]"));
-    expect($("#v-map .mcount").textContent).toBe("Nada en el plan de este día");
+    // (ese día tiene documentos sin ubicación de otros tests: van en el plan sin número)
+    expect($("#v-map .mcount").textContent).toMatch(/^(Nada en el plan de este día|0 lugares)/);
     click($("#v-map [data-act=monly]"));
     expect($("#v-map .mcount").textContent).toMatch(/^\d+ lugar/);
     // en «Todo el viaje» no hay interruptor
@@ -1414,10 +1415,12 @@ describe("formulario: ubicaciones", () => {
     b.dataset.act = "list"; b.dataset.city = "madrid"; b.dataset.kind = "see";
     document.body.appendChild(b); click(b); b.remove();
     click($('[data-act="item-add"]'));
-    $("#i-n").value = "Museo del Prado";
-    click($('[data-act="item-save"]')); await tick();
-    expect($("#i-err").textContent).toContain("Ya hay un «Museo del Prado»");
-    click($('[data-act="item-back"]'));
+    $("#i-n").value = "Museo del Prado"; $("#i-n").dispatchEvent(new Event("input", { bubbles: true }));
+    expect($("#i-dup").hidden).toBe(false);                             // avisa mientras se escribe
+    expect($("#i-dup").textContent).toContain("Se guardará como «Museo del Prado (2)»");
+    click($('[data-act="item-save"]')); await tick();                  // al primer toque
+    expect($("#sheet-body").textContent).toContain("Museo del Prado (2)");
+    click($('#sheet [data-act="close"]'));
     // editar desde la tarjeta del mapa: Cancelar vuelve a la tarjeta
     location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
     setSel("m-day", "2026-12-30");
@@ -1427,5 +1430,49 @@ describe("formulario: ubicaciones", () => {
     click($('[data-act="item-back"]'));
     expect($("#sh-title").textContent).toBe("Parque del Retiro");
     click($('#sheet [data-act="close"]'));
+  });
+  it("55) lo añadido al plan sin hora va al final en el orden en que se añade, y el calendario sigue ese orden", async () => {
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const lm = $('#v-map [data-act=mmode][data-v="list"]'); if (lm) click(lm);
+    setSel("m-day", "2026-12-30");
+    click($("#v-map [data-act=plan-add]"));
+    const pick = (n) => click([...document.querySelectorAll("#sheet-body .ppick")].find((b) => b.textContent.includes(n)));
+    pick("Parque del Retiro"); await tick();
+    click($("#v-map [data-act=plan-add]")); pick("Museo del Prado"); await tick();
+    click($('#sheet [data-act="close"]'));
+    const names = [...document.querySelectorAll("#m-plan li")].map((li) => li.querySelector("b").textContent);
+    expect(names.indexOf("Parque del Retiro")).toBeLessThan(names.indexOf("Museo del Prado"));   // como se añadieron
+    location.hash = "#calendario"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    // en el calendario, los sitios sin hora no salen uno a uno: una línea que lleva al plan
+    const cal = [...document.querySelectorAll("#c-2026-12-30 .ag")].map((x) => x.textContent);
+    expect(cal.some((t) => t.includes("Parque del Retiro"))).toBe(false);
+    const ln = $("#c-2026-12-30 .agplan");
+    expect(ln.textContent).toMatch(/\d+ sitios en el plan/);
+    click(ln);
+    expect(location.hash).toBe("#mapa");
+    expect($("#m-plan")).toBeTruthy();                                  // en modo lista, en ese día
+  });
+  it("56) evento suelto: sale en el plan sin número y en el mismo orden que en el calendario; ícono según lo que es", async () => {
+    const b = document.createElement("button");
+    b.dataset.act = "ev-add"; b.dataset.day = "2026-12-30";
+    document.body.appendChild(b); click(b); b.remove();
+    $("#e-title").value = "Paseo libre";
+    click($('[data-act="ev-save"]')); await tick();
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const lm = $('#v-map [data-act=mmode][data-v="list"]'); if (lm) click(lm);
+    setSel("m-day", "2026-12-30");
+    const rows = [...document.querySelectorAll("#m-plan li")];
+    const free = rows.find((li) => li.querySelector("b").textContent === "Paseo libre");
+    expect(free.querySelector(".mnum.free").textContent).toMatch(/^\d+$/);   // número hueco gris
+    expect(free.textContent).toContain("Sin lugar");
+    expect(rows[rows.length - 1]).toBe(free);                            // lo último añadido, al final
+    const plan = rows.map((li) => li.querySelector("b").textContent);
+    location.hash = "#calendario"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const cal = [...document.querySelectorAll("#c-2026-12-30 .ag")];
+    const calNames = cal.map((x) => plan.find((n) => x.textContent.includes(n))).filter(Boolean);
+    expect(calNames).toEqual(plan.filter((n) => calNames.includes(n)));
+    expect(cal.some((x) => x.textContent.includes("Paseo libre"))).toBe(true);   // los eventos sueltos sí salen
+    const plaza = [...document.querySelectorAll("#c-2026-12-29 .ag")].find((x) => x.textContent.includes("Plaza Mayor"));
+    expect(plaza.getAttribute("style")).toContain("#7C3AED");             // sitio con hora: sale, con el color de Qué ver
   });
 });
