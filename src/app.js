@@ -1297,10 +1297,10 @@ async function saveOrder(){
  if(!same){await setKV("pl:"+c.cid+":"+c.kind,nl.map(function(p){return Object.assign({},p)}));refresh();toast("Orden guardado")}
  openListSheet(c.cid,c.kind);
 }
-function openItemForm(id){
+function openItemForm(id,note){
  var c=listCtx,p=id==null?null:listOf(c.cid,c.kind).filter(function(x){return x.id===id})[0]||null;
  itemEd=p;
- openSheet('<div class="sh-head"><h2 id="sh-title">'+(p?"Editar":"Añadir")+' · '+esc(listTitle(c.kind))+'</h2><button type="button" class="x" data-act="item-back">Cancelar</button></div>'+
+ openSheet('<div class="sh-head"><h2 id="sh-title">'+(p?"Editar":"Añadir")+' · '+esc(listTitle(c.kind))+'</h2><button type="button" class="x" data-act="item-back">Cancelar</button></div>'+(note?'<p class="adrw" style="margin:0">'+esc(note)+'</p>':"")+
  '<div class="field"><label for="i-n">Nombre'+REQ+'</label><input id="i-n" type="text" placeholder="'+(c.kind==="see"?"Ej. Museo del Prado":"Ej. Casa Lucio")+'" value="'+esc(p?p.n:"")+'" autocomplete="off"></div>'+
  '<div class="field"><label for="i-d">Descripción</label><textarea id="i-d" placeholder="Qué es, qué pedir, horarios...">'+esc(p?p.d:"")+'</textarea></div>'+
  '<div class="field"><label for="i-u">Enlace de Google Maps</label><input id="i-u" type="text" placeholder="Si lo dejas vacío, el mapa busca por nombre" value="'+esc(p?p.u:"")+'" autocomplete="off"></div>'+
@@ -1399,13 +1399,15 @@ function dayPlan(dd,all){
  all.forEach(function(p){p.refs.forEach(function(r){if(r.day===dd)items.push({k:r.k,t:r.t,pid:p.id,p:p,doc:r.doc,ev:r.ev})})});
  return planOrder(items,(kv.plan||{})[dd]);
 }
-/* Hoteles del plan de un día: el de anoche (si cambia: día de check-out) arriba y el de esta noche
-   (abajo si hubo check-out; si no, arriba). Sin número: el día empieza y termina ahí. */
+/* Hoteles del plan de un día, sin número. Arriba, donde se durmió anoche (de ahí sale la línea al 1);
+   abajo, el de esta noche si es otro (check-in). Si anoche fue en el avión o en una escala sin
+   hotel, arriba no va hotel sino esa noche (night). */
 function planHotels(dd,all){
- var out={top:[],bottom:[]},dy=dayById(dd);if(!dy)return out;
+ var out={top:[],bottom:[],night:""},dy=dayById(dd);if(!dy)return out;
  var prev=DAYS[dy.i-1],hs=all.filter(function(p){return p.cat==="hotel"});
- var last=prev?hs.filter(function(p){return p.days[prev.d]&&!p.days[dd]}):[],tonight=hs.filter(function(p){return p.days[dd]});
- out.top=last.length?last:tonight;out.bottom=last.length?tonight:[];
+ out.top=prev?hs.filter(function(p){return p.days[prev.d]}):[];
+ out.bottom=hs.filter(function(p){return p.days[dd]&&out.top.indexOf(p)<0});
+ if(!out.top.length&&prev)out.night=nightLabel(prev);
  return out;
 }
 /* Lo que se ve: con «Solo el plan» (y un día elegido), el plan completo y sus hoteles aunque haya
@@ -1493,26 +1495,30 @@ function unlocWhy(p){
  if(!isOnline())return "se ubicará al volver la conexión.";
  return "Google no lo encontró por su nombre. Pega su enlace largo de Google Maps en la lista.";
 }
-var revBack=false;   // la edición se abrió desde Revisar ubicaciones: al guardar o cancelar se vuelve ahí
-function revReturn(){if(!revBack)return false;revBack=false;openReview();return true}
+var revBack=false;   // a dónde volver al guardar o cancelar la edición (Revisar ubicaciones o el mapa)
+function revReturn(){if(!revBack)return false;var f=revBack;revBack=false;f();return true}
 function revEdit(b){
- revBack=true;
+ revBack=openReview;
  if(b.dataset.doc){openDocSheet({id:b.dataset.doc});return}
  var lp=placeByKey(b.dataset.pk);if(!lp){revBack=false;return}
  listCtx={cid:lp.cid,kind:lp.kind};openItemForm(lp.p.id);
- var u=$("#i-u");if(u)u.focus();
 }
-function reviewRow(p,why){
+function reviewRow(p,why,num){
  var act=p.kind==="doc"?'data-act="rev-edit" data-doc="'+esc(p.docIds[0])+'"':'data-act="rev-edit" data-pk="'+esc(p.pk)+'"';
- return '<li class="pl mrow tap" '+act+'><span class="adri" style="--t:'+mapColor(p)+'">'+svg(mapIcon(p),18)+'</span><div class="adrt"><b>'+esc(p.name)+'</b><p>'+esc(why)+'</p></div><span class="pen" aria-hidden="true">'+svg("pencil",17)+'</span></li>';
+ return '<li class="pl mrow tap" '+act+'><span class="adri'+(num?" mnum":"")+'" style="--t:'+mapColor(p)+'">'+(num?num:svg(mapIcon(p),18))+'</span><div class="adrt"><b>'+esc(p.name)+'</b><p>'+esc(why)+'</p></div><span class="pen" aria-hidden="true">'+svg("pencil",17)+'</span></li>';
 }
 function openReview(){
- var vis=mapShown(mapPoints()),un=vis.filter(function(p){return !p.ll}),bn=vis.filter(function(p){return p.geo});
+ var all=mapPoints(),vis=mapShown(all),dd=mapDayId(),dy=dayById(dd),nums=mapNumbers(all),inPlan=[],seen={};
+ // lo del plan del día sin ubicar o ubicado por nombre va primero: es lo que más importa revisar
+ dayPlan(dd,all).forEach(function(x){var p=x.p;if(seen[p.id])return;seen[p.id]=1;if(!p.ll||p.geo)inPlan.push(p)});
+ var rest=function(p){return inPlan.indexOf(p)<0};
+ var un=vis.filter(function(p){return !p.ll&&rest(p)}),bn=vis.filter(function(p){return p.geo&&rest(p)});
  var why=function(p){var g=geoOf(p.gk);return p.kind==="doc"?(isShortMaps(p.url)?"Enlace corto":p.url?"Enlace sin coordenadas":"Sin enlace"):((g&&g.no?"Quitado del mapa":"No encontrado por nombre")+" · "+listTitle(p.cat)+(p.city?" · "+nm(p.city):""))};
  openSheet('<div class="sh-head"><h2 id="sh-title">Revisar ubicaciones</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
+  (inPlan.length?'<section class="adrg"><h3 class="lab">En el plan del '+esc(shortDay(dy))+' <small>'+inPlan.length+'</small></h3><ul class="rows">'+inPlan.map(function(p){return reviewRow(p,p.ll?"Ubicado por su nombre: comprueba que esté bien":"Sin ubicar · "+why(p),nums[p.id])}).join("")+'</ul></section>':"")+
   (un.length?'<section class="adrg"><h3 class="lab">Sin ubicar <small>'+un.length+'</small></h3><p class="foot" style="margin:0 0 8px">Para que salgan en el mapa, pega su enlace largo de Google Maps. Si tienes uno corto: ábrelo en Safari y copia la dirección de la barra.</p><ul class="rows">'+un.map(function(p){return reviewRow(p,why(p))}).join("")+'</ul></section>':"")+
   (bn.length?'<section class="adrg"><h3 class="lab">Ubicados por su nombre <small>'+bn.length+'</small></h3><p class="foot" style="margin:0 0 8px">Google los buscó por nombre: comprueba en el mapa que estén bien (borde punteado). Si alguno no, tócalo en el mapa → «No es aquí».</p><ul class="rows">'+bn.map(function(p){return reviewRow(p,listTitle(p.cat)+(p.city?" · "+nm(p.city):""))}).join("")+'</ul></section>':"")+
-  (un.length||bn.length?"":'<p class="foot">Todo está ubicado con su enlace.</p>'));
+  (inPlan.length||un.length||bn.length?"":'<p class="foot">Todo está ubicado con su enlace.</p>'));
 }
 function mapRow(p,num){
  return '<li class="pl mrow tap" data-act="mcard" data-id="'+p.id+'"><span class="adri'+(num?" mnum":"")+(p.geo?" bn":"")+'" style="--t:'+mapColor(p)+'">'+(num?num:svg(mapIcon(p),18))+'</span><div class="adrt"><b>'+esc(p.name)+'</b><p>'+esc(mapSub(p))+'</p>'+(p.ll?"":'<p class="adrw">Sin ubicar</p>')+'</div>'+mapBtn(mapHref(p))+'</li>';
@@ -1552,6 +1558,7 @@ function renderMap(){
  var nlist=function(l){return l.length===1?"El "+l[0]:"El "+l.slice(0,-1).join(", el ")+" y el "+l[l.length-1]};
  var gapNote="";
  if(mapState.mode==="map"&&dd){
+  if(mapState.only&&!plan.length)gapNote+='<p class="mgap">'+svg("pin",16)+'<span>No hay nada en el plan de este día.</span></p>';
   if(gaps.un.length)gapNote+='<button type="button" class="mgap" data-act="mreview">'+svg("pin",16)+'<span>'+nlist(gaps.un)+(gaps.un.length>1?" no salen":" no sale")+' en el mapa: sin ubicar</span>'+svg("chev",16)+'</button>';
   if(gaps.fil.length)gapNote+='<button type="button" class="mgap" data-act="monly-on">'+svg("filter",16)+'<span>'+nlist(gaps.fil)+(gaps.fil.length>1?" están ocultos":" está oculto")+' por los filtros</span>'+svg("chev",16)+'</button>';
  }
@@ -1564,8 +1571,9 @@ function renderMap(){
   var ph="";
   if(dy){
    var seenN={};
-   var hl=function(l,lab){return l.length?'<ul class="rows mhot">'+l.map(function(p){return hotelRow(p,lab)}).join("")+'</ul>':""};
-   ph='<section class="adrg"><h3 class="lab">Plan del día</h3>'+hl(hot.top,hot.bottom.length?"Hotel de anoche · check-out":"Hotel de la noche")+(plan.length?'<ul class="rows" id="m-plan">'+plan.map(function(x){var n=nums[x.pid];var r=seenN[x.pid]?"":planRow(x,n);seenN[x.pid]=1;return r}).join("")+'</ul>'+(plan.some(function(x){return tmin(x.t)==null})?'<p class="foot">Lo que tiene hora va en su hora. Lo demás se ordena arrastrando desde ≡.</p>':""):'<p class="foot">Nada todavía. Añade sitios de Qué ver y Comer y ordénalos.</p>')+hl(hot.bottom,"Hotel de esta noche · check-in")+
+   var hl=function(l,lab){return l.length?'<ul class="rows mhot">'+l.map(function(p){return hotelRow(p,typeof lab==="function"?lab(p):lab)}).join("")+'</ul>':""};
+   var nr=hot.night?'<ul class="rows mhot"><li class="pl mrow mnight"><span class="adri" style="--t:var(--muted)">'+svg(TYPE_ICON.vuelo,18)+'</span><div class="adrt"><b>'+esc(hot.night)+'</b></div></li></ul>':"";
+   ph='<section class="adrg"><h3 class="lab">Plan del día</h3>'+nr+hl(hot.top,function(p){return p.days[dd]?"Hotel de la noche":"Hotel de anoche · check-out"})+(plan.length?'<ul class="rows" id="m-plan">'+plan.map(function(x){var n=nums[x.pid];var r=seenN[x.pid]?"":planRow(x,n);seenN[x.pid]=1;return r}).join("")+'</ul>'+(plan.some(function(x){return tmin(x.t)==null})?'<p class="foot">Lo que tiene hora va en su hora. Lo demás se ordena arrastrando desde ≡.</p>':""):'<p class="foot">Nada todavía. Añade sitios de Qué ver y Comer y ordénalos.</p>')+hl(hot.bottom,"Hotel de esta noche · check-in")+
     (dy.stops.some(hasInfo)?'<div><button type="button" class="mini" data-act="plan-add">'+svg("plus",14)+'Añadir sitio</button></div>':"")+'</section>';
   }
   vis.forEach(function(p){if(nums[p.id]||(dy&&hotIds[p.id]))return;var k=p.city&&order.indexOf(p.city)>=0?p.city:"_";(groups[k]=groups[k]||[]).push(p)});
@@ -1600,7 +1608,7 @@ function openMapCard(id){
   var anyW=an.some(function(a){return distKm(p.ll,a.p.ll)<=WALK_KM}),anyF=an.some(function(a){return distKm(p.ll,a.p.ll)>WALK_KM});
   if(an.length)h+='<ul class="mdist">'+an.map(function(a,i){var km=distKm(p.ll,a.p.ll),w=km<=WALK_KM;return '<li>'+svg(w?"clock":"pin",15)+'<span><b><span class="dk" data-i="'+i+'">'+distText(km)+'</span> '+esc(a.l)+'</b>'+(w?' · <span class="wk" data-i="'+i+'">≈ '+walkText(walkMin(km))+' a pie</span>':"")+'</span></li>'}).join("")+'</ul>'+
    '<p class="foot" style="margin:0">'+(anyW?'<span id="md-note">Estimado en línea recta'+(isOnline()?"":" (sin internet)")+'.</span>':"")+(anyF?(anyW?" ":"")+"A más de 3 km, solo la distancia aproximada.":"")+'</p>';
-  if(p.geo)h+='<div class="bnbox"><p class="adrw">Ubicado buscando el nombre: puede no ser exacto.</p><button type="button" class="btn" data-act="geo-no" data-gk="'+esc(p.gk)+'">No es aquí</button></div>';
+  if(p.geo)h+='<div class="bnbox"><p class="adrw">Ubicado buscando el nombre: puede no ser exacto.</p><button type="button" class="btn" data-act="geo-no" data-gk="'+esc(p.gk)+'" data-pk="'+esc(p.pk)+'">No es aquí</button></div>';
  }else h+='<p class="adrw" style="align-self:flex-start">Sin ubicar: '+unlocWhy(p)+'</p>';
  if(p.kind==="place")h+=vField("Estado",statSel(p.pk));
  var pdy=dayById(dd);
@@ -1625,7 +1633,7 @@ if(typeof window!=="undefined"){window.addEventListener("online",function(){if(v
    Geocoding y Routes (en prueba gratuita hasta ~8 feb 2027: no cobra; ver PENDIENTES.md). */
 var GM_KEY="AIzaSyAE46uJ7JtkDkKJY9nN7OARfz0qlcKkXDc",GM_MAPID="83a25be103270202f5082791";
 var GM_ON=!!GM_KEY&&!(typeof navigator!=="undefined"&&/jsdom/i.test(navigator.userAgent||""));   // en los tests no se carga Google
-var gmP=null,gm=null,gmEl=null,gmMarkers=[],gmMe=null,gmLines=[],gFail=false,gmFitKey="";
+var gmP=null,gm=null,gmEl=null,gmMarkers=[],gmMe=null,gmLines=[],gFail=false,gmFitKey="",gmKeep=false;
 if(GM_ON)mapState.mode="map";
 window.gm_authFailure=function(){gFail=true;if(view==="map")renderMap()};   // clave rechazada por Google
 function loadGM(){
@@ -1646,7 +1654,13 @@ function geoOf(k){var g=kv.geo&&kv.geo[k];return g||null}
 function geoFresh(g){return !!g&&Date.now()-(g.t||0)<GEO_DAYS*864e5}
 function applyGeo(list){list.forEach(function(p){if(p.ll||p.kind==="doc")return;var g=geoOf(p.gk);if(g&&g.no)return;if(geoFresh(g)&&g.ll){p.ll=g.ll;p.pid=g.pid||"";p.geo=true}})}
 /* «No es aquí»: el sitio queda sin ubicar (y no se vuelve a buscar) hasta que se le pegue un enlace */
-async function geoNo(gk){var geo=Object.assign({},kv.geo||{});geo[gk]={no:1,t:Date.now()};await setKV("geo",geo);closeSheet();if(view==="map")renderMap();toast("Quitado del mapa. Pega su enlace largo para ubicarlo.")}
+async function geoNo(gk,pk){
+ var geo=Object.assign({},kv.geo||{});geo[gk]={no:1,t:Date.now()};await setKV("geo",geo);
+ if(view==="map")renderMap();
+ var lp=placeByKey(pk);if(!lp){closeSheet();toast("Quitado del mapa");return}
+ listCtx={cid:lp.cid,kind:lp.kind};openItemForm(lp.p.id,"Pega el enlace de Google Maps del sitio correcto. Mientras tanto queda sin ubicar.");
+ revBack=closeSheet;
+}
 function geoQuery(p){
  var city=p.city&&CITIES[p.city]?CITIES[p.city]:null;
  return p.name+(city?", "+city.name+(p.city==="medellin"?", Colombia":", España"):"");
@@ -1701,9 +1715,14 @@ async function mountMap(vis,nums,segs){
   // plan del día: línea punteada 1 → 2 → 3
   gmLines.forEach(function(l){l.setMap(null)});gmLines=[];
   (segs||[]).forEach(function(sg){gmLines.push(new maps.Polyline({map:gm,path:[sg.a,sg.b].map(function(ll){return {lat:ll[0],lng:ll[1]}}),strokeOpacity:0,zIndex:0,
-   icons:[{icon:{path:"M 0,-1 0,1",strokeOpacity:sg.gap?.9:.85,strokeColor:sg.gap?"#A7AFBD":"#1D2433",strokeWeight:3,scale:3},offset:"0",repeat:"13px"}]}))});
+   icons:[sg.gap?{icon:{path:google.maps.SymbolPath.CIRCLE,fillColor:"#7D869A",fillOpacity:1,strokeOpacity:0,scale:2.2},offset:"0",repeat:"9px"}
+    :{icon:{path:"M 0,-1 0,1",strokeOpacity:.85,strokeColor:"#1D2433",strokeWeight:3,scale:3},offset:"0",repeat:"13px"}]}))});
   var fk=mapState.day+"|"+Object.keys(mapState.cats).join(",")+"|"+Object.keys(mapState.st).join(",")+"|"+mapState.only+"|"+gmMarkers.length;
-  if(fk!==gmFitKey){gmFitKey=fk;gmFit(vis)}
+  if(gmKeep){
+   // al tocar «Solo el plan» el mapa se queda quieto; solo encuadra si no queda nada a la vista
+   gmKeep=false;gmFitKey=fk;var bb=gm.getBounds();
+   if(bb&&!vis.some(function(p){return p.ll&&bb.contains({lat:p.ll[0],lng:p.ll[1]})}))gmFit(vis);
+  }else if(fk!==gmFitKey){gmFitKey=fk;gmFit(vis)}
  }catch(e){gFail=true;renderMap()}
 }
 /* Encuadrar: todo lo visible; en "Todo el viaje" sin Medellín (si no, España se ve diminuta) */
@@ -1711,7 +1730,7 @@ function gmFit(vis){
  if(!gm||typeof google==="undefined")return;
  var pts=vis.filter(function(p){return p.ll});
  if(mapState.day==="all"){var es=pts.filter(function(p){return p.city!=="medellin"});if(es.length)pts=es}
- if(!pts.length){gm.setCenter({lat:40.2,lng:-3.7});gm.setZoom(6);return}
+ if(!pts.length)return;
  if(pts.length===1){gm.setCenter({lat:pts[0].ll[0],lng:pts[0].ll[1]});gm.setZoom(15);return}
  var b=new google.maps.LatLngBounds();pts.forEach(function(p){b.extend({lat:p.ll[0],lng:p.ll[1]})});gm.fitBounds(b,48);
 }
@@ -2270,7 +2289,7 @@ document.addEventListener("click",function(e){
  else if(a==="mstep"){mapStep(+b.dataset.d)}
  else if(a==="mreview"){openReview()}
  else if(a==="rev-edit"){revEdit(b)}
- else if(a==="geo-no"){confirmTap(b,"Confirmar",function(){geoNo(b.dataset.gk)})}
+ else if(a==="geo-no"){geoNo(b.dataset.gk,b.dataset.pk)}
  else if(a==="plan-add"){openPlanPicker()}
  else if(a==="plan-pick"){var pb=b;planToggle(pb.dataset.pk,mapDayId()).then(function(){var on=planEvs(pb.dataset.pk,mapDayId()).length>0;pb.setAttribute("aria-pressed",on);pb.querySelector(".mchk").innerHTML=on?svg("check",16):""})}
  else if(a==="plan-one"){planToggle(b.dataset.pk,b.dataset.day).then(closeSheet)}
@@ -2278,8 +2297,8 @@ document.addEventListener("click",function(e){
  else if(a==="mcard"){openMapCard(b.dataset.id)}
  else if(a==="m-me"){gmLocate()}
  else if(a==="m-fit"){gmFit(mapShown(mapPoints()))}
- else if(a==="monly"){mapState.only=!mapState.only;renderMap()}
- else if(a==="monly-on"){mapState.only=true;renderMap()}
+ else if(a==="monly"){mapState.only=!mapState.only;gmKeep=true;renderMap()}
+ else if(a==="monly-on"){mapState.only=true;gmKeep=true;renderMap()}
  else if(a==="map-day"){mapState.day=b.dataset.day;mapFrom=location.hash||"#inicio";location.hash="#mapa"}
  else if(a==="spend"){openSpend()}
  else if(a==="sumtog"){setKV("sumOpen",!kv.sumOpen);renderDocsView()}

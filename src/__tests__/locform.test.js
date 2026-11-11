@@ -1114,8 +1114,14 @@ describe("formulario: ubicaciones", () => {
     const sec = $("#v-map .adrg");
     expect(sec.querySelector(".lab").textContent).toBe("Plan del día");
     const h = [...sec.querySelectorAll(".mhot li")].find((li) => li.querySelector("b").textContent === "Hotel Sol");
-    expect(h.textContent).toContain("Hotel de la noche");
+    // la noche anterior no se durmió ahí: va abajo, como check-in (la línea no sale de él)
+    expect(h.textContent).toContain("Hotel de esta noche · check-in");
     expect(h.querySelector(".mnum")).toBeNull();
+    // al día siguiente se amanece ahí: va arriba, como check-out
+    setSel("m-day", "2026-12-31");
+    const h2 = [...$("#v-map .adrg").querySelectorAll(".mhot li")].find((li) => li.querySelector("b").textContent === "Hotel Sol");
+    expect(h2.textContent).toContain("Hotel de anoche · check-out");
+    setSel("m-day", "2026-12-30");
     const rest = () => [...document.querySelectorAll("#v-map .adrg")].slice(1).map((x) => x.textContent).join(" ");
     expect(rest()).not.toContain("Hotel Sol");                             // no se repite en «Más en Madrid»
     expect(rest()).toContain("Gran Vía");                                  // los sitios no planeados
@@ -1148,6 +1154,11 @@ describe("formulario: ubicaciones", () => {
     expect(g.textContent).toMatch(/El \d+ no sale en el mapa: sin ubicar/);
     click(g);
     expect($("#sh-title").textContent).toBe("Revisar ubicaciones");
+    // lo planeado va primero, con su número del plan
+    const sp = $("#sheet-body .adrg");
+    expect(sp.querySelector(".lab").textContent).toMatch(/^En el plan del /);
+    const row = [...sp.querySelectorAll("li")].find((li) => li.textContent.includes("Sitio Sin Enlace"));
+    expect(row.querySelector(".mnum").textContent).toMatch(/^\d+$/);
     click($('[data-act="close"]'));
     click($('#v-map [data-act=mmode][data-v="list"]'));
     expect($("#v-map .mgap")).toBeNull();                               // en la lista no hace falta: sale con «Sin ubicar»

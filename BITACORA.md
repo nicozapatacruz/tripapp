@@ -14,6 +14,29 @@ Reglas:
 
 ## 2026-11-11
 
+- Mapa, segunda ronda tras probarlo en el iPhone:
+  - Revisar ubicaciones: el lápiz ya no activa el campo del enlace (el
+    teclado tapaba la hoja). Lo que está en el plan del día sin ubicar (o
+    ubicado por nombre) sale primero, en "En el plan del …", con su número.
+  - "No es aquí" ya no pide confirmar: quita el punto (queda sin ubicar) y
+    abre la edición del sitio con una nota para pegar el enlace correcto.
+    Al guardar o cancelar se vuelve al mapa. Pegar un enlace lo arregla
+    siempre, así que no se pierde nada.
+  - Tramo de la línea que salta un número: gris medio y en puntos (antes
+    gris muy claro, se distingue por la forma y no solo por el color).
+  - Hoteles del plan: arriba solo el hotel donde se durmió anoche (la línea
+    sale de ahí); el de esta noche, si es otro, abajo como check-in. Si
+    anoche fue en el avión (o escala sin hotel), arriba sale "Noche en el
+    avión" y la línea empieza en el 1. Antes, el día de llegada salía el
+    hotel arriba como si se amaneciera ahí.
+  - "Solo el plan" ya no mueve el mapa (solo encuadra si no queda ningún
+    punto a la vista). Sin puntos que mostrar, el mapa se queda quieto en
+    vez de alejarse a toda España; con el plan vacío sale "No hay nada en
+    el plan de este día".
+  - Decidido: no se hará mover un pin a mano (difícil en el móvil e
+    inexacto); se corrige pegando el enlace. Para marcar un sitio
+    cualquiera basta el enlace de Google Maps (pin soltado → compartir).
+
 - Mapa, ajustes tras probarlo:
   - Filtros: Estado pasa a ser una sección con su casilla, como Logística
     y Planes, con los 4 estados (Sin marcar, Quiero ir, Reservado, Ya fui).

@@ -27,8 +27,11 @@ En este orden:
    - Corregir las ubicaciones con "N sin ubicar" → Revisar ubicaciones
      (documentos con enlace corto: pegar el largo) y mirar los sitios con
      borde punteado.
-   - Quizás: corregir un punto moviéndolo en el mapa (hoy se corrige
-     pegando el enlace largo de Google Maps en el documento o la lista).
+   - Idea para más adelante: botón "Guardar dónde estoy" en el mapa. Guarda
+     la ubicación del GPS (exacta, sin Google Maps) y pregunta qué es: un
+     sitio para ver, un restaurante, una tienda, un parking, el hotel…
+     Hoy los sitios solo son Qué ver y Comer; tienda o parking pedirían un
+     tipo nuevo (decidir si va como "Otros" o tipos propios).
 
 ### Diseño del mapa (acordado con Nicolas, 10 nov)
 
