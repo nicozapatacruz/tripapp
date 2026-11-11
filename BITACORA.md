@@ -14,6 +14,14 @@ Reglas:
 
 ## 2026-11-11
 
+- Revertida la regla del coche de alquiler: vuelve a poder asignarse a
+  cualquier trayecto, como el tren o el bus. La app no tiene forma de saber
+  qué tramos solo se pueden hacer en avión (habría que escribir a mano que
+  Tenerife es isla, y ni así cubriría una escala en Bogotá), y la regla
+  impedía casos válidos como Tenerife → Madrid en vuelo + Madrid →
+  Pamplona en coche alquilado. Decidido con Nicolas: sin restricciones por
+  tipo; si se permite el tren, se permite el coche.
+
 - Revisión completa de la app (4 revisiones en paralelo). Arreglado el
   bloque prioritario:
   - Guardar: si el teléfono no guarda, ya no dice "guardado". Se reabre la

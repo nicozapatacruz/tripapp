@@ -1330,19 +1330,6 @@ describe("formulario: ubicaciones", () => {
     expect(items.map((x) => x.getAttribute("aria-label"))).toEqual(["Ruta", "Calendario", "Mapa", "Documentos", "Ajustes"]);
     expect(items.every((x) => x.textContent.trim() === "" && x.querySelector("svg"))).toBe(true);
   });
-  it("50) coche de alquiler en un día de vuelo: no tapa el vuelo pendiente", async () => {
-    openNew("2027-01-06", "coche");
-    expect($("#f-leg")).toBeNull();                                      // sin trayecto: no es el billete del vuelo
-    $("#f-co").value = "Hertz"; typeLoc("Aeropuerto Tenerife Sur");
-    await save();
-    expect($("#sheet").hidden).toBe(true);
-    location.hash = "#documentos"; window.dispatchEvent(new HashChangeEvent("hashchange"));
-    // (el vuelo de ese día ya lo cargaron tests anteriores) el coche no queda como «Hertz · Málaga → Tenerife»
-    const tk = [...document.querySelectorAll("#v-docs .ticket, #v-docs .dcard, #v-docs li")].map((x) => x.textContent).join(" | ");
-    expect(tk).toContain("Hertz");
-    expect(tk).not.toContain("Hertz · Málaga → Tenerife");
-  });
-
   it("51) evento que pasa la medianoche: se guarda y sale +1", async () => {
     const b = document.createElement("button");
     b.dataset.act = "ev-add"; b.dataset.day = DEC31;

@@ -399,8 +399,6 @@ var viaOpen=false;
 function legField(dayId,type,sel){
  var day=dayById(dayId);
  if(!day||!day.legs||!TRIPT[type])return "";
- // un coche de alquiler no es el billete de un vuelo: sin trayecto si el día solo tiene vuelos
- if(type==="coche"&&day.legs.every(function(l){return l.m==="vuelo"}))return "";
  // parada intermedia desde el formulario (solo si el día tiene un único traslado)
  var vv=day.legs.length===1?viaOf(day.d,0):[];
  var via=day.legs.length!==1?"":(vv.length?'<div class="viarow">Paradas: '+vv.map(function(x,k){return esc(x)+' <button type="button" class="mini" data-act="leg-via-del" data-k="'+k+'" aria-label="Quitar la parada '+esc(x)+'">Quitar</button>'}).join(" · ")+'</div>':"")+(viaOpen?
@@ -411,7 +409,7 @@ function legField(dayId,type,sel){
   return '<div class="field"><span class="fl">Trayecto</span><div class="legfix"><b>'+esc(segText(s0))+'</b>'+via+'</div><input type="hidden" id="f-leg" value="0-0"></div>';
  }
  var o='<option value="">Sin asignar</option>';
- day.legs.forEach(function(l,i){if(type==="coche"&&l.m==="vuelo")return;var ss=legSegs(day,i);
+ day.legs.forEach(function(l,i){var ss=legSegs(day,i);
   // con paradas, primero el trayecto entero (un billete con escalas) y después cada tramo por separado
   if(ss.length>1){var vr=i+"-0-"+(ss.length-1);o+='<option value="'+vr+'"'+(String(sel)===vr?" selected":"")+'>'+esc(segsText(ss)+" · "+viaText(ss))+'</option>'}
   ss.forEach(function(s){var v=i+"-"+s.j;o+='<option value="'+v+'"'+(String(sel)===v?" selected":"")+'>'+esc(segText(s))+'</option>'})});
@@ -509,12 +507,11 @@ function pendTickets(){
  var out=[];
  DAYS.forEach(function(day){
   if(!day.legs)return;
-  // el coche de alquiler no cuenta como billete de un vuelo (ni sin asignar cubre nada)
-  var own=docsOf(day.d).filter(function(d){return TRIPT[d.type]}),free=own.filter(function(d){return d.leg==null&&d.type!=="coche"}).length;
+  var own=docsOf(day.d).filter(function(d){return TRIPT[d.type]}),free=own.filter(function(d){return d.leg==null}).length;
   day.legs.forEach(function(l,i){
    var segs=legSegs(day,i);
    segs.forEach(function(sg){
-    var has=own.some(function(d){if(d.leg!==i||(d.type==="coche"&&l.m==="vuelo"))return false;var a=Math.min(d.seg||0,segs.length-1),b=Math.min(d.segTo!=null?d.segTo:(d.seg||0),segs.length-1);return a<=sg.j&&sg.j<=b});
+    var has=own.some(function(d){if(d.leg!==i)return false;var a=Math.min(d.seg||0,segs.length-1),b=Math.min(d.segTo!=null?d.segTo:(d.seg||0),segs.length-1);return a<=sg.j&&sg.j<=b});
     if(has)return;
     if(free>0){free--;return}
     out.push({day:day,leg:i,seg:sg,type:segType(l,sg.j)});
