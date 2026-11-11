@@ -1330,4 +1330,51 @@ describe("formulario: ubicaciones", () => {
     expect(items.map((x) => x.getAttribute("aria-label"))).toEqual(["Ruta", "Calendario", "Mapa", "Documentos", "Ajustes"]);
     expect(items.every((x) => x.textContent.trim() === "" && x.querySelector("svg"))).toBe(true);
   });
+  it("50) coche de alquiler en un día de vuelo: no tapa el vuelo pendiente", async () => {
+    openNew("2027-01-06", "coche");
+    expect($("#f-leg")).toBeNull();                                      // sin trayecto: no es el billete del vuelo
+    $("#f-co").value = "Hertz"; typeLoc("Aeropuerto Tenerife Sur");
+    await save();
+    expect($("#sheet").hidden).toBe(true);
+    location.hash = "#documentos"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    // (el vuelo de ese día ya lo cargaron tests anteriores) el coche no queda como «Hertz · Málaga → Tenerife»
+    const tk = [...document.querySelectorAll("#v-docs .ticket, #v-docs .dcard, #v-docs li")].map((x) => x.textContent).join(" | ");
+    expect(tk).toContain("Hertz");
+    expect(tk).not.toContain("Hertz · Málaga → Tenerife");
+  });
+
+  it("51) evento que pasa la medianoche: se guarda y sale +1", async () => {
+    const b = document.createElement("button");
+    b.dataset.act = "ev-add"; b.dataset.day = DEC31;
+    document.body.appendChild(b); click(b); b.remove();
+    $("#e-title").value = "Cotillón"; $("#e-t1").value = "22:00"; $("#e-t2").value = "02:00";
+    click($('[data-act="ev-save"]')); await tick();
+    expect($("#sheet").hidden).toBe(true);
+    location.hash = "#calendario"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const ag = [...document.querySelectorAll("#c-" + DEC31 + " .ag")].find((x) => x.textContent.includes("Cotillón"));
+    expect(ag.textContent).toContain("02:00 +1");
+    // igual inicio y fin sí da error
+    const b2 = document.createElement("button");
+    b2.dataset.act = "ev-add"; b2.dataset.day = DEC31;
+    document.body.appendChild(b2); click(b2); b2.remove();
+    $("#e-title").value = "Mal"; $("#e-t1").value = "10:00"; $("#e-t2").value = "10:00";
+    click($('[data-act="ev-save"]')); await tick();
+    expect($("#e-err").textContent).toMatch(/igual/);
+    click($('#sheet [data-act="close"]'));
+  });
+
+  it("52) formulario con cambios: tocar fuera no lo cierra (Cancelar sí)", async () => {
+    openNew(MADRID, "entrada");
+    $("#f-title").value = "Prado"; $("#f-title").dispatchEvent(new Event("input", { bubbles: true }));
+    click($("#sheet"));
+    expect($("#sheet").hidden).toBe(false);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect($("#sheet").hidden).toBe(false);
+    click($('#sheet [data-act="close"]'));
+    expect($("#sheet").hidden).toBe(true);
+    // sin cambios, tocar fuera cierra como siempre
+    openNew(MADRID, "entrada");
+    click($("#sheet"));
+    expect($("#sheet").hidden).toBe(true);
+  });
 });

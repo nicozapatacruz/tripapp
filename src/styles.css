@@ -55,7 +55,7 @@ ul,ol{padding:0;list-style:none}
 .app{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 20px;border-radius:99px;border:1px solid var(--line);background:var(--surface);font-weight:650;font-size:15px}
-.btn.primary{background:var(--c1,var(--accent));border-color:transparent;color:#fff}
+.btn.primary{background:var(--c1,var(--accent));border-color:transparent;color:var(--accent-ink)}
 .btn.danger{color:var(--danger);border-color:currentColor;background:transparent}
 .pinn{flex:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--c);color:#fff;font:700 12px/1 var(--f);font-variant-numeric:tabular-nums}
 
@@ -614,3 +614,7 @@ body.mapfull .app{padding-bottom:0}
 .mgap span{flex:1;min-width:0}
 .mgap .i{flex:none;color:var(--muted)}
 .mgap.un .i:first-child{color:var(--miss)}
+
+/* Aviso fijo: el teléfono no está guardando (no se va solo) */
+.savewarn{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 8px);z-index:200;display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:14px;background:var(--danger);color:#fff;font:500 14px/1.35 var(--f);box-shadow:var(--shadow)}
+.savewarn b{font-weight:700}

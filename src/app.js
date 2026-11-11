@@ -399,6 +399,8 @@ var viaOpen=false;
 function legField(dayId,type,sel){
  var day=dayById(dayId);
  if(!day||!day.legs||!TRIPT[type])return "";
+ // un coche de alquiler no es el billete de un vuelo: sin trayecto si el día solo tiene vuelos
+ if(type==="coche"&&day.legs.every(function(l){return l.m==="vuelo"}))return "";
  // parada intermedia desde el formulario (solo si el día tiene un único traslado)
  var vv=day.legs.length===1?viaOf(day.d,0):[];
  var via=day.legs.length!==1?"":(vv.length?'<div class="viarow">Paradas: '+vv.map(function(x,k){return esc(x)+' <button type="button" class="mini" data-act="leg-via-del" data-k="'+k+'" aria-label="Quitar la parada '+esc(x)+'">Quitar</button>'}).join(" · ")+'</div>':"")+(viaOpen?
@@ -409,7 +411,7 @@ function legField(dayId,type,sel){
   return '<div class="field"><span class="fl">Trayecto</span><div class="legfix"><b>'+esc(segText(s0))+'</b>'+via+'</div><input type="hidden" id="f-leg" value="0-0"></div>';
  }
  var o='<option value="">Sin asignar</option>';
- day.legs.forEach(function(l,i){var ss=legSegs(day,i);
+ day.legs.forEach(function(l,i){if(type==="coche"&&l.m==="vuelo")return;var ss=legSegs(day,i);
   // con paradas, primero el trayecto entero (un billete con escalas) y después cada tramo por separado
   if(ss.length>1){var vr=i+"-0-"+(ss.length-1);o+='<option value="'+vr+'"'+(String(sel)===vr?" selected":"")+'>'+esc(segsText(ss)+" · "+viaText(ss))+'</option>'}
   ss.forEach(function(s){var v=i+"-"+s.j;o+='<option value="'+v+'"'+(String(sel)===v?" selected":"")+'>'+esc(segText(s))+'</option>'})});
@@ -491,9 +493,9 @@ function nightLabel(d){return d.plane?"Noche en el avión":d.layover?"Noche de e
 /* Noches de hotel y pendientes */
 function staysOf(){var out=[];DAYS.forEach(function(d){if(!d.sleep)return;var l=out[out.length-1];if(l&&l.city===d.sleep&&l.nights[l.nights.length-1].i===d.i-1)l.nights.push(d);else out.push({city:d.sleep,nights:[d]})});return out}
 function stayOfDay(id){var st=staysOf();for(var k=0;k<st.length;k++)for(var n=0;n<st[k].nights.length;n++)if(st[k].nights[n].d===id)return st[k];return null}
-function nightsCovered(){
+function nightsCovered(skipId){
  var m={};
- docs.forEach(function(d){if(d.type!=="hotel")return;var a=dayById(d.dayId);if(!a)return;var b=(d.nightTo&&dayById(d.nightTo))||a;for(var k=a.i;k<=b.i;k++)m[DAYS[k].d]=1});
+ docs.forEach(function(d){if(d.type!=="hotel"||d.id===skipId)return;var a=dayById(d.dayId);if(!a)return;var b=(d.nightTo&&dayById(d.nightTo))||a;for(var k=a.i;k<=Math.max(a.i,b.i);k++)m[DAYS[k].d]=1});
  return m;
 }
 function pendHotels(){
@@ -507,11 +509,12 @@ function pendTickets(){
  var out=[];
  DAYS.forEach(function(day){
   if(!day.legs)return;
-  var own=docsOf(day.d).filter(function(d){return TRIPT[d.type]}),free=own.filter(function(d){return d.leg==null}).length;
+  // el coche de alquiler no cuenta como billete de un vuelo (ni sin asignar cubre nada)
+  var own=docsOf(day.d).filter(function(d){return TRIPT[d.type]}),free=own.filter(function(d){return d.leg==null&&d.type!=="coche"}).length;
   day.legs.forEach(function(l,i){
    var segs=legSegs(day,i);
    segs.forEach(function(sg){
-    var has=own.some(function(d){if(d.leg!==i)return false;var a=Math.min(d.seg||0,segs.length-1),b=Math.min(d.segTo!=null?d.segTo:(d.seg||0),segs.length-1);return a<=sg.j&&sg.j<=b});
+    var has=own.some(function(d){if(d.leg!==i||(d.type==="coche"&&l.m==="vuelo"))return false;var a=Math.min(d.seg||0,segs.length-1),b=Math.min(d.segTo!=null?d.segTo:(d.seg||0),segs.length-1);return a<=sg.j&&sg.j<=b});
     if(has)return;
     if(free>0){free--;return}
     out.push({day:day,leg:i,seg:sg,type:segType(l,sg.j)});
@@ -522,7 +525,7 @@ function pendTickets(){
 }
 function hotelEnd(dayId){
  var st=stayOfDay(dayId);if(!st)return null;
- var cov=nightsCovered(),last=null;
+ var cov=nightsCovered(editing&&editing.id),last=null;   // el hotel que se edita no se tapa a sí mismo
  for(var k=0;k<st.nights.length;k++){var n=st.nights[k];if(n.d<dayId)continue;if(n.d!==dayId&&cov[n.d])break;last=n.d}
  return last;
 }
@@ -707,28 +710,53 @@ function routeHTML(day){return day.stops.map(function(s){return esc(nm(s))}).joi
 function routeText(day){return day.stops.map(nm).join(" → ")}
 
 /* ================= Almacenamiento local ================= */
-var db=null, docs=[], kv={}, urls={};
+var db=null, docs=[], kv={}, urls={}, impDone=0;
 function openDB(){return new Promise(function(res){try{var r=indexedDB.open("journest",1);
  r.onupgradeneeded=function(){var d=r.result;d.createObjectStore("docs",{keyPath:"id"});d.createObjectStore("kv",{keyPath:"k"})};
  r.onsuccess=function(){res(r.result)};r.onerror=function(){res(null)};r.onblocked=function(){res(null)}}catch(e){res(null)}})}
 function tx(store,mode,fn){return new Promise(function(res,rej){var t=db.transaction(store,mode);var s=t.objectStore(store);var r=fn(s);t.oncomplete=function(){res(r&&r.result)};t.onerror=function(){rej(t.error)};t.onabort=function(){rej(t.error)}})}
 async function loadAll(){
  db=await openDB();
- if(!db)return;
+ if(!db){storeWarn("Este teléfono no deja guardar datos de la app.","Lo que añadas se perderá al cerrarla. Si estás en navegación privada, ábrela de forma normal.");return}
  try{docs=(await tx("docs","readonly",function(s){return s.getAll()}))||[];upgradeOldPlaces(docs);
-  var rows=(await tx("kv","readonly",function(s){return s.getAll()}))||[];rows.forEach(function(r){kv[r.k]=r.v})}catch(e){docs=[]}
+  var rows=(await tx("kv","readonly",function(s){return s.getAll()}))||[];rows.forEach(function(r){kv[r.k]=r.v})}
+ catch(e){
+  // si no se pudo leer, no se escribe nada: guardar con datos a medias pisaría lo que hay en el teléfono
+  db=null;docs=[];kv={};
+  storeWarn("No se pudieron leer tus datos guardados.","Cierra la app del todo y vuelve a abrirla. No añadas nada hasta entonces.");
+ }
 }
+/* Aviso fijo (no se va solo) cuando el teléfono no está guardando */
+var storeWarned=false;
+function storeWarn(t,sub){
+ if(storeWarned||typeof document==="undefined")return;storeWarned=true;
+ var el=document.createElement("div");el.className="savewarn";el.setAttribute("role","alert");
+ el.innerHTML='<b>'+esc(t||"Los cambios no se están guardando.")+'</b><span>'+esc(sub||"Cierra la app del todo y vuelve a abrirla. Si sigue pasando, revisa el espacio libre del teléfono.")+'</span>';
+ document.body.appendChild(el);
+}
+/* Escribir en la base. iOS a veces corta la conexión tras mucho tiempo en segundo plano: se reabre
+   y se reintenta una vez. Si sigue fallando, aviso fijo y el error sube (quien llama decide). */
+async function dbWrite(store,fn){
+ try{return await tx(store,"readwrite",fn)}
+ catch(e){
+  if(!(e&&e.name==="QuotaExceededError")){try{var n=await openDB();if(n){db=n;return await tx(store,"readwrite",fn)}}catch(e2){}}
+  storeWarn();throw e;
+ }
+}
+/* Documento: primero en el teléfono y solo después en la app. Si falla, lanza el error y la app
+   queda como estaba (así nunca se ve "guardado" algo que se perdería al cerrar). */
 async function saveDoc(d){
+ if(db)await dbWrite("docs",function(s){return s.put(d)});
  var i=docs.findIndex(function(x){return x.id===d.id});if(i<0)docs.push(d);else docs[i]=d;
- if(db){try{await tx("docs","readwrite",function(s){return s.put(d)})}catch(e){toast("No se pudo guardar en el dispositivo")}}
 }
+function saveErrText(e){return e&&e.name==="QuotaExceededError"?"No queda espacio en el teléfono para guardarlo. Prueba con un archivo más liviano o libera espacio.":"No se pudo guardar en el teléfono. Inténtalo otra vez."}
 async function removeDoc(id){
  docs=docs.filter(function(x){return x.id!==id});
  if(urls[id]){try{URL.revokeObjectURL(urls[id])}catch(e){}delete urls[id]}
- if(db){try{await tx("docs","readwrite",function(s){return s.delete(id)})}catch(e){}}
+ if(db){try{await dbWrite("docs",function(s){return s.delete(id)})}catch(e){}}
 }
-async function setKV(k,v){kv[k]=v;if(db){try{await tx("kv","readwrite",function(s){return s.put({k:k,v:v})})}catch(e){}}}
-async function delKV(k){delete kv[k];if(db){try{await tx("kv","readwrite",function(s){return s.delete(k)})}catch(e){}}}
+async function setKV(k,v){kv[k]=v;if(db){try{await dbWrite("kv",function(s){return s.put({k:k,v:v})})}catch(e){}}}
+async function delKV(k){delete kv[k];if(db){try{await dbWrite("kv",function(s){return s.delete(k)})}catch(e){}}}
 function objUrl(d){if(!d.blob)return "";if(!urls[d.id])urls[d.id]=URL.createObjectURL(d.blob);return urls[d.id]}
 function uid(){return "d"+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 function fmtSize(n){if(!n)return "";if(n<1024)return n+" B";if(n<1048576)return Math.round(n/1024)+" KB";return (n/1048576).toFixed(1)+" MB"}
@@ -846,6 +874,8 @@ function legsHTML(day){
 function docSeg(d){if(!TRIPT[d.type])return "";return segsText(docSegs(d))}
 function docSegs(d){return rangeSegs(dayById(d.dayId),parseLeg(docLegVal(d)))}
 function arrSuffix(d){var n=docArr(d);return n>0?" +"+n:""}
+/* Fin antes que el inicio en algo que no es traslado ni hotel (cena 21:30–01:00): termina al día siguiente */
+function plus1(t1,t2,type){return type!=="hotel"&&!TRIPT[type]&&tmin(t1)!=null&&tmin(t2)!=null&&tmin(t2)<tmin(t1)?" +1":""}
 /* Debajo del título: números ("AV9301 · IB6800") y escalas ("escala 2 h 55 min en Bogotá") */
 function tripSub(d){
  if(!TRIPT[d.type])return [];
@@ -861,7 +891,7 @@ function ticketLine(d){
  var o=[],st0=docSeg(d);
  if(st0&&!titleHas(d,st0))o.push(st0);
  if(d.type==="hotel"){var nt0=nightsText(d);if(nt0)o.push(nt0)}
- if(d.t1)o.push(d.t1+(d.t2?"–"+d.t2+arrSuffix(d):""));
+ if(d.t1)o.push(d.t1+(d.t2?"–"+d.t2+(arrSuffix(d)||plus1(d.t1,d.t2,d.type)):""));
  if(TRIPT[d.type]){
   var nos=d.hops?d.hops.map(function(h){return h.no}).filter(Boolean).join(" · "):(d.no||"");if(nos)o.push(nos);
   var ns=docSegs(d).length-1;if(ns>0)o.push(ns+(ns===1?" escala":" escalas"));
@@ -953,7 +983,10 @@ function renderDocsView(){
 /* ================= Hoja: añadir / editar documento ================= */
 var sheet=$("#sheet"),sheetBody=$("#sheet-body"),sheetFoot=$("#sheet-foot"),sheetHead=$("#sheet-head"),selType="hotel",editing=null;
 /* foot: botones fijos abajo (Editar, o Eliminar | Guardar), siempre a mano aunque el formulario sea largo */
-function openSheet(html,foot){flushPaid();sheetBody.innerHTML=html;sheetFoot.innerHTML=foot||"";sheetFoot.hidden=!foot;sheetBody.scrollTop=0;
+var sheetDirty=false;   // hay algo escrito en un formulario con Guardar
+function sheetHasSave(){return !!sheetFoot.querySelector('[data-act="save"],[data-act="ev-save"],[data-act="item-save"]')}
+function sheetCanDismiss(){if(sheetDirty&&sheetHasSave()){toast("Tienes cambios sin guardar. Toca Guardar o Cancelar.");return false}return true}
+function openSheet(html,foot){flushPaid();sheetDirty=false;sheetBody.innerHTML=html;sheetFoot.innerHTML=foot||"";sheetFoot.hidden=!foot;sheetBody.scrollTop=0;
  // cabecera (título y Cerrar/Cancelar) fuera del área que se desplaza: así nada se ve pasar por encima o por detrás
  var hd=sheetBody.querySelector(".sh-head");sheetHead.innerHTML="";if(hd&&hd.parentNode===sheetBody)sheetHead.appendChild(hd);sheetHead.hidden=!sheetHead.firstChild;sheetHead.classList.remove("scrolled");sheet.hidden=false;document.documentElement.style.overflow="hidden";var dlg=sheet.querySelector(".sheet");if(dlg)try{dlg.focus({preventScroll:true})}catch(e){}}
 function closeSheet(){flushPaid();revBack=false;if(docTitle0!==null){document.title=docTitle0;docTitle0=null}evEditing=null;expFile=null;impWrapper=null;impBackup=null;sheet.hidden=true;sheetBody.innerHTML="";sheetHead.innerHTML="";sheetFoot.innerHTML="";sheetFoot.hidden=true;document.documentElement.style.overflow="";editing=null}
@@ -1056,7 +1089,7 @@ function vField(l,h){return '<div class="field"><span class="fl">'+l+'</span>'+h
 function vTimes(t,a,b){
  var L=t==="hotel"?["Check-in","Check-out"]:TRIPT[t]?["Salida","Llegada"]:["Inicio","Fin"],c=[];
  if(a)c.push('<div><small>'+L[0]+'</small><b>'+esc(a)+'</b></div>');
- if(b)c.push('<div><small>'+L[1]+'</small><b>'+esc(b)+'</b></div>');
+ if(b)c.push('<div><small>'+L[1]+'</small><b>'+esc(b)+(plus1(a,b,t)?' <small>(día siguiente)</small>':"")+'</b></div>');
  return c.length?'<div class="vtimes">'+c.join("")+'</div>':"";
 }
 function vLeg(l,t,name,u,tag,sub){
@@ -1142,7 +1175,7 @@ async function saveFromSheet(){
  var cur=$("#f-cur").value;
  var d=editing?Object.assign({},editing):{id:uid(),created:Date.now()};
  var t1=fx.t1||"",t2=fx.t2||"";
- if(t1&&t2&&selType!=="hotel"&&!TRIPT[selType]&&t2<=t1){formErr("La hora de fin debe ser posterior a la de inicio.","",$("#f-t2"));return}
+ if(t1&&t2&&selType!=="hotel"&&!TRIPT[selType]&&t2===t1){formErr("La hora de fin es igual a la de inicio. Si termina al día siguiente, pon la hora real (por ejemplo 01:00).","",$("#f-t2"));return}
  if(ARRT[selType]&&fx.arr<minArr()){formErr(arrMsg(),"",$("#f-t2")||$("#f-h"+(fx.hops.length-1)+"-t2"));return}
  var tr=!!TRIPT[selType],dy=dayById(day),ls=$("#f-leg"),idx=placeIndex(),slots=tr?[1,2]:[1];
  // No puede haber dos lugares con el mismo nombre y distinto enlace en la misma ciudad
@@ -1181,7 +1214,9 @@ async function saveFromSheet(){
  else{d.title=autoTitle(d,dy);d.titleAuto=true}
  if(fileDel&&!file){if(urls[d.id]){try{URL.revokeObjectURL(urls[d.id])}catch(e){}delete urls[d.id]}delete d.blob;delete d.fileName;delete d.mime;delete d.size}
  if(file){if(urls[d.id]){try{URL.revokeObjectURL(urls[d.id])}catch(e){}delete urls[d.id]}d.blob=file;d.fileName=file.name;d.mime=file.type||"application/octet-stream";d.size=file.size}
- var wasEdit=!!editing;await saveDoc(d);refresh();
+ var wasEdit=!!editing;
+ try{await saveDoc(d)}catch(e){formErr(saveErrText(e));return}
+ refresh();
  if(wasEdit){if(!revReturn())openDocView(d.id)}else closeSheet();
  toast("Documento guardado");
 }
@@ -1566,7 +1601,7 @@ function renderMap(){
  if(mapState.mode==="map"){
   var off=!isOnline();
   if(GM_ON&&!off&&!gFail)body='<div class="mapbox"><div class="mapctl"><button type="button" class="mctl" data-act="m-me" aria-label="Mi ubicación">'+svg("locate",20)+'</button><button type="button" class="mctl" data-act="m-fit" aria-label="Encuadrar todo">'+svg("fit",20)+'</button></div></div>';
-  else body='<div class="mapph">'+svg("route",34)+'<b>'+(off?"Sin internet: el mapa no se puede mostrar":gFail?"No se pudo cargar el mapa de Google":"Aquí irá el mapa")+'</b><span>'+(off?"La lista funciona igual sin conexión.":gFail?"Prueba más tarde. Mientras, la lista funciona igual.":"Falta conectar Google Maps. Mientras, usa la lista.")+'</span><button type="button" class="btn" data-act="mmode" data-v="list">Ver como lista</button></div>';
+  else body='<div class="mapph">'+svg("route",34)+'<b>'+(off?"Sin internet: el mapa no se puede mostrar":gFail?"No se pudo cargar el mapa de Google":"Aquí irá el mapa")+'</b><span>'+(off?"La lista funciona igual sin conexión.":gFail?(gAuth?"Google rechazó la clave del mapa. Mientras, la lista funciona igual.":"Puede ser la conexión. Mientras, la lista funciona igual."):"Falta conectar Google Maps. Mientras, usa la lista.")+'</span>'+(gFail&&!gAuth&&!off?'<button type="button" class="btn primary" data-act="m-retry">Reintentar</button>':"")+'<button type="button" class="btn" data-act="mmode" data-v="list">Ver como lista</button></div>';
  }else{
   var ph="";
   if(dy){
@@ -1629,16 +1664,18 @@ function openMapCard(id){
   an2.forEach(function(a,i){if(distKm(p.ll,a.p.ll)>WALK_KM)return;routesWalk(a.p.ll,p.ll).then(function(r){var w=sheetBody.querySelector('.wk[data-i="'+i+'"]');if(!w)return;w.textContent=walkText(r.min)+" a pie";
    var dk=sheetBody.querySelector('.dk[data-i="'+i+'"]');if(dk&&r.km)dk.textContent=distText(r.km);var nt=$("#md-note");if(nt)nt.textContent="Distancia y tiempo a pie según Google Maps."}).catch(function(){})})}
 }
-if(typeof window!=="undefined"){window.addEventListener("online",function(){if(view==="map")renderMap()});window.addEventListener("offline",function(){if(view==="map")renderMap()})}
+if(typeof window!=="undefined"){window.addEventListener("online",function(){gRetry();if(view==="map")renderMap()});window.addEventListener("offline",function(){if(view==="map")renderMap()})}
 /* ---- Google Maps: mapa, coordenadas por nombre y tiempo a pie ----
    La clave va en el código a propósito: el mapa se dibuja en el navegador. Está restringida en
    Google Cloud a nicozapatacruz.github.io/tripapp/* y localhost, y solo a Maps JavaScript,
    Geocoding y Routes (en prueba gratuita hasta ~8 feb 2027: no cobra; ver PENDIENTES.md). */
 var GM_KEY="AIzaSyAE46uJ7JtkDkKJY9nN7OARfz0qlcKkXDc",GM_MAPID="83a25be103270202f5082791";
 var GM_ON=!!GM_KEY&&!(typeof navigator!=="undefined"&&/jsdom/i.test(navigator.userAgent||""));   // en los tests no se carga Google
-var gmP=null,gm=null,gmEl=null,gmMarkers=[],gmMe=null,gmLines=[],gFail=false,gmFitKey="",gmKeep=false;
+var gmP=null,gm=null,gmEl=null,gmMarkers=[],gmMe=null,gmLines=[],gFail=false,gAuth=false,gmFitKey="",gmKeep=false;
 if(GM_ON)mapState.mode="map";
-window.gm_authFailure=function(){gFail=true;if(view==="map")renderMap()};   // clave rechazada por Google
+window.gm_authFailure=function(){gFail=true;gAuth=true;if(view==="map")renderMap()};   // clave rechazada por Google
+/* Un fallo de red (no de clave) se puede reintentar: al volver la conexión, al volver a la app o con el botón */
+function gRetry(){if(!gFail||gAuth||!isOnline())return false;gFail=false;return true}
 function loadGM(){
  if(gmP)return gmP;
  gmP=new Promise(function(res,rej){
@@ -2006,12 +2043,18 @@ async function applyImport(mode,btn){
  var label=btn.textContent,all=sheetBody.querySelectorAll("[data-act=imp-apply]");
  all.forEach(function(x){x.disabled=true});busy(btn,"Importando…");
  try{
-  var plan=importPlan(impBackup,mode);
-  for(var i=0;i<plan.docs.length;i++){if(plan.docs.length>1)progress("Importando documentos · "+(i+1)+" de "+plan.docs.length);var d=Object.assign({},plan.docs[i]);plan.docs[i].data=null;upgradeOldPlaces([d]);if(d.data){d.blob=dataURLtoBlob(d.data);delete d.data}await saveDoc(d);d=null}
+  var plan=importPlan(impBackup,mode);impDone=0;
+  // la copia en memoria no se toca: si algo falla a mitad, un segundo intento no puede guardar documentos sin su archivo
+  for(var i=0;i<plan.docs.length;i++){if(plan.docs.length>1)progress("Importando documentos · "+(i+1)+" de "+plan.docs.length);var d=Object.assign({},plan.docs[i]);upgradeOldPlaces([d]);if(d.data){d.blob=dataURLtoBlob(d.data);delete d.data}await saveDoc(d);d=null;impDone=i+1}
   var ks=Object.keys(plan.kv);for(var k=0;k<ks.length;k++)await setKV(ks[k],plan.kv[ks[k]]);
   impBackup=null;closeSheet();applyTheme();refresh();
   toast(plan.docs.length?"Importados "+plan.docs.length+(plan.docs.length===1?" documento":" documentos"):"Itinerario importado");
- }catch(e){all.forEach(function(x){x.disabled=false});progress("");idle(btn,label);toast("No se pudo importar la copia")}
+ }catch(e){
+  // no se reintenta con la misma copia: hay que volver a elegir el archivo
+  impBackup=null;idle(btn,label);all.forEach(function(x){x.disabled=true});progress("");
+  var pe=$("#x-prog");if(pe){pe.hidden=false;pe.textContent=(e&&e.name==="QuotaExceededError"?"No queda espacio en el teléfono. ":"No se pudo importar la copia. ")+(impDone?"Se importaron "+impDone+" documentos. ":"")+"Cierra y vuelve a elegir el archivo."}
+  toast("No se pudo importar la copia");
+ }
 }
 
 /* ================= Navegación ================= */
@@ -2054,7 +2097,7 @@ function agendaOf(day){
  items.forEach(function(x){if(tmin(x.t1)!=null)return;if(x.hout)x.top=true;else if(x.hin)x.top=!outTimed});
  var top=items.filter(function(x){return x.top}).sort(function(a,b){return (b.hout?1:0)-(a.hout?1:0)}),timed=items.filter(function(x){return !x.top&&tmin(x.t1)!=null}),un=items.filter(function(x){return !x.top&&tmin(x.t1)==null}).sort(function(a,b){return (b.hin?1:0)-(a.hin?1:0)});
  timed.sort(function(a,b){var d=tmin(a.t1)-tmin(b.t1);if(d)return d;var x=tmin(a.t2),y=tmin(b.t2);return (x==null?1e4:x)-(y==null?1e4:y)});
- function rng(x){var s=tmin(x.t1),e=tmin(x.t2);if(e!=null&&x.arr)e+=x.arr*1440;return {s:s,e:(e!=null&&e>s)?e:s}}
+ function rng(x){var s=tmin(x.t1),e=tmin(x.t2);if(e!=null&&x.arr)e+=x.arr*1440;else if(e!=null&&e<s&&plus1(x.t1,x.t2,x.type))e+=1440;return {s:s,e:(e!=null&&e>s)?e:s}}
  for(var i=0;i<timed.length;i++)for(var j=i+1;j<timed.length;j++){
   var a=rng(timed[i]),b=rng(timed[j]),hit=false;
   if(a.e>a.s&&b.e>b.s)hit=a.s<b.e&&b.s<a.e;
@@ -2065,7 +2108,7 @@ function agendaOf(day){
  return {top:top,timed:timed,un:un,all:items};
 }
 function agItem(it){
- var has=tmin(it.t1)!=null,tm=has?'<b>'+esc(it.t1)+'</b>'+(it.t2?'<small>'+esc(it.t2+(it.arr?" +"+it.arr:""))+'</small>':""):"";   // sin hora: sin columna de hora
+ var has=tmin(it.t1)!=null,tm=has?'<b>'+esc(it.t1)+'</b>'+(it.t2?'<small>'+esc(it.t2+(it.arr?" +"+it.arr:plus1(it.t1,it.t2,it.type)))+'</small>':""):"";   // sin hora: sin columna de hora
  return '<button type="button" class="ag'+(has?"":" nt")+(it.clash?" clash":"")+'" style="--t:'+colOf(it.type)+'" data-act="'+(it.k==="doc"?"view":"ev-view")+'" data-id="'+esc(it.id)+'">'+(has?'<span class="agt">'+tm+'</span>':"")+'<span class="agi">'+svg(it.type==="evento"?"cal":(TYPE_ICON[it.type]||"file"),16)+'</span><span class="agb"><b>'+esc(it.title)+'</b>'+(it.sub?'<small>'+esc(it.sub)+'</small>':"")+(it.clash?'<em class="cl">Se cruza con otra actividad</em>':"")+'</span></button>';
 }
 function dayAgenda(day){
@@ -2130,7 +2173,7 @@ async function saveEvent(){
  var title=$("#e-title").value.trim(),t1=$("#e-t1").value||"",t2=$("#e-t2").value||"";
  if(!title){$("#e-err").textContent="Escribe un nombre para el evento.";return}
  if(t2&&!t1){$("#e-err").textContent="Pon también la hora de inicio.";return}
- if(t1&&t2&&t2<=t1){$("#e-err").textContent="La hora de fin debe ser posterior a la de inicio.";return}
+ if(t1&&t2&&t2===t1){$("#e-err").textContent="La hora de fin es igual a la de inicio. Si termina al día siguiente, pon la hora real (por ejemplo 01:00).";return}
  var list=evList().slice(),ev=evEditing?Object.assign({},evEditing):{id:uid()};
  ev.title=title;ev.day=$("#e-day").value;ev.t1=t1;ev.t2=t2;ev.note=$("#e-note").value.trim();
  if(evPk)ev.pk=evPk;   // campo nuevo opcional: los eventos viejos siguen valiendo
@@ -2205,7 +2248,7 @@ function refresh(){applyTransit();var y=window.scrollY;var h=location.hash.repla
 
 document.addEventListener("click",function(e){
  var b=e.target.closest("[data-act]");
- if(!b){if(e.target===sheet)closeSheet();return}
+ if(!b){if(e.target===sheet&&sheetCanDismiss())closeSheet();return}
  // un enlace dentro de un elemento con acción (p. ej. "Mapa" en una tarjeta) hace lo suyo, sin abrir la tarjeta
  var lk=e.target.closest("a");if(lk&&lk!==b&&b.contains(lk))return;
  var a=b.dataset.act;
@@ -2311,6 +2354,7 @@ document.addEventListener("click",function(e){
  else if(a==="mcard"){openMapCard(b.dataset.id)}
  else if(a==="m-me"){gmLocate()}
  else if(a==="m-fit"){gmFit(mapShown(mapPoints()))}
+ else if(a==="m-retry"){if(gRetry())renderMap()}
  else if(a==="monly"){mapState.only=!mapState.only;gmKeep=true;renderMap()}
  else if(a==="monly-on"){mapState.only=true;gmKeep=true;renderMap()}
  else if(a==="map-day"){mapState.day=b.dataset.day;mapFrom=location.hash||"#inicio";location.hash="#mapa"}
@@ -2338,7 +2382,8 @@ document.addEventListener("change",function(e){
  if(e.target.id==="f-file"){var f=e.target.files[0];if(f){var fd=$("#f-filedel");if(fd)fd.hidden=false;$("#f-name").innerHTML=esc(f.name)+"<small>"+fmtSize(f.size)+"</small>";var ft=$("#f-title");if(ft&&!ft.value)ft.value=f.name.replace(/\.[^.]+$/,"");
   var bn=$("#f-bignote");if(bn){bn.hidden=f.size<=BIG_FILE;bn.textContent=f.size>BIG_FILE?"Este archivo pesa "+fmtSize(f.size)+". Las copias de seguridad tardarán y pueden fallar en iPhone o iPad. Si puedes, usa un PDF más liviano o una captura.":""}}}
  else if(e.target.id==="f-day"){
-  formDay=e.target.value;toSel="";viaOpen=false;
+  // al cambiar la primera noche de un hotel ya guardado se conserva su última noche (si sigue valiendo)
+  formDay=e.target.value;toSel=editing&&editing.type==="hotel"&&editing.nightTo?editing.nightTo:"";viaOpen=false;
   legSel=onlyLeg(formDay);legManual=!!legSel;refreshLegField();autoLeg();
   dayChanged();refreshLocFields();refreshTypes(null);
  }
@@ -2373,7 +2418,8 @@ document.addEventListener("input",function(e){
  autoLeg();
  refreshLocStat(n);
 });
-document.addEventListener("keydown",function(e){if(e.key!=="Escape")return;if(vw){closeViewer();return}if(!sheet.hidden)closeSheet()});
+document.addEventListener("keydown",function(e){if(e.key!=="Escape")return;if(vw){closeViewer();return}if(!sheet.hidden&&sheetCanDismiss())closeSheet()});
+["input","change"].forEach(function(t){document.addEventListener(t,function(e){if(!sheet.hidden&&e.target&&e.target.closest&&e.target.closest("#sheet-body"))sheetDirty=true},true)});
 window.addEventListener("hashchange",route);
 // Es una app: sin zoom con dos dedos. iOS ignora user-scalable=no del viewport, así que se frena el gesto.
 ["gesturestart","gesturechange"].forEach(function(t){document.addEventListener(t,function(e){e.preventDefault()},{passive:false})});
@@ -2386,6 +2432,14 @@ window.addEventListener("resize",updateFab);
 /* Barra de abajo solo con íconos (el título de cada página dice dónde se está); el nombre va en aria-label */
 [["#nav-home","way","Ruta"],["#nav-cal","cal","Calendario"],["#nav-map","route","Mapa"],["#nav-docs","file","Documentos"],["#nav-set","sliders","Ajustes"]].forEach(function(x){var el=$(x[0]);el.innerHTML=svg(x[1],26);el.setAttribute("aria-label",x[2]);el.setAttribute("title",x[2])});
 
+/* La app instalada casi nunca se recarga: al volver a primer plano, si cambió el día, se redibuja
+   (Hoy, contador, día por defecto) y se vuelve a llevar a hoy. Si el mapa falló por la red, se reintenta. */
+var lastToday=todayStr();
+document.addEventListener("visibilitychange",function(){
+ if(document.visibilityState!=="visible")return;
+ var t=todayStr();if(t!==lastToday){lastToday=t;homeScrolled=false;calScrolled=false;refresh()}
+ else if(view==="map"&&gRetry())renderMap();
+});
 loadAll().then(function(){
  applyTheme();
  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}

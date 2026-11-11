@@ -14,6 +14,36 @@ Reglas:
 
 ## 2026-11-11
 
+- Revisión completa de la app (4 revisiones en paralelo). Arreglado el
+  bloque prioritario:
+  - Guardar: si el teléfono no guarda, ya no dice "guardado". Se reabre la
+    base y se reintenta una vez (iOS corta la conexión tras horas en
+    segundo plano); si sigue fallando, aviso rojo fijo arriba. El documento
+    se guarda primero en el teléfono y solo después en la app; sin espacio,
+    el formulario lo dice y no se cierra. Si al abrir no se pudieron leer
+    los datos, la app no escribe nada (no pisar lo guardado) y avisa.
+  - Importar: la copia en memoria ya no se vacía mientras se importa; si
+    falla a mitad, hay que volver a elegir el archivo (antes un segundo
+    intento podía guardar documentos sin su archivo).
+  - Hojas con Guardar (documento, evento, sitio): tocar fuera o Escape no
+    las cierra si hay algo escrito; avisa que se use Guardar o Cancelar.
+  - Eventos y actividades que pasan la medianoche (Nochevieja 22:00–02:00)
+    se pueden guardar: el fin es al día siguiente y sale "+1". Solo da
+    error si inicio y fin son iguales.
+  - Al volver la app a primer plano otro día, se redibuja (Hoy, contador)
+    y vuelve a llevar a hoy.
+  - Mapa: un fallo de red ya no lo deja roto hasta cerrar la app. Se
+    reintenta al volver la conexión o la app, y hay botón "Reintentar"
+    (si Google rechaza la clave, lo dice).
+  - Coche de alquiler: no se asigna a un trayecto en avión ni cuenta como
+    su billete (antes, cargar el coche de Tenerife quitaba "falta vuelo
+    Málaga → Tenerife").
+  - Hotel: al cambiar la primera noche de uno ya guardado se conserva su
+    última noche (antes quedaba en 1 noche y las demás volvían a
+    Pendientes).
+  - Modo oscuro: el texto de los botones principales usa el color de
+    contraste del tema (antes blanco sobre casi blanco).
+
 - Arreglado: Pendientes → Hoteles salía con filas "0, 1, 2… Sin ubicar".
   La fila del hotel en el plan del mapa se llamaba igual que la de
   Pendientes (`hotelRow`) y la reemplazaba en todo el archivo. Renombrada
