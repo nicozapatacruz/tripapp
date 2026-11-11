@@ -12,6 +12,42 @@ Reglas:
 
 ---
 
+## 2026-11-11
+
+- Mapa, ajustes tras probarlo:
+  - Filtros: Estado pasa a ser una sección con su casilla, como Logística
+    y Planes, con los 4 estados (Sin marcar, Quiero ir, Reservado, Ya fui).
+    Casilla marcada = todos (reemplaza "Todos"). Por defecto, todos menos
+    "Ya fui". Sin Qué ver ni Comer, la sección queda en gris.
+  - Revisar ubicaciones: el lápiz abre directamente la edición (documento o
+    sitio, con el foco en el enlace). Al guardar, cancelar o eliminar se
+    vuelve a Revisar ubicaciones para seguir con el siguiente; cerrar la
+    hoja tocando fuera sale del todo.
+  - Tarjeta: todas las líneas con el mismo formato ("850 m del hotel · 14
+    min a pie", "14 km de Barajas") y una sola nota abajo ("A más de 3 km,
+    solo la distancia aproximada").
+  - "No es aquí": botón en su propia línea (no un enlace pequeño en la
+    frase) y con Confirmar, porque no se puede deshacer.
+- Mapa, plan del día:
+  - El hotel va dentro del Plan del día, sin número: arriba el de la noche;
+    en días con check-out, arriba el de anoche y abajo el de esta noche.
+    Ya no se repite en "Más en …". Tiene botón de Maps como el resto.
+  - Interruptor "Solo el plan" (solo con un día elegido), en la línea del
+    contador: en el mapa y en la lista deja solo el plan y sus hoteles,
+    aunque haya filtros puestos (lo planeado se ve completo).
+  - La línea punteada sale del hotel de la mañana hasta el 1 (no vuelve al
+    hotel al final, para no llenar el mapa de líneas).
+  - Los círculos del mapa quedan centrados en su coordenada (Google apoya la
+    parte de abajo del marcador, pensada para pins con punta): la línea pasa
+    por el centro de cada número y ya no parecen desplazados.
+  - Sin los botones + / − de Google en el mapa (asomaban detrás de "Mi
+    ubicación" y "Encuadrar"); el zoom se hace con dos dedos o la rueda.
+  - Si un número del plan no sale en el mapa, el tramo de la línea que lo
+    salta va en gris claro, y encima del mapa sale un aviso que dice cuál y
+    por qué: "El 2 no sale en el mapa: sin ubicar" (lleva a Revisar
+    ubicaciones) o "… está oculto por los filtros" (enciende "Solo el
+    plan"). Solo un color no explicaba qué pasaba.
+
 ## 2026-11-10
 
 - Routes (tiempo a pie) ya funciona: Safari recorta siempre la dirección

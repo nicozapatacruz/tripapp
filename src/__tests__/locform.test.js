@@ -972,11 +972,23 @@ describe("formulario: ubicaciones", () => {
     location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
     expect(plaza()).toBeFalsy();
     click($("#v-map [data-act=mfilt]"));
-    click($('#sheet-body [data-act=mst][data-v="all"]'));
+    const st = $('#sheet-body [data-act=mgrp][data-g="st"]');
+    expect(st.getAttribute("aria-pressed")).toBe("false");               // por defecto, todo menos «Ya fui»
+    expect($('#sheet-body [data-act=mst][data-v="3"]').getAttribute("aria-pressed")).toBe("false");
+    click($('#sheet-body [data-act=mst][data-v="3"]'));                 // marcar «Ya fui»
+    expect(plaza()).toBeTruthy();
+    expect($('#sheet-body [data-act=mgrp][data-g="st"]').getAttribute("aria-pressed")).toBe("true");   // los 4: casilla marcada
+    click($('#sheet-body [data-act=mst][data-v="0"]'));                 // quitar «Sin marcar»: solo los que tienen estado
+    expect(rows().some((x) => x.textContent.includes("Gran Vía"))).toBe(false);
     expect(plaza()).toBeTruthy();
     click($('#sheet-foot [data-act=mreset]'));                          // Quitar filtros
     expect(plaza()).toBeFalsy();
-    click($('#sheet-body [data-act=mst][data-v="all"]'));
+    // sin Qué ver ni Comer, el estado queda en gris
+    click($('#sheet-body [data-act=mgrp][data-g="plan"]'));
+    expect($('#sheet-body [data-act=mgrp][data-g="st"]').disabled).toBe(true);
+    click($('#sheet-body [data-act=mgrp][data-g="plan"]'));
+    click($('#sheet-body [data-act=mgrp][data-g="st"]'));               // casilla de Estado: todos
+    expect(plaza()).toBeTruthy();
     click($('[data-act="close"]'));
     // ‹ › del día: de Todo el viaje al día 1 y de vuelta
     click($('#v-map [data-act=mstep][data-d="1"]'));
@@ -1067,7 +1079,13 @@ describe("formulario: ubicaciones", () => {
     click($("#v-map [data-act=mreview]"));
     const r = [...document.querySelectorAll("#sheet-body .mrow")].find((x) => x.textContent.includes("Casa Tote"));
     expect(r.textContent).toContain("Enlace corto");
-    expect(r.dataset.act).toBe("view");                                  // lleva al documento para corregirlo
+    click(r);                                                            // el lápiz abre directamente la edición
+    expect($("#sh-title").textContent).toBe("Editar documento");
+    click($('#sheet [data-act="view"]'));                                          // Cancelar → vuelve a Revisar ubicaciones
+    expect($("#sh-title").textContent).toBe("Revisar ubicaciones");
+    click([...document.querySelectorAll("#sheet-body .mrow")].find((x) => x.textContent.includes("Casa Tote")));
+    await save();                                                        // Guardar → también vuelve
+    expect($("#sh-title").textContent).toBe("Revisar ubicaciones");
     click($('[data-act="close"]'));
     setSel("m-day", "all");
   });
@@ -1081,9 +1099,58 @@ describe("formulario: ubicaciones", () => {
     setSel("m-day", "2027-01-02");
     click([...document.querySelectorAll("#v-map .mrow")].find((x) => x.querySelector("b").textContent === "Sitio Lejano"));
     const t = $("#sheet-body .mdist").textContent;
-    expect(t).toMatch(/km del hotel en línea recta/);
+    expect(t).toMatch(/km del hotel$/);
     expect(t).not.toContain("a pie");
+    expect($("#sheet-body").textContent).toContain("A más de 3 km, solo la distancia aproximada.");
     click($('[data-act="close"]'));
+    setSel("m-day", "all");
+  });
+
+  it("45h) el hotel de la noche va arriba del plan (sin número); «Solo el plan» oculta lo demás aunque haya filtros", async () => {
+    const H = "https://www.google.com/maps/place/Hotel/@40.41,-3.70,17z/data=!3m1!4b1!8m2!3d40.4168!4d-3.7038";
+    openNew("2026-12-30", "hotel"); typeLoc("Hotel Sol " + H); await save();
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    setSel("m-day", "2026-12-30");
+    const sec = $("#v-map .adrg");
+    expect(sec.querySelector(".lab").textContent).toBe("Plan del día");
+    const h = [...sec.querySelectorAll(".mhot li")].find((li) => li.querySelector("b").textContent === "Hotel Sol");
+    expect(h.textContent).toContain("Hotel de la noche");
+    expect(h.querySelector(".mnum")).toBeNull();
+    const rest = () => [...document.querySelectorAll("#v-map .adrg")].slice(1).map((x) => x.textContent).join(" ");
+    expect(rest()).not.toContain("Hotel Sol");                             // no se repite en «Más en Madrid»
+    expect(rest()).toContain("Gran Vía");                                  // los sitios no planeados
+    // quitar Hoteles en filtros y encender «Solo el plan»: sale el plan entero, hotel incluido
+    click($("#v-map [data-act=mfilt]"));
+    click($('#sheet-body [data-act=mcat][data-c="hotel"]'));
+    click($('[data-act="close"]'));
+    const tog = $("#v-map [data-act=monly]");
+    expect(tog.getAttribute("aria-checked")).toBe("false");
+    click(tog);
+    expect($("#v-map [data-act=monly]").getAttribute("aria-checked")).toBe("true");
+    expect(rest()).toBe("");                                               // nada fuera del plan
+    expect($("#v-map .mhot").textContent).toContain("Hotel Sol");
+    expect($("#v-map .mcount").textContent).toMatch(/^\d+ lugar/);
+    click($("#v-map [data-act=monly]"));
+    click($("#v-map [data-act=mfilt]"));
+    click($('#sheet-foot [data-act=mreset]'));
+    click($('[data-act="close"]'));
+    // en «Todo el viaje» no hay interruptor
+    setSel("m-day", "all");
+    expect($("#v-map [data-act=monly]")).toBeNull();
+  });
+
+  it("45i) modo Mapa: aviso encima del mapa si un número del plan no sale (sin ubicar → Revisar ubicaciones)", async () => {
+    openNew("2026-12-31", "entrada"); typeLoc("Sitio Sin Enlace"); $("#f-title").value = "Sin enlace"; await save();
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    setSel("m-day", "2026-12-31");
+    click($('#v-map [data-act=mmode][data-v="map"]'));
+    const g = $("#v-map .mgap");
+    expect(g.textContent).toMatch(/El \d+ no sale en el mapa: sin ubicar/);
+    click(g);
+    expect($("#sh-title").textContent).toBe("Revisar ubicaciones");
+    click($('[data-act="close"]'));
+    click($('#v-map [data-act=mmode][data-v="list"]'));
+    expect($("#v-map .mgap")).toBeNull();                               // en la lista no hace falta: sale con «Sin ubicar»
     setSel("m-day", "all");
   });
 

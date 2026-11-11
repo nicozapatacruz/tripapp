@@ -957,7 +957,7 @@ var sheet=$("#sheet"),sheetBody=$("#sheet-body"),sheetFoot=$("#sheet-foot"),shee
 function openSheet(html,foot){flushPaid();sheetBody.innerHTML=html;sheetFoot.innerHTML=foot||"";sheetFoot.hidden=!foot;sheetBody.scrollTop=0;
  // cabecera (título y Cerrar/Cancelar) fuera del área que se desplaza: así nada se ve pasar por encima o por detrás
  var hd=sheetBody.querySelector(".sh-head");sheetHead.innerHTML="";if(hd&&hd.parentNode===sheetBody)sheetHead.appendChild(hd);sheetHead.hidden=!sheetHead.firstChild;sheetHead.classList.remove("scrolled");sheet.hidden=false;document.documentElement.style.overflow="hidden";var dlg=sheet.querySelector(".sheet");if(dlg)try{dlg.focus({preventScroll:true})}catch(e){}}
-function closeSheet(){flushPaid();if(docTitle0!==null){document.title=docTitle0;docTitle0=null}evEditing=null;expFile=null;impWrapper=null;impBackup=null;sheet.hidden=true;sheetBody.innerHTML="";sheetHead.innerHTML="";sheetFoot.innerHTML="";sheetFoot.hidden=true;document.documentElement.style.overflow="";editing=null}
+function closeSheet(){flushPaid();revBack=false;if(docTitle0!==null){document.title=docTitle0;docTitle0=null}evEditing=null;expFile=null;impWrapper=null;impBackup=null;sheet.hidden=true;sheetBody.innerHTML="";sheetHead.innerHTML="";sheetFoot.innerHTML="";sheetFoot.hidden=true;document.documentElement.style.overflow="";editing=null}
 function dayOptions(sel){return DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===sel?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'<option value="trip"'+(sel==="trip"?" selected":"")+'>Todo el viaje (sin día)</option>'}
 /* Campo de hora con una × para borrarla (el selector de hora del iPhone no tiene cómo dejarla vacía) */
 function timeBox(id,v,l){return '<span class="tbox"><input id="'+id+'" type="time" value="'+esc(v||"")+'" aria-label="'+l+'"><button type="button" class="tclr" data-act="t-clr" data-for="'+id+'" aria-label="Quitar '+l.toLowerCase()+'"'+(v?"":" hidden")+'>'+svg("xmark",16)+'</button></span>'}
@@ -1183,7 +1183,7 @@ async function saveFromSheet(){
  if(fileDel&&!file){if(urls[d.id]){try{URL.revokeObjectURL(urls[d.id])}catch(e){}delete urls[d.id]}delete d.blob;delete d.fileName;delete d.mime;delete d.size}
  if(file){if(urls[d.id]){try{URL.revokeObjectURL(urls[d.id])}catch(e){}delete urls[d.id]}d.blob=file;d.fileName=file.name;d.mime=file.type||"application/octet-stream";d.size=file.size}
  var wasEdit=!!editing;await saveDoc(d);refresh();
- if(wasEdit)openDocView(d.id);else closeSheet();
+ if(wasEdit){if(!revReturn())openDocView(d.id)}else closeSheet();
  toast("Documento guardado");
 }
 
@@ -1314,11 +1314,11 @@ async function saveItem(){
  var l=listOf(c.cid,c.kind).map(function(x){return {id:x.id,n:x.n,d:x.d,u:x.u||""}});
  if(itemEd){l.forEach(function(x){if(x.id===itemEd.id){x.n=n;x.d=d;x.u=u}})}
  else l.push({id:"u"+Date.now().toString(36),n:n,d:d,u:u});
- await setKV("pl:"+c.cid+":"+c.kind,l);refresh();openListSheet(c.cid,c.kind);toast("Guardado");
+ await setKV("pl:"+c.cid+":"+c.kind,l);refresh();if(!revReturn())openListSheet(c.cid,c.kind);toast("Guardado");
 }
 async function deleteItem(){
  var c=listCtx,l=listOf(c.cid,c.kind).filter(function(x){return x.id!==itemEd.id});
- await setKV("pl:"+c.cid+":"+c.kind,l);await delKV(itemKey(c.kind,c.cid,itemEd));refresh();openListSheet(c.cid,c.kind);toast("Eliminado");
+ await setKV("pl:"+c.cid+":"+c.kind,l);await delKV(itemKey(c.kind,c.cid,itemEd));refresh();if(!revReturn())openListSheet(c.cid,c.kind);toast("Eliminado");
 }
 
 /* ================= Mapa (pestaña Mapa | Lista) =================
@@ -1326,20 +1326,22 @@ async function deleteItem(){
    (unidas por nombre + enlace) y sitios de Qué ver / Comer de cada ciudad. Las coordenadas salen
    de los enlaces largos de Google Maps; el resto queda "Sin ubicar" hasta conectar Google.
    El mapa en sí (Google Maps) está pendiente de la clave: mientras, se ve un aviso y la Lista. */
-var mapState={mode:"list",day:"all",cats:{hotel:1,trans:1,see:1,eat:1,other:1},st:"nodone"},mapFrom=null;
+var mapState={mode:"list",day:"all",cats:{hotel:1,trans:1,see:1,eat:1,other:1},st:{0:1,1:1,2:1},only:false},mapFrom=null;
 var MCATS=[["hotel","Hoteles"],["trans","Traslados"],["see","Qué ver"],["eat","Comer"],["other","Otros documentos"]];
-/* Filtros (hoja): dos grupos según para qué sirve cada cosa. El estado solo afecta a los sitios. */
-var MGROUPS={log:["hotel","trans","other"],plan:["see","eat"]};
-var MST=[["nodone","Pendientes"],["all","Todos"],["3","Ya fui"]];
+/* Filtros (hoja): Logística, Planes y Estado (el estado solo afecta a los sitios de Planes). */
+var MGROUPS={log:["hotel","trans","other"],plan:["see","eat"]},MST_ALL=["0","1","2","3"],MST_DEF=["0","1","2"];
 function mapCatsIs(l){var k=Object.keys(mapState.cats);return k.length===l.length&&l.every(function(c){return mapState.cats[c]})}
-function mapFiltered(){return !mapCatsIs(MGROUPS.log.concat(MGROUPS.plan))||mapState.st!=="nodone"}
+function mapStIs(l){var k=Object.keys(mapState.st);return k.length===l.length&&l.every(function(x){return mapState.st[x]})}
+function mapFiltered(){return !mapCatsIs(MGROUPS.log.concat(MGROUPS.plan))||!mapStIs(MST_DEF)}
 function openMapFilters(){
  var chip=function(c){var l=MCATS.filter(function(x){return x[0]===c})[0][1];return '<button type="button" class="chip" data-act="mcat" data-c="'+c+'" aria-pressed="'+!!mapState.cats[c]+'">'+l+'</button>'};
- var grp=function(g,t){var on=MGROUPS[g].every(function(c){return mapState.cats[c]});return '<button type="button" class="mgh" data-act="mgrp" data-g="'+g+'" aria-pressed="'+on+'"><span class="mchk">'+(on?svg("check",16):"")+'</span><span class="lab">'+t+'</span></button>'};
+ var grp=function(g,t,on,dis){return '<button type="button" class="mgh" data-act="mgrp" data-g="'+g+'" aria-pressed="'+on+'"'+(dis?" disabled":"")+'><span class="mchk">'+(on?svg("check",16):"")+'</span><span class="lab">'+t+'</span></button>'};
+ var gOn=function(g){return MGROUPS[g].every(function(c){return mapState.cats[c]})},noPlan=!MGROUPS.plan.some(function(c){return mapState.cats[c]});
  openSheet('<div class="sh-head"><h2 id="sh-title">Filtros</h2><button type="button" class="x" data-act="close">Listo</button></div>'+
-  '<section class="mgs">'+grp("log","Logística")+'<div class="chips">'+MGROUPS.log.map(chip).join("")+'</div></section>'+
-  '<section class="mgs">'+grp("plan","Planes")+'<div class="chips">'+MGROUPS.plan.map(chip).join("")+'</div>'+
-  '<p class="mstl">Estado</p><div class="chips">'+MST.map(function(x){return '<button type="button" class="chip" data-act="mst" data-v="'+x[0]+'" aria-pressed="'+(mapState.st===x[0])+'">'+x[1]+'</button>'}).join("")+'</div></section>',
+  '<section class="mgs">'+grp("log","Logística",gOn("log"))+'<div class="chips">'+MGROUPS.log.map(chip).join("")+'</div></section>'+
+  '<section class="mgs">'+grp("plan","Planes",gOn("plan"))+'<div class="chips">'+MGROUPS.plan.map(chip).join("")+'</div></section>'+
+  // sin Qué ver ni Comer, el estado no hace nada: en gris
+  '<section class="mgs'+(noPlan?" off":"")+'">'+grp("st","Estado de los planes",mapStIs(MST_ALL),noPlan)+'<div class="chips">'+MST_ALL.map(function(x){return '<button type="button" class="chip" data-act="mst" data-v="'+x+'" aria-pressed="'+!!mapState.st[x]+'"'+(noPlan?" disabled":"")+'>'+STATUS[+x]+'</button>'}).join("")+'</div></section>',
   mapFiltered()?'<div class="actions"><button type="button" class="btn" data-act="mreset">Quitar filtros</button></div>':"");
 }
 /* ‹ › del día: Todo el viaje → día 1 → … → último día */
@@ -1385,8 +1387,8 @@ function mapVisible(list){
  return list.filter(function(p){
   if(!mapState.cats[p.cat])return false;
   if(mapState.day!=="all"&&(!dd||!p.days[dd]))return false;
-  if(p.kind==="place"){var s=kv[p.pk]||0;if(mapState.st==="nodone")return s!==3;if(mapState.st==="all")return true;return s===+mapState.st}
-  return mapState.st==="nodone"||mapState.st==="all";   // los documentos no tienen estado
+  if(p.kind==="place")return !!mapState.st[kv[p.pk]||0];
+  return true;   // los documentos no tienen estado
  });
 }
 /* Plan del día: lo que tiene ese día (traslados y documentos con ubicación, y sitios añadidos o
@@ -1396,6 +1398,26 @@ function dayPlan(dd,all){
  var items=[];if(!dd)return items;
  all.forEach(function(p){p.refs.forEach(function(r){if(r.day===dd)items.push({k:r.k,t:r.t,pid:p.id,p:p,doc:r.doc,ev:r.ev})})});
  return planOrder(items,(kv.plan||{})[dd]);
+}
+/* Hoteles del plan de un día: el de anoche (si cambia: día de check-out) arriba y el de esta noche
+   (abajo si hubo check-out; si no, arriba). Sin número: el día empieza y termina ahí. */
+function planHotels(dd,all){
+ var out={top:[],bottom:[]},dy=dayById(dd);if(!dy)return out;
+ var prev=DAYS[dy.i-1],hs=all.filter(function(p){return p.cat==="hotel"});
+ var last=prev?hs.filter(function(p){return p.days[prev.d]&&!p.days[dd]}):[],tonight=hs.filter(function(p){return p.days[dd]});
+ out.top=last.length?last:tonight;out.bottom=last.length?tonight:[];
+ return out;
+}
+/* Lo que se ve: con «Solo el plan» (y un día elegido), el plan completo y sus hoteles aunque haya
+   filtros puestos; si no, lo que dejan los filtros */
+function mapShown(all){
+ var dd=mapDayId();if(!(dd&&mapState.only))return mapVisible(all);
+ var ids={},h=planHotels(dd,all);
+ dayPlan(dd,all).forEach(function(x){ids[x.pid]=1});h.top.concat(h.bottom).forEach(function(p){ids[p.id]=1});
+ return all.filter(function(p){return ids[p.id]});
+}
+function hotelRow(p,lab){
+ return '<li class="pl mrow tap" data-act="mcard" data-id="'+p.id+'"><span class="adri" style="--t:'+mapColor(p)+'">'+svg("bed",18)+'</span><div class="adrt"><b>'+esc(p.name)+'</b><p>'+lab+'</p>'+(p.ll?"":'<p class="adrw">Sin ubicar</p>')+'</div>'+mapBtn(mapHref(p))+'</li>';
 }
 function mapNumbers(all){var dd=mapDayId();return dd?planNumbers(dayPlan(dd,all)):{}}
 function planRow(x,num){
@@ -1471,12 +1493,21 @@ function unlocWhy(p){
  if(!isOnline())return "se ubicará al volver la conexión.";
  return "Google no lo encontró por su nombre. Pega su enlace largo de Google Maps en la lista.";
 }
+var revBack=false;   // la edición se abrió desde Revisar ubicaciones: al guardar o cancelar se vuelve ahí
+function revReturn(){if(!revBack)return false;revBack=false;openReview();return true}
+function revEdit(b){
+ revBack=true;
+ if(b.dataset.doc){openDocSheet({id:b.dataset.doc});return}
+ var lp=placeByKey(b.dataset.pk);if(!lp){revBack=false;return}
+ listCtx={cid:lp.cid,kind:lp.kind};openItemForm(lp.p.id);
+ var u=$("#i-u");if(u)u.focus();
+}
 function reviewRow(p,why){
- var act=p.kind==="doc"?'data-act="view" data-id="'+esc(p.docIds[0])+'"':'data-act="list" data-city="'+esc(p.city)+'" data-kind="'+p.cat+'"';
+ var act=p.kind==="doc"?'data-act="rev-edit" data-doc="'+esc(p.docIds[0])+'"':'data-act="rev-edit" data-pk="'+esc(p.pk)+'"';
  return '<li class="pl mrow tap" '+act+'><span class="adri" style="--t:'+mapColor(p)+'">'+svg(mapIcon(p),18)+'</span><div class="adrt"><b>'+esc(p.name)+'</b><p>'+esc(why)+'</p></div><span class="pen" aria-hidden="true">'+svg("pencil",17)+'</span></li>';
 }
 function openReview(){
- var vis=mapVisible(mapPoints()),un=vis.filter(function(p){return !p.ll}),bn=vis.filter(function(p){return p.geo});
+ var vis=mapShown(mapPoints()),un=vis.filter(function(p){return !p.ll}),bn=vis.filter(function(p){return p.geo});
  var why=function(p){var g=geoOf(p.gk);return p.kind==="doc"?(isShortMaps(p.url)?"Enlace corto":p.url?"Enlace sin coordenadas":"Sin enlace"):((g&&g.no?"Quitado del mapa":"No encontrado por nombre")+" · "+listTitle(p.cat)+(p.city?" · "+nm(p.city):""))};
  openSheet('<div class="sh-head"><h2 id="sh-title">Revisar ubicaciones</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
   (un.length?'<section class="adrg"><h3 class="lab">Sin ubicar <small>'+un.length+'</small></h3><p class="foot" style="margin:0 0 8px">Para que salgan en el mapa, pega su enlace largo de Google Maps. Si tienes uno corto: ábrelo en Safari y copia la dirección de la barra.</p><ul class="rows">'+un.map(function(p){return reviewRow(p,why(p))}).join("")+'</ul></section>':"")+
@@ -1497,15 +1528,33 @@ function fixedPlacesHTML(used,order){
    return '<li class="pl adr"><span class="adri" style="--t:'+TYPES[ty].t+'">'+svg(TYPE_ICON[ty],18)+'</span><div class="adrt"><b>'+esc(x.n)+'</b>'+(x.c?'<p>'+esc(nm(x.c))+'</p>':"")+'</div>'+mapBtn(x.u)+'</li>'}).join("")+'</ul></details>';
 }
 function renderMap(){
- var all=mapPoints(),vis=mapVisible(all),nums=mapNumbers(all),order=[],groups={};
+ var all=mapPoints(),vis=mapShown(all),nums=mapNumbers(all),order=[],groups={};
  DAYS.forEach(function(d){d.stops.forEach(function(s){if(order.indexOf(s)<0)order.push(s)})});
  var td=inTripToday();if(mapState.day==="today"&&!td)mapState.day="all";
  var dayOpts='<option value="all">Todo el viaje</option>'+(td?'<option value="today"'+(mapState.day==="today"?" selected":"")+'>Hoy</option>':"")+DAYS.map(function(d){return '<option value="'+d.d+'"'+(mapState.day===d.d?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("");
- var dd=mapDayId(),dy=dayById(dd),plan=dayPlan(dd,all);
+ var dd=mapDayId(),dy=dayById(dd),plan=dayPlan(dd,all),hot=planHotels(dd,all),hotIds={};
+ hot.top.concat(hot.bottom).forEach(function(p){hotIds[p.id]=1});
  var dlab=dy?'<b>'+(mapState.day==="today"?"Hoy · ":"")+esc(cap(shortDay(dy)))+'</b><small>'+esc(routeText(dy))+'</small>':'<b>Todo el viaje</b><small>'+DAYS[0].dt.getDate()+' '+MO3[DAYS[0].dt.getMonth()]+' – '+DAYS[DAYS.length-1].dt.getDate()+' '+MO3[DAYS[DAYS.length-1].dt.getMonth()]+'</small>';
  var atFirst=mapState.day==="all",atLast=dd===DAYS[DAYS.length-1].d;
- var unloc=vis.filter(function(p){return !p.ll}).length,line=[];
- if(dd){var seen=null;plan.forEach(function(x){if(x.p.ll&&vis.indexOf(x.p)>=0&&x.pid!==seen){line.push(x.p.ll);seen=x.pid}})}
+ var unloc=vis.filter(function(p){return !p.ll}).length,segs=[],gaps={un:[],fil:[]};
+ if(dd){
+  // la línea sale del hotel de la mañana y sigue 1 → 2 → 3 (sin volver al hotel al final)
+  var h0=hot.top[0],last=h0&&h0.ll&&vis.indexOf(h0)>=0?h0.ll:null,gap=false,done={};
+  plan.forEach(function(x){
+   if(done[x.pid])return;done[x.pid]=1;
+   var shown=x.p.ll&&vis.indexOf(x.p)>=0;
+   if(!shown){gap=true;(x.p.ll?gaps.fil:gaps.un).push(nums[x.pid]);return}
+   if(last)segs.push({a:last,b:x.p.ll,gap:gap});
+   last=x.p.ll;gap=false;
+  });
+ }
+ // aviso encima del mapa: qué número del plan no sale y por qué (tocarlo lleva a arreglarlo)
+ var nlist=function(l){return l.length===1?"El "+l[0]:"El "+l.slice(0,-1).join(", el ")+" y el "+l[l.length-1]};
+ var gapNote="";
+ if(mapState.mode==="map"&&dd){
+  if(gaps.un.length)gapNote+='<button type="button" class="mgap" data-act="mreview">'+svg("pin",16)+'<span>'+nlist(gaps.un)+(gaps.un.length>1?" no salen":" no sale")+' en el mapa: sin ubicar</span>'+svg("chev",16)+'</button>';
+  if(gaps.fil.length)gapNote+='<button type="button" class="mgap" data-act="monly-on">'+svg("filter",16)+'<span>'+nlist(gaps.fil)+(gaps.fil.length>1?" están ocultos":" está oculto")+' por los filtros</span>'+svg("chev",16)+'</button>';
+ }
  var body;
  if(mapState.mode==="map"){
   var off=!isOnline();
@@ -1515,10 +1564,11 @@ function renderMap(){
   var ph="";
   if(dy){
    var seenN={};
-   ph='<section class="adrg"><h3 class="lab">Plan del día</h3>'+(plan.length?'<ul class="rows" id="m-plan">'+plan.map(function(x){var n=nums[x.pid];var r=seenN[x.pid]?"":planRow(x,n);seenN[x.pid]=1;return r}).join("")+'</ul>'+(plan.some(function(x){return tmin(x.t)==null})?'<p class="foot">Lo que tiene hora va en su hora. Lo demás se ordena arrastrando desde ≡.</p>':""):'<p class="foot">Nada todavía. Añade sitios de Qué ver y Comer y ordénalos.</p>')+
+   var hl=function(l,lab){return l.length?'<ul class="rows mhot">'+l.map(function(p){return hotelRow(p,lab)}).join("")+'</ul>':""};
+   ph='<section class="adrg"><h3 class="lab">Plan del día</h3>'+hl(hot.top,hot.bottom.length?"Hotel de anoche · check-out":"Hotel de la noche")+(plan.length?'<ul class="rows" id="m-plan">'+plan.map(function(x){var n=nums[x.pid];var r=seenN[x.pid]?"":planRow(x,n);seenN[x.pid]=1;return r}).join("")+'</ul>'+(plan.some(function(x){return tmin(x.t)==null})?'<p class="foot">Lo que tiene hora va en su hora. Lo demás se ordena arrastrando desde ≡.</p>':""):'<p class="foot">Nada todavía. Añade sitios de Qué ver y Comer y ordénalos.</p>')+hl(hot.bottom,"Hotel de esta noche · check-in")+
     (dy.stops.some(hasInfo)?'<div><button type="button" class="mini" data-act="plan-add">'+svg("plus",14)+'Añadir sitio</button></div>':"")+'</section>';
   }
-  vis.forEach(function(p){if(nums[p.id])return;var k=p.city&&order.indexOf(p.city)>=0?p.city:"_";(groups[k]=groups[k]||[]).push(p)});
+  vis.forEach(function(p){if(nums[p.id]||(dy&&hotIds[p.id]))return;var k=p.city&&order.indexOf(p.city)>=0?p.city:"_";(groups[k]=groups[k]||[]).push(p)});
   var co={hotel:0,trans:1,other:2,see:3,eat:4};
   var keys=order.filter(function(k){return groups[k]}).concat(groups._?["_"]:[]);
   body=keys.map(function(k){var g=groups[k].sort(function(a,b){var na=nums[a.id]||1e3,nb=nums[b.id]||1e3;return na-nb||co[a.cat]-co[b.cat]||a.name.localeCompare(b.name)});
@@ -1533,10 +1583,11 @@ function renderMap(){
   '<div class="mday"><button type="button" class="mstep" data-act="mstep" data-d="-1" aria-label="Día anterior"'+(atFirst?" disabled":"")+'>'+svg("back",20)+'</button>'+
   '<label class="mdsel"><span class="mdl">'+dlab+'</span>'+svg("chev",16)+'<select id="m-day" aria-label="Día">'+dayOpts+'</select></label>'+
   '<button type="button" class="mstep" data-act="mstep" data-d="1" aria-label="Día siguiente"'+(atLast?" disabled":"")+'>'+svg("chev",20)+'</button></div>'+
-  '<p class="mcount">'+vis.length+(vis.length===1?" lugar":" lugares")+(unloc?' · <button type="button" class="mrev" data-act="mreview">'+unloc+' sin ubicar</button>':vis.some(function(p){return p.geo})?' · <button type="button" class="mrev" data-act="mreview">Revisar ubicaciones</button>':"")+'</p>'+
+  '<div class="mcrow"><p class="mcount">'+vis.length+(vis.length===1?" lugar":" lugares")+(unloc?' · <button type="button" class="mrev" data-act="mreview">'+unloc+' sin ubicar</button>':vis.some(function(p){return p.geo})?' · <button type="button" class="mrev" data-act="mreview">Revisar ubicaciones</button>':"")+'</p>'+
+  (dy?'<button type="button" class="mtog" role="switch" data-act="monly" aria-checked="'+!!mapState.only+'"><span>Solo el plan</span><i></i></button>':"")+'</div>'+gapNote+
   '<div class="dgroups">'+body+'</div>'+(isMap?"":'<div class="fabspace"></div>')+'</div>';
  mapFull();
- if(isMap&&V.map.querySelector(".mapbox"))mountMap(vis,nums,line);
+ if(isMap&&V.map.querySelector(".mapbox"))mountMap(vis,nums,segs);
  if(!isMap&&$("#m-plan"))bindReorder($("#m-plan"),savePlan,true);
  geoRun(all);   // ubica por nombre lo que falte (con internet y con Google conectado)
 }
@@ -1546,9 +1597,10 @@ function openMapCard(id){
  if(p.ll){
   var an=dayAnchors(dd,all).filter(function(a){return a.p!==p});
   // a más de 3 km no se pone tiempo a pie (nadie va andando): solo la distancia en línea recta
-  var anyW=an.some(function(a){return distKm(p.ll,a.p.ll)<=WALK_KM});
-  if(an.length)h+='<ul class="mdist">'+an.map(function(a,i){var km=distKm(p.ll,a.p.ll),w=km<=WALK_KM;return '<li>'+svg(w?"clock":"pin",15)+'<span><b><span class="dk" data-i="'+i+'">'+distText(km)+'</span> '+esc(a.l)+'</b>'+(w?' · <span class="wk" data-i="'+i+'">≈ '+walkText(walkMin(km))+' a pie</span>':' <span class="dlr">en línea recta</span>')+'</span></li>'}).join("")+'</ul>'+(anyW?'<p class="foot" id="md-note" style="margin:0">Estimado en línea recta'+(isOnline()?"":" (sin internet)")+'.</p>':"");
-  if(p.geo)h+='<p class="adrw bn" style="align-self:flex-start">Ubicado buscando el nombre: puede no ser exacto. <button type="button" class="mini" data-act="geo-no" data-gk="'+esc(p.gk)+'">No es aquí</button></p>';
+  var anyW=an.some(function(a){return distKm(p.ll,a.p.ll)<=WALK_KM}),anyF=an.some(function(a){return distKm(p.ll,a.p.ll)>WALK_KM});
+  if(an.length)h+='<ul class="mdist">'+an.map(function(a,i){var km=distKm(p.ll,a.p.ll),w=km<=WALK_KM;return '<li>'+svg(w?"clock":"pin",15)+'<span><b><span class="dk" data-i="'+i+'">'+distText(km)+'</span> '+esc(a.l)+'</b>'+(w?' · <span class="wk" data-i="'+i+'">≈ '+walkText(walkMin(km))+' a pie</span>':"")+'</span></li>'}).join("")+'</ul>'+
+   '<p class="foot" style="margin:0">'+(anyW?'<span id="md-note">Estimado en línea recta'+(isOnline()?"":" (sin internet)")+'.</span>':"")+(anyF?(anyW?" ":"")+"A más de 3 km, solo la distancia aproximada.":"")+'</p>';
+  if(p.geo)h+='<div class="bnbox"><p class="adrw">Ubicado buscando el nombre: puede no ser exacto.</p><button type="button" class="btn" data-act="geo-no" data-gk="'+esc(p.gk)+'">No es aquí</button></div>';
  }else h+='<p class="adrw" style="align-self:flex-start">Sin ubicar: '+unlocWhy(p)+'</p>';
  if(p.kind==="place")h+=vField("Estado",statSel(p.pk));
  var pdy=dayById(dd);
@@ -1573,7 +1625,7 @@ if(typeof window!=="undefined"){window.addEventListener("online",function(){if(v
    Geocoding y Routes (en prueba gratuita hasta ~8 feb 2027: no cobra; ver PENDIENTES.md). */
 var GM_KEY="AIzaSyAE46uJ7JtkDkKJY9nN7OARfz0qlcKkXDc",GM_MAPID="83a25be103270202f5082791";
 var GM_ON=!!GM_KEY&&!(typeof navigator!=="undefined"&&/jsdom/i.test(navigator.userAgent||""));   // en los tests no se carga Google
-var gmP=null,gm=null,gmEl=null,gmMarkers=[],gmMe=null,gmLine=null,gFail=false,gmFitKey="";
+var gmP=null,gm=null,gmEl=null,gmMarkers=[],gmMe=null,gmLines=[],gFail=false,gmFitKey="";
 if(GM_ON)mapState.mode="map";
 window.gm_authFailure=function(){gFail=true;if(view==="map")renderMap()};   // clave rechazada por Google
 function loadGM(){
@@ -1630,7 +1682,7 @@ function gmPin(p,num){
  el.innerHTML=num?String(num):svg(mapIcon(p),15);return el;
 }
 function mapFull(){document.body.classList.toggle("mapfull",view==="map"&&mapState.mode==="map")}
-async function mountMap(vis,nums,line){
+async function mountMap(vis,nums,segs){
  var box=V.map.querySelector(".mapbox");if(!box)return;
  // alto: hasta justo encima de la barra de abajo (así los botones y el logo de Google no quedan tapados)
  var nb=$("#bnav"),top=box.getBoundingClientRect().top+window.scrollY,navH=nb&&!nb.hidden?nb.offsetHeight:0;
@@ -1640,17 +1692,17 @@ async function mountMap(vis,nums,line){
  try{
   await loadGM();
   var maps=await google.maps.importLibrary("maps"),mk=await google.maps.importLibrary("marker");
-  if(!gm)gm=new maps.Map(gmEl,{mapId:GM_MAPID,center:{lat:40.2,lng:-3.7},zoom:6,disableDefaultUI:true,zoomControl:true,clickableIcons:false,gestureHandling:"greedy"});
+  if(!gm)gm=new maps.Map(gmEl,{mapId:GM_MAPID,center:{lat:40.2,lng:-3.7},zoom:6,disableDefaultUI:true,zoomControl:false,clickableIcons:false,gestureHandling:"greedy"});
   gmMarkers.forEach(function(m){m.map=null});gmMarkers=[];
   vis.filter(function(p){return p.ll}).forEach(function(p){
    var m=new mk.AdvancedMarkerElement({map:gm,position:{lat:p.ll[0],lng:p.ll[1]},content:gmPin(p,nums[p.id]),title:p.name,zIndex:nums[p.id]?100-nums[p.id]:1,gmpClickable:true});
    m.addListener("click",function(){openMapCard(p.id)});gmMarkers.push(m);
   });
   // plan del día: línea punteada 1 → 2 → 3
-  if(gmLine){gmLine.setMap(null);gmLine=null}
-  if(line&&line.length>1)gmLine=new maps.Polyline({map:gm,path:line.map(function(ll){return {lat:ll[0],lng:ll[1]}}),strokeOpacity:0,zIndex:0,
-   icons:[{icon:{path:"M 0,-1 0,1",strokeOpacity:.85,strokeColor:"#1D2433",strokeWeight:3,scale:3},offset:"0",repeat:"13px"}]});
-  var fk=mapState.day+"|"+Object.keys(mapState.cats).join(",")+"|"+mapState.st+"|"+gmMarkers.length;
+  gmLines.forEach(function(l){l.setMap(null)});gmLines=[];
+  (segs||[]).forEach(function(sg){gmLines.push(new maps.Polyline({map:gm,path:[sg.a,sg.b].map(function(ll){return {lat:ll[0],lng:ll[1]}}),strokeOpacity:0,zIndex:0,
+   icons:[{icon:{path:"M 0,-1 0,1",strokeOpacity:sg.gap?.9:.85,strokeColor:sg.gap?"#A7AFBD":"#1D2433",strokeWeight:3,scale:3},offset:"0",repeat:"13px"}]}))});
+  var fk=mapState.day+"|"+Object.keys(mapState.cats).join(",")+"|"+Object.keys(mapState.st).join(",")+"|"+mapState.only+"|"+gmMarkers.length;
   if(fk!==gmFitKey){gmFitKey=fk;gmFit(vis)}
  }catch(e){gFail=true;renderMap()}
 }
@@ -2138,7 +2190,7 @@ document.addEventListener("click",function(e){
  else if(a==="via"){openViaSheet(b.dataset.day,Number(b.dataset.leg))}
  else if(a==="via-add"){addVia()}
  else if(a==="via-del"){confirmTap(b,"Confirmar",function(){delVia(Number(b.dataset.k))})}
- else if(a==="view"){openDocView(b.dataset.id)}
+ else if(a==="view"){if(!(b.closest("#sheet")&&$("#f-day")&&revReturn()))openDocView(b.dataset.id)}
  else if(a==="edit"){openDocSheet({id:b.dataset.id})}
  else if(a==="copy"){copyText(b.dataset.code)}
  else if(a==="close"){closeSheet()}
@@ -2198,7 +2250,7 @@ document.addEventListener("click",function(e){
  else if(a==="ord-start"){openListSheet(listCtx.cid,listCtx.kind,true)}
  else if(a==="ord-cancel"){openListSheet(listCtx.cid,listCtx.kind)}
  else if(a==="ord-done"){saveOrder()}
- else if(a==="item-back"){openListSheet(listCtx.cid,listCtx.kind)}
+ else if(a==="item-back"){if(!revReturn())openListSheet(listCtx.cid,listCtx.kind)}
  else if(a==="item-save"){saveItem()}
  else if(a==="item-del"){confirmTap(b,"Confirmar",deleteItem)}
  else if(a==="list-reset"){confirmTap(b,"Confirmar",function(){var rc=listCtx;delKV("pl:"+rc.cid+":"+rc.kind).then(function(){refresh();openListSheet(rc.cid,rc.kind);toast("Lista restaurada")})})}
@@ -2209,19 +2261,25 @@ document.addEventListener("click",function(e){
  else if(a==="settings"){openSettings()}
  else if(a==="mmode"){mapState.mode=b.dataset.v;renderMap()}
  else if(a==="mfilt"){openMapFilters()}
- else if(a==="mgrp"){var gl=MGROUPS[b.dataset.g],gon=gl.every(function(c){return mapState.cats[c]});gl.forEach(function(c){if(gon)delete mapState.cats[c];else mapState.cats[c]=1});renderMap();openMapFilters()}
- else if(a==="mst"){mapState.st=b.dataset.v;renderMap();openMapFilters()}
- else if(a==="mreset"){mapState.cats={hotel:1,trans:1,see:1,eat:1,other:1};mapState.st="nodone";renderMap();openMapFilters()}
+ else if(a==="mgrp"){
+  if(b.dataset.g==="st"){if(mapStIs(MST_ALL))mapState.st={};else{mapState.st={};MST_ALL.forEach(function(x){mapState.st[x]=1})}}
+  else{var gl=MGROUPS[b.dataset.g],gon=gl.every(function(c){return mapState.cats[c]});gl.forEach(function(c){if(gon)delete mapState.cats[c];else mapState.cats[c]=1})}
+  renderMap();openMapFilters()}
+ else if(a==="mst"){var sv0=b.dataset.v;if(mapState.st[sv0])delete mapState.st[sv0];else mapState.st[sv0]=1;renderMap();openMapFilters()}
+ else if(a==="mreset"){mapState.cats={hotel:1,trans:1,see:1,eat:1,other:1};mapState.st={0:1,1:1,2:1};renderMap();openMapFilters()}
  else if(a==="mstep"){mapStep(+b.dataset.d)}
  else if(a==="mreview"){openReview()}
- else if(a==="geo-no"){geoNo(b.dataset.gk)}
+ else if(a==="rev-edit"){revEdit(b)}
+ else if(a==="geo-no"){confirmTap(b,"Confirmar",function(){geoNo(b.dataset.gk)})}
  else if(a==="plan-add"){openPlanPicker()}
  else if(a==="plan-pick"){var pb=b;planToggle(pb.dataset.pk,mapDayId()).then(function(){var on=planEvs(pb.dataset.pk,mapDayId()).length>0;pb.setAttribute("aria-pressed",on);pb.querySelector(".mchk").innerHTML=on?svg("check",16):""})}
  else if(a==="plan-one"){planToggle(b.dataset.pk,b.dataset.day).then(closeSheet)}
  else if(a==="mcat"){var mc=b.dataset.c;if(mapState.cats[mc])delete mapState.cats[mc];else mapState.cats[mc]=1;renderMap();if(b.closest("#sheet"))openMapFilters()}
  else if(a==="mcard"){openMapCard(b.dataset.id)}
  else if(a==="m-me"){gmLocate()}
- else if(a==="m-fit"){gmFit(mapVisible(mapPoints()))}
+ else if(a==="m-fit"){gmFit(mapShown(mapPoints()))}
+ else if(a==="monly"){mapState.only=!mapState.only;renderMap()}
+ else if(a==="monly-on"){mapState.only=true;renderMap()}
  else if(a==="map-day"){mapState.day=b.dataset.day;mapFrom=location.hash||"#inicio";location.hash="#mapa"}
  else if(a==="spend"){openSpend()}
  else if(a==="sumtog"){setKV("sumOpen",!kv.sumOpen);renderDocsView()}
