@@ -14,6 +14,23 @@ Reglas:
 
 ## 2026-11-11
 
+- Trayecto: la opción pasa a llamarse "No es un traslado" (sin nota).
+- Tarjeta de un sitio en el mapa: botón con lápiz para editarlo; al guardar
+  o cancelar se vuelve a la tarjeta.
+- Quitar del plan un sitio cuyo evento tiene nota: el evento queda guardado
+  y escondido (campo nuevo opcional `off`), no sale en calendario, plan ni
+  mapa. La nota se ve (sin editar) en la lista del mapa y en la tarjeta. Al
+  volver a añadir el sitio al plan (cualquier día) reaparece con su nota.
+  Sin nota, se borra como antes.
+- Evento ligado a un sitio: quitado el mensaje "Vinculado a…: en el mapa
+  sale solo el día de este evento". Decidido: un sitio en el plan de un día
+  sigue saliendo solo ese día (los otros días quedan más limpios; desde
+  "Añadir sitio" se puede pasar a otro día).
+- Doble toque en Guardar (documento, evento o sitio) ya no crea dos copias.
+  Al añadir o renombrar un sitio con el mismo nombre que otro de esa lista,
+  avisa una vez; tocar Guardar otra vez lo guarda igual. (Los dos "Museo
+  del Prado" de Nicolas venían de renombrar uno en una prueba.)
+
 - Trayecto "Ninguno · no es el traslado del día" en el formulario de
   billetes, también en días con un solo trayecto (antes era fijo). El coche
   viene con "Ninguno" por defecto (suele ser un alquiler para moverse); si

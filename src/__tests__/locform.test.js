@@ -270,7 +270,7 @@ describe("formulario: ubicaciones", () => {
     click($('[data-act="leg-via-add"]'));
     for (let i = 0; i < 5; i++) await tick();
     const o = [...$("#f-leg").options].map((x) => x.textContent);
-    expect(o).toEqual(["Sin asignar", "Tenerife → Pamplona · vía Bilbao", "Tenerife → Bilbao", "Bilbao → Pamplona", "Ninguno · no es el traslado del día"]);
+    expect(o).toEqual(["Sin asignar", "Tenerife → Pamplona · vía Bilbao", "Tenerife → Bilbao", "Bilbao → Pamplona", "No es un traslado"]);
     expect($("#f-leg").value).toBe("0-0-1");                    // por defecto, un billete para todo
     // y se puede quitar desde el mismo formulario
     const del = $('[data-act="leg-via-del"][data-k="0"]');
@@ -1008,7 +1008,7 @@ describe("formulario: ubicaciones", () => {
     click($('#v-day [data-act="tab"][data-tab="general"]'));
     const btn = [...document.querySelectorAll('#v-day [data-act="ev-add"][data-pk]')].find((b) => b.dataset.title === "Plaza Mayor y Puerta del Sol");
     click(btn);
-    expect($("#sheet-body .evpl").textContent).toContain("Plaza Mayor");
+    expect($("#sheet-body .evpl")).toBeNull();                          // sin el mensaje «Vinculado a…»
     $("#e-day").value = "2026-12-29"; $("#e-t1").value = "11:00";
     click($('[data-act="ev-save"]')); await tick();
     location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
@@ -1380,5 +1380,52 @@ describe("formulario: ubicaciones", () => {
     click(tk.querySelector('[data-act="view"]')); click($('[data-act="edit"]'));
     expect($("#f-leg").value).toBe("none");
     click($('#sheet [data-act="view"], #sheet [data-act="close"]'));
+  });
+  it("53) quitar del plan un sitio con nota: la nota queda guardada (se ve, no se edita) y vuelve al añadirlo", async () => {
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const lm = $('#v-map [data-act=mmode][data-v="list"]'); if (lm) click(lm);
+    setSel("m-day", "2026-12-30");
+    const N = "Palacio Real y Templo de Debod";
+    const open = () => click([...document.querySelectorAll("#v-map .mrow")].find((x) => x.querySelector("b").textContent === N));
+    open();
+    expect($('#sheet .sh-head [data-act="mc-edit"]')).toBeTruthy();       // editar desde la tarjeta
+    click($('[data-act="plan-one"]')); await tick();
+    open();
+    click($('#sheet-body [data-act="ev-view"]'));
+    click($('[data-act="ev-edit"]'));
+    $("#e-note").value = "Entrar por Bailén";
+    click($('[data-act="ev-save"]')); await tick();
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    open();
+    click($('[data-act="plan-one"]')); await tick();                    // quitar del plan
+    const row = [...document.querySelectorAll("#v-map .mrow")].find((x) => x.querySelector("b").textContent === N);
+    expect(row.textContent).toContain("Nota: Entrar por Bailén");
+    open();
+    expect($("#sheet-body").textContent).toContain("Se puede editar si vuelves a añadirlo al plan");
+    click($('[data-act="plan-one"]')); await tick();                    // volver a añadirlo
+    open();
+    click($('#sheet-body [data-act="ev-view"]'));
+    expect($("#sheet-body").textContent).toContain("Entrar por Bailén");
+    click($('#sheet [data-act="close"]'));
+  });
+
+  it("54) sitio con el mismo nombre que otro: avisa una vez; editar desde la tarjeta vuelve a la tarjeta", async () => {
+    const b = document.createElement("button");
+    b.dataset.act = "list"; b.dataset.city = "madrid"; b.dataset.kind = "see";
+    document.body.appendChild(b); click(b); b.remove();
+    click($('[data-act="item-add"]'));
+    $("#i-n").value = "Museo del Prado";
+    click($('[data-act="item-save"]')); await tick();
+    expect($("#i-err").textContent).toContain("Ya hay un «Museo del Prado»");
+    click($('[data-act="item-back"]'));
+    // editar desde la tarjeta del mapa: Cancelar vuelve a la tarjeta
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    setSel("m-day", "2026-12-30");
+    click([...document.querySelectorAll("#v-map .mrow")].find((x) => x.querySelector("b").textContent === "Parque del Retiro"));
+    click($('#sheet .sh-head [data-act="mc-edit"]'));
+    expect($("#i-n").value).toBe("Parque del Retiro");
+    click($('[data-act="item-back"]'));
+    expect($("#sh-title").textContent).toBe("Parque del Retiro");
+    click($('#sheet [data-act="close"]'));
   });
 });

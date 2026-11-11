@@ -124,6 +124,11 @@ Para planear el orden de cada día y no alejarse de los puntos de traslado.
   cuántas noches se queda en cada ciudad, etc. Hasta entonces, vuelo/tren/
   bus solo se pueden poner en días con traslado. Cuando exista, el aviso
   "Este día no tiene traslados" llevará al final un enlace "Editar ruta".
+  Al crear cada trayecto, preguntar el medio (Avión, Tren, Bus, Coche o
+  "Aún no lo sé"). Hoy el medio está escrito a mano en el itinerario y,
+  sin él, la app propone siempre tren. Con "Aún no lo sé", el formulario
+  del billete no marca ningún tipo; los tramos después de una parada
+  siguen proponiendo el tipo del tramo anterior.
 - Pases de Wallet (.pkpass) como archivo de un documento, de respaldo. Al
   tocarlo, iOS muestra su vista de Wallet con "Agregar" (como al abrirlo en
   WhatsApp). Tres cambios: aceptar .pkpass en el selector; guardarlo con el

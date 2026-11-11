@@ -401,7 +401,7 @@ function segType(l,j,day,i){
 function onlyLeg(dayId){var day=dayById(dayId);if(!day||!day.legs||day.legs.length!==1)return "";var n=legSegs(day,0).length;return n===1?"0-0":"0-0-"+(n-1)}
 /* Trayecto por defecto según el tipo: el coche suele ser un alquiler para moverse, no el traslado («none») */
 function defLeg(dayId){return selType==="coche"?"none":onlyLeg(dayId)}
-var LEG_NONE='<option value="none">Ninguno · no es el traslado del día</option>';
+var LEG_NONE='<option value="none">No es un traslado</option>';
 function fixedLeg(dayId){var day=dayById(dayId);return !!(day&&day.legs&&day.legs.length===1&&legSegs(day,0).length===1)}
 var viaOpen=false;
 function legField(dayId,type,sel){
@@ -1341,7 +1341,9 @@ async function saveOrder(){
  if(!same){await setKV("pl:"+c.cid+":"+c.kind,nl.map(function(p){return Object.assign({},p)}));refresh();toast("Orden guardado")}
  openListSheet(c.cid,c.kind);
 }
+var itemDupOk="";
 function openItemForm(id){
+ itemDupOk="";
  var c=listCtx,p=id==null?null:listOf(c.cid,c.kind).filter(function(x){return x.id===id})[0]||null;
  itemEd=p;
  // quitado del mapa con «No es aquí» (y sin enlace con coordenadas): nota + deshacer
@@ -1353,10 +1355,16 @@ function openItemForm(id){
  '',
  '<p class="err" id="i-err" role="alert"></p><div class="actions">'+(p?'<button type="button" class="btn danger" data-act="item-del">Eliminar</button>':"")+'<button type="button" class="btn primary" style="--c1:var(--accent)" data-act="item-save">Guardar</button></div>');
 }
+/* Un doble toque en Guardar creaba dos copias (de un sitio, un evento o un documento nuevo) */
+var saving=false;
+async function once(fn){if(saving)return;saving=true;try{await fn()}finally{saving=false}}
 async function saveItem(){
  var c=listCtx,n=$("#i-n").value.trim(),d=$("#i-d").value.trim(),u=$("#i-u").value.trim();
  if(!n){$("#i-err").textContent="Escribe un nombre.";return}
  if(u&&!/^https?:\/\/\S+$/i.test(u)){$("#i-err").textContent="El enlace debe empezar por https://";return}
+ // mismo nombre que otro sitio de la lista: se avisa una vez; tocar Guardar otra vez lo guarda igual
+ var dupN=listOf(c.cid,c.kind).some(function(x){return (!itemEd||x.id!==itemEd.id)&&normName(x.n)===normName(n)});
+ if(dupN&&itemDupOk!==n){itemDupOk=n;$("#i-err").textContent="Ya hay un «"+n+"» en "+listTitle(c.kind)+" de "+nm(c.cid)+". Si es otro, toca Guardar otra vez.";return}
  var l=listOf(c.cid,c.kind).map(function(x){return {id:x.id,n:x.n,d:x.d,u:x.u||""}});
  if(itemEd){l.forEach(function(x){if(x.id===itemEd.id){x.n=n;x.d=d;x.u=u}})
   if(n!==itemEd.n||u!==(itemEd.u||"")){var gk="pl|"+itemKey(c.kind,c.cid,itemEd);if(kv.geo&&kv.geo[gk]){var g0=Object.assign({},kv.geo);delete g0[gk];await setKV("geo",g0)}delete geoTried[gk]}}
@@ -1485,14 +1493,17 @@ async function savePlan(){
 function planEvs(pk,dd){return evList().filter(function(e){return e.pk===pk&&e.day===dd})}
 async function planToggle(pk,dd){
  var lp=placeByKey(pk);if(!lp||!dayById(dd))return;
- var evs=planEvs(pk,dd),list=evList().slice(),dy=dayById(dd);
+ var evs=planEvs(pk,dd),list=evAll().slice(),dy=dayById(dd);
  if(evs.length){
   if(evs.some(function(e){return e.t1}))return;   // con hora: se cambia desde el calendario
-  var kept=0;
-  list=list.filter(function(e){return !(e.pk===pk&&e.day===dd&&!e.note)}).map(function(e){if(e.pk===pk&&e.day===dd){kept++;var c=Object.assign({},e);delete c.pk;return c}return e});
-  await setKV("events",list);toast(kept?"Quitado del plan (el evento sigue en el calendario por su nota)":"Quitado del plan del "+shortDay(dy));
+  list=list.filter(function(e){return !(!e.off&&e.pk===pk&&e.day===dd&&!e.note)}).map(function(e){if(!e.off&&e.pk===pk&&e.day===dd)return Object.assign({},e,{off:1});return e});
+  await setKV("events",list);toast("Quitado del plan del "+shortDay(dy));
  }else{
-  list.push({id:uid(),title:lp.p.n,day:dd,t1:"",t2:"",note:"",pk:pk});await setKV("events",list);toast("Añadido al plan del "+shortDay(dy));
+  // si tenía un evento escondido con nota (se quitó del plan), vuelve ese, en este día
+  var hid=list.filter(function(e){return e.off&&e.pk===pk})[0];
+  if(hid)list=list.map(function(e){if(e!==hid)return e;var c=Object.assign({},e,{day:dd});delete c.off;return c});
+  else list.push({id:uid(),title:lp.p.n,day:dd,t1:"",t2:"",note:"",pk:pk});
+  await setKV("events",list);toast("Añadido al plan del "+shortDay(dy));
  }
  if(view==="map")renderMap();
 }
@@ -1532,7 +1543,7 @@ function dayAnchors(dd,list){
 }
 function mapSub(p){
  if(p.kind==="doc")return p.docIds.map(function(id){var d=docs.filter(function(x){return x.id===id})[0];return d?(d.title||(TYPES[d.type]||TYPES.otro).l):""}).filter(Boolean).join(" · ");
- var s=kv[p.pk]||0,o=[listTitle(p.cat)];if(s)o.push(STATUS[s]);
+ var s=kv[p.pk]||0,o=[listTitle(p.cat)],on=offNote(p.pk);if(s)o.push(STATUS[s]);if(on&&!p.evIds.length)o.push("Nota: "+on);
  p.evIds.forEach(function(id){var e=evList().filter(function(x){return x.id===id})[0];var dy=e&&dayById(e.day);if(dy)o.push(cap(shortDay(dy))+(e.t1?" "+e.t1:""))});
  return o.join(" · ");
 }
@@ -1669,8 +1680,10 @@ function openMapCard(id){
    :'<div><button type="button" class="btn'+(pev.length?"":" primary")+'" style="--c1:var(--accent)" data-act="plan-one" data-pk="'+esc(p.pk)+'" data-day="'+dd+'">'+(pev.length?"Quitar del plan del "+esc(shortDay(pdy)):svg("plus",18)+"Añadir al plan del "+esc(shortDay(pdy)))+'</button></div>';
  }
  if(p.docIds.length)h+=vField(p.docIds.length>1?"Documentos":"Documento",'<ul class="adru">'+p.docIds.map(function(did){var d=docs.filter(function(x){return x.id===did})[0];if(!d)return "";var dy=dayById(d.dayId);return '<li><button type="button" class="mini" data-act="view" data-id="'+d.id+'">'+esc(d.title||(TYPES[d.type]||TYPES.otro).l)+(dy?' · '+esc(shortDay(dy)):"")+'</button></li>'}).join("")+'</ul>');
+ var onx=p.kind==="place"&&!p.evIds.length&&offNote(p.pk);
+ if(onx)h+=vField("Nota",'<p style="margin:0">'+esc(onx)+'</p><p class="foot" style="margin:4px 0 0">Del plan del que lo quitaste. Se puede editar si vuelves a añadirlo al plan.</p>');
  if(p.evIds.length)h+=vField("En el calendario",'<ul class="adru">'+p.evIds.map(function(eid){var e=evList().filter(function(x){return x.id===eid})[0];var dy=e&&dayById(e.day);return e?'<li><button type="button" class="mini" data-act="ev-view" data-id="'+e.id+'">'+esc(dy?cap(shortDay(dy)):"")+(e.t1?' · '+esc(e.t1):"")+'</button></li>':""}).join("")+'</ul>');
- openSheet('<div class="sh-head"><h2 id="sh-title">'+esc(p.name)+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+h,
+ openSheet('<div class="sh-head"><h2 id="sh-title">'+esc(p.name)+'</h2>'+(p.kind==="place"?'<button type="button" class="pen" data-act="mc-edit" data-pk="'+esc(p.pk)+'" data-gk="'+esc(p.gk)+'" aria-label="Editar '+esc(p.name)+'">'+svg("pencil",17)+'</button>':"")+'<button type="button" class="x" data-act="close">Cerrar</button></div>'+h,
   '<div class="actions"><a class="btn" href="'+esc(mapHref(p))+'" target="_blank" rel="noopener">Abrir en Maps</a><a class="btn primary" style="--c1:var(--accent)" href="'+esc(dirHref(p))+'" target="_blank" rel="noopener">Cómo llegar</a></div>');
  // con internet, el tiempo a pie real de Google reemplaza al estimado
  var tok=++cardTok;   // si se abre otra tarjeta antes de que llegue la respuesta, no se escribe en ella
@@ -1715,8 +1728,11 @@ async function geoNo(gk,pk,id){
  var lp=placeByKey(pk);if(!lp){closeSheet();toast("Quitado del mapa");return}
  listCtx={cid:lp.cid,kind:lp.kind};openItemForm(lp.p.id);
  // al guardar, deshacer o «Más tarde», de vuelta a la tarjeta (buscada por su clave: si se eliminó, se cierra)
- revBack=function(){var q=mapPoints().filter(function(x){return x.gk===gk})[0];if(q)openMapCard(q.id);else closeSheet()};
+ revBack=backToCard(gk);
 }
+/* Volver a la tarjeta de un sitio buscándolo por su clave (los ids cambian al redibujar; si ya no existe, se cierra) */
+function backToCard(gk){return function(){var q=mapPoints().filter(function(x){return x.gk===gk})[0];if(q)openMapCard(q.id);else closeSheet()}}
+function cardEdit(b){var lp=placeByKey(b.dataset.pk);if(!lp)return;listCtx={cid:lp.cid,kind:lp.kind};openItemForm(lp.p.id);revBack=backToCard(b.dataset.gk)}
 /* Deshacer «No es aquí»: vuelve al punto de antes; si no se guardó (quitado antes de esto), se busca otra vez */
 async function geoUndo(gk){
  var geo=Object.assign({},kv.geo||{}),g=geo[gk];
@@ -2085,7 +2101,11 @@ function confirmTap(b,msg,fn){
  b.textContent=msg;b.classList.add("armed");
 }
 var calTab="dias",calSel=null,curDayId=null,calScrolled=false,evEditing=null,evPk=null;   // evPk: sitio del que sale el evento nuevo (📅+)
-function evList(){return Array.isArray(kv.events)?kv.events:[]}
+/* evAll: todos los eventos guardados; evList: los que se ven. Un evento con nota que se quitó del
+   plan queda guardado y escondido (off, campo nuevo opcional) para recuperar la nota si vuelve. */
+function evAll(){return Array.isArray(kv.events)?kv.events:[]}
+function evList(){return evAll().filter(function(e){return !e.off})}
+function offNote(pk){var e=evAll().filter(function(x){return x.off&&x.pk===pk&&x.note})[0];return e?e.note:""}
 function tmin(t){if(!/^\d{1,2}:\d{2}$/.test(t||""))return null;var a=t.split(":");return +a[0]*60+ +a[1]}
 function colOf(t){return TYPES[t]?TYPES[t].t:"var(--accent)"}
 function agendaOf(day){
@@ -2170,7 +2190,6 @@ function openEventSheet(o){
  '<div class="field"><label for="e-title">Nombre'+REQ+'</label><input id="e-title" type="text" placeholder="Ej. Visita a Plaza de España" value="'+esc(e?e.title:(o.title||""))+'" autocomplete="off"></div>'+
  '<div class="field"><label for="e-day">Día'+REQ+'</label><select id="e-day">'+DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===day?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'</select></div>'+
  '<div class="field"><span class="fl">Hora de inicio y fin</span><div class="timerow">'+timeBox("e-t1",e&&e.t1,"Hora de inicio")+'<span>–</span>'+timeBox("e-t2",e&&e.t2,"Hora de fin")+'</div></div>'+
- (lp?'<p class="note ok evpl">'+svg("pin",18)+'<span>Vinculado a «'+esc(lp.p.n)+'»: en el mapa sale solo el día de este evento.</span></p>':"")+
  '<div class="field"><label for="e-note">Nota o lugar</label><input id="e-note" type="text" placeholder="Ej. Entrada por la puerta principal" value="'+esc(e&&e.note||"")+'" autocomplete="off"></div>'+
  '',
  '<p class="err" id="e-err" role="alert"></p><div class="actions">'+(e?'<button type="button" class="btn danger" data-act="ev-del">Eliminar</button>':"")+'<button type="button" class="btn primary" style="--c1:var(--accent)" data-act="ev-save">Guardar</button></div>');
@@ -2190,7 +2209,7 @@ async function saveEvent(){
  if(!title){$("#e-err").textContent="Escribe un nombre para el evento.";return}
  if(t2&&!t1){$("#e-err").textContent="Pon también la hora de inicio.";return}
  if(t1&&t2&&t2===t1){$("#e-err").textContent="La hora de fin es igual a la de inicio. Si termina al día siguiente, pon la hora real (por ejemplo 01:00).";return}
- var list=evList().slice(),ev=evEditing?Object.assign({},evEditing):{id:uid()};
+ var list=evAll().slice(),ev=evEditing?Object.assign({},evEditing):{id:uid()};
  ev.title=title;ev.day=$("#e-day").value;ev.t1=t1;ev.t2=t2;ev.note=$("#e-note").value.trim();
  if(evPk)ev.pk=evPk;   // campo nuevo opcional: los eventos viejos siguen valiendo
  var k=-1;list.forEach(function(x,i){if(x.id===ev.id)k=i});if(k>=0)list[k]=ev;else list.push(ev);
@@ -2200,7 +2219,7 @@ async function saveEvent(){
 }
 async function deleteEvent(){
  if(!evEditing)return;var id=evEditing.id;
- await setKV("events",evList().filter(function(x){return x.id!==id}));closeSheet();refresh();toast("Evento eliminado");
+ await setKV("events",evAll().filter(function(x){return x.id!==id}));closeSheet();refresh();toast("Evento eliminado");
 }
 
 // el scroll de cada pestaña lo pone la app (scrollPos); que el navegador no lo recoloque por su cuenta
@@ -2275,7 +2294,7 @@ document.addEventListener("click",function(e){
  else if(a==="ev-add"){openEventSheet({day:b.dataset.day,title:b.dataset.title,pk:b.dataset.pk})}
  else if(a==="ev-view"){openEventView(b.dataset.id)}
  else if(a==="ev-edit"){openEventSheet({id:b.dataset.id})}
- else if(a==="ev-save"){saveEvent()}
+ else if(a==="ev-save"){once(saveEvent)}
  else if(a==="ev-del"){confirmTap(b,"Confirmar",deleteEvent)}
  else if(a==="dtab"){docsTab=b.dataset.v;renderDocsView()}
  else if(a==="via"){openViaSheet(b.dataset.day,Number(b.dataset.leg))}
@@ -2346,10 +2365,10 @@ document.addEventListener("click",function(e){
  else if(a==="ord-cancel"){openListSheet(listCtx.cid,listCtx.kind)}
  else if(a==="ord-done"){saveOrder()}
  else if(a==="item-back"){if(!revReturn())openListSheet(listCtx.cid,listCtx.kind)}
- else if(a==="item-save"){saveItem()}
+ else if(a==="item-save"){once(saveItem)}
  else if(a==="item-del"){confirmTap(b,"Confirmar",deleteItem)}
  else if(a==="list-reset"){confirmTap(b,"Confirmar",function(){var rc=listCtx;delKV("pl:"+rc.cid+":"+rc.kind).then(function(){refresh();openListSheet(rc.cid,rc.kind);toast("Lista restaurada")})})}
- else if(a==="save"){saveFromSheet()}
+ else if(a==="save"){once(saveFromSheet)}
  else if(a==="delete"){confirmTap(b,"Confirmar",function(){removeDoc(editing.id).then(function(){closeSheet();refresh();toast("Documento eliminado")})})}
  else if(a==="resto"){var s=((kv[b.dataset.k]||0)+1)%4;setKV(b.dataset.k,s).then(refresh)}
  else if(a==="filter"){docFilter=b.dataset.f;renderDocsView()}
@@ -2367,6 +2386,7 @@ document.addEventListener("click",function(e){
  else if(a==="rev-edit"){revEdit(b)}
  else if(a==="geo-no"){geoNo(b.dataset.gk,b.dataset.pk,b.dataset.id)}
  else if(a==="geo-undo"){geoUndo(b.dataset.gk)}
+ else if(a==="mc-edit"){cardEdit(b)}
  else if(a==="plan-add"){openPlanPicker()}
  else if(a==="plan-pick"){var pb=b;planToggle(pb.dataset.pk,mapDayId()).then(function(){var on=planEvs(pb.dataset.pk,mapDayId()).length>0;pb.setAttribute("aria-pressed",on);pb.querySelector(".mchk").innerHTML=on?svg("check",16):""})}
  else if(a==="plan-one"){planToggle(b.dataset.pk,b.dataset.day).then(closeSheet)}
