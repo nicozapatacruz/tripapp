@@ -206,7 +206,6 @@ var TRIPT={vuelo:1,tren:1,bus:1,coche:1};
 /* ---- Ubicaciones: enlaces de Google Maps, sugerencias y ciudad ---- */
 function gmap(q){return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q)}
 function safeDec(s){try{return decodeURIComponent(s)}catch(e){return s}}
-function norm(s){return String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase()}
 function nameFromUrl(u){
  var m=u.match(/\/maps\/place\/([^\/@?#]+)/)||u.match(/[?&](?:q|query)=([^&#]+)/);
  if(!m)return "";
@@ -1301,8 +1300,8 @@ function openItemForm(id){
  var c=listCtx,p=id==null?null:listOf(c.cid,c.kind).filter(function(x){return x.id===id})[0]||null;
  itemEd=p;
  // quitado del mapa con «No es aquí» (y sin enlace con coordenadas): nota + deshacer
- var gk=p?"pl|"+itemKey(c.kind,c.cid,p):"",gn=p&&!coordsOf(p.u)&&geoOf(gk),note=gn&&gn.no?'<div class="bnbox"><p class="adrw">Quitado del mapa («No es aquí»). Pega el enlace de Google Maps del sitio correcto; mientras tanto queda sin ubicar.</p><button type="button" class="btn" data-act="geo-undo" data-gk="'+esc(gk)+'">Estaba bien, deshacer</button></div>':"";
- openSheet('<div class="sh-head"><h2 id="sh-title">'+(p?"Editar":"Añadir")+' · '+esc(listTitle(c.kind))+'</h2><button type="button" class="x" data-act="item-back">Cancelar</button></div>'+note+
+ var gk=p?"pl|"+itemKey(c.kind,c.cid,p):"",gn=p&&!coordsOf(p.u)&&geoOf(gk),note=gn&&gn.no?'<div class="bnbox"><p class="adrw">Quitado del mapa («No es aquí»). Pega el enlace de Google Maps del sitio correcto. Si no lo tienes ahora, toca «Más tarde»: no saldrá en el mapa y quedará en Sin ubicar hasta que pegues el enlace.</p><button type="button" class="btn" data-act="geo-undo" data-gk="'+esc(gk)+'">Estaba bien, deshacer</button></div>':"";
+ openSheet('<div class="sh-head"><h2 id="sh-title">'+(p?"Editar":"Añadir")+' · '+esc(listTitle(c.kind))+'</h2><button type="button" class="x" data-act="item-back">'+(note?"Más tarde":"Cancelar")+'</button></div>'+note+
  '<div class="field"><label for="i-n">Nombre'+REQ+'</label><input id="i-n" type="text" placeholder="'+(c.kind==="see"?"Ej. Museo del Prado":"Ej. Casa Lucio")+'" value="'+esc(p?p.n:"")+'" autocomplete="off"></div>'+
  '<div class="field"><label for="i-d">Descripción</label><textarea id="i-d" placeholder="Qué es, qué pedir, horarios...">'+esc(p?p.d:"")+'</textarea></div>'+
  '<div class="field"><label for="i-u">Enlace de Google Maps</label><input id="i-u" type="text" placeholder="Si lo dejas vacío, el mapa busca por nombre" value="'+esc(p?p.u:"")+'" autocomplete="off"></div>'+
@@ -1420,7 +1419,7 @@ function mapShown(all){
  dayPlan(dd,all).forEach(function(x){ids[x.pid]=1});h.top.concat(h.bottom).forEach(function(p){ids[p.id]=1});
  return all.filter(function(p){return ids[p.id]});
 }
-function hotelRow(p,lab){
+function planHotelRow(p,lab){
  return '<li class="pl mrow tap" data-act="mcard" data-id="'+p.id+'"><span class="adri" style="--t:'+mapColor(p)+'">'+svg("bed",18)+'</span><div class="adrt"><b>'+esc(p.name)+'</b><p>'+lab+'</p>'+(p.ll?"":'<p class="adrw">Sin ubicar</p>')+'</div>'+mapBtn(mapHref(p))+'</li>';
 }
 function mapNumbers(all){var dd=mapDayId();return dd?planNumbers(dayPlan(dd,all)):{}}
@@ -1572,7 +1571,7 @@ function renderMap(){
   var ph="";
   if(dy){
    var seenN={};
-   var hl=function(l,lab){return l.length?'<ul class="rows mhot">'+l.map(function(p){return hotelRow(p,typeof lab==="function"?lab(p):lab)}).join("")+'</ul>':""};
+   var hl=function(l,lab){return l.length?'<ul class="rows mhot">'+l.map(function(p){return planHotelRow(p,typeof lab==="function"?lab(p):lab)}).join("")+'</ul>':""};
    var nr=hot.night?'<ul class="rows mhot"><li class="pl mrow mnight"><span class="adri" style="--t:var(--muted)">'+svg(TYPE_ICON.vuelo,18)+'</span><div class="adrt"><b>'+esc(hot.night)+'</b></div></li></ul>':"";
    ph='<section class="adrg"><h3 class="lab">Plan del día</h3>'+nr+hl(hot.top,function(p){return p.days[dd]?"Hotel de la noche":"Hotel de anoche · check-out"})+(plan.length?'<ul class="rows" id="m-plan">'+plan.map(function(x){var n=nums[x.pid];var r=seenN[x.pid]?"":planRow(x,n);seenN[x.pid]=1;return r}).join("")+'</ul>'+(plan.some(function(x){return tmin(x.t)==null})?'<p class="foot">Lo que tiene hora va en su hora. Lo demás se ordena arrastrando desde ≡.</p>':""):'<p class="foot">Nada todavía. Añade sitios de Qué ver y Comer y ordénalos.</p>')+hl(hot.bottom,"Hotel de esta noche · check-in")+
     (dy.stops.some(hasInfo)?'<div><button type="button" class="mini" data-act="plan-add">'+svg("plus",14)+'Añadir sitio</button></div>':"")+'</section>';
@@ -1609,7 +1608,7 @@ function openMapCard(id){
   var anyW=an.some(function(a){return distKm(p.ll,a.p.ll)<=WALK_KM}),anyF=an.some(function(a){return distKm(p.ll,a.p.ll)>WALK_KM});
   if(an.length)h+='<ul class="mdist">'+an.map(function(a,i){var km=distKm(p.ll,a.p.ll),w=km<=WALK_KM;return '<li>'+svg(w?"clock":"pin",15)+'<span><b><span class="dk" data-i="'+i+'">'+distText(km)+'</span> '+esc(a.l)+'</b>'+(w?' · <span class="wk" data-i="'+i+'">≈ '+walkText(walkMin(km))+' a pie</span>':"")+'</span></li>'}).join("")+'</ul>'+
    '<p class="foot" style="margin:0">'+(anyW?'<span id="md-note">Estimado en línea recta'+(isOnline()?"":" (sin internet)")+'.</span>':"")+(anyF?(anyW?" ":"")+"A más de 3 km, solo la distancia aproximada.":"")+'</p>';
-  if(p.geo)h+='<div class="bnbox"><p class="adrw">Ubicado buscando el nombre: puede no ser exacto.</p><button type="button" class="btn" data-act="geo-no" data-gk="'+esc(p.gk)+'" data-pk="'+esc(p.pk)+'">No es aquí</button></div>';
+  if(p.geo)h+='<div class="bnbox"><p class="adrw">Ubicado buscando el nombre: puede no ser exacto.</p><button type="button" class="btn" data-act="geo-no" data-gk="'+esc(p.gk)+'" data-pk="'+esc(p.pk)+'" data-id="'+p.id+'">No es aquí</button></div>';
  }else{h+='<p class="adrw" style="align-self:flex-start">Sin ubicar: '+unlocWhy(p)+'</p>';
   var gq=p.kind==="place"&&geoOf(p.gk);
   if(gq&&gq.no)h+='<div><button type="button" class="btn" data-act="geo-undo" data-gk="'+esc(p.gk)+'">'+(gq.prev?"Volver a ponerlo donde estaba":"Volver a buscarlo por su nombre")+'</button></div>';
@@ -1658,13 +1657,13 @@ function geoOf(k){var g=kv.geo&&kv.geo[k];return g||null}
 function geoFresh(g){return !!g&&Date.now()-(g.t||0)<GEO_DAYS*864e5}
 function applyGeo(list){list.forEach(function(p){if(p.ll||p.kind==="doc")return;var g=geoOf(p.gk);if(g&&g.no)return;if(geoFresh(g)&&g.ll){p.ll=g.ll;p.pid=g.pid||"";p.geo=true}})}
 /* «No es aquí»: el sitio queda sin ubicar (y no se vuelve a buscar) hasta que se le pegue un enlace */
-async function geoNo(gk,pk){
+async function geoNo(gk,pk,id){
  // se guarda el punto que tenía (prev) para poder deshacerlo sin volver a buscarlo
  var geo=Object.assign({},kv.geo||{}),old=geo[gk];geo[gk]={no:1,t:Date.now()};if(old&&old.ll)geo[gk].prev=old;await setKV("geo",geo);
  if(view==="map")renderMap();
  var lp=placeByKey(pk);if(!lp){closeSheet();toast("Quitado del mapa");return}
  listCtx={cid:lp.cid,kind:lp.kind};openItemForm(lp.p.id);
- revBack=closeSheet;
+ revBack=function(){openMapCard(id)};   // al guardar, deshacer o «Más tarde», de vuelta a la tarjeta
 }
 /* Deshacer «No es aquí»: vuelve al punto de antes; si no se guardó (quitado antes de esto), se busca otra vez */
 async function geoUndo(gk){
@@ -2303,7 +2302,7 @@ document.addEventListener("click",function(e){
  else if(a==="mstep"){mapStep(+b.dataset.d)}
  else if(a==="mreview"){openReview()}
  else if(a==="rev-edit"){revEdit(b)}
- else if(a==="geo-no"){geoNo(b.dataset.gk,b.dataset.pk)}
+ else if(a==="geo-no"){geoNo(b.dataset.gk,b.dataset.pk,b.dataset.id)}
  else if(a==="geo-undo"){geoUndo(b.dataset.gk)}
  else if(a==="plan-add"){openPlanPicker()}
  else if(a==="plan-pick"){var pb=b;planToggle(pb.dataset.pk,mapDayId()).then(function(){var on=planEvs(pb.dataset.pk,mapDayId()).length>0;pb.setAttribute("aria-pressed",on);pb.querySelector(".mchk").innerHTML=on?svg("check",16):""})}

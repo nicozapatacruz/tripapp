@@ -14,6 +14,18 @@ Reglas:
 
 ## 2026-11-11
 
+- Arreglado: Pendientes → Hoteles salía con filas "0, 1, 2… Sin ubicar".
+  La fila del hotel en el plan del mapa se llamaba igual que la de
+  Pendientes (`hotelRow`) y la reemplazaba en todo el archivo. Renombrada
+  a `planHotelRow`. Nuevo test que falla si `app.js` repite un nombre de
+  función (encontró otro, `norm`, duplicado sin efecto: quitado).
+- "No es aquí": guardar, "Estaba bien, deshacer" o cerrar la edición
+  vuelven a la tarjeta del sitio (donde se estaba). En esa edición, el
+  botón de arriba dice "Más tarde" en vez de "Cancelar" (no deshace el
+  "No es aquí"). La nota de arriba lo explica: "Si no lo tienes ahora,
+  toca «Más tarde»: no saldrá en el mapa y quedará en Sin ubicar hasta que
+  pegues el enlace."
+
 - Mapa, tercera ronda:
   - Número del plan sin ubicar: círculo hueco fucsia (en el Plan del día,
     en la lista y en Revisar ubicaciones). Fucsia = "falta algo": no se
