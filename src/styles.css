@@ -568,6 +568,7 @@ button.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-co
 
 /* Mapa: cabecera con Lista/Mapa y Filtros, día con ‹ ›, hoja de filtros y plan del día */
 body.mapfull .app{padding-bottom:0}
+body.nobnav .app{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}   /* el día no tiene barra de abajo */
 .page-h.mh h1{flex:1;min-width:0}
 .mctl.mhb{position:relative;flex:none;box-shadow:none}
 .mdot{position:absolute;top:7px;right:7px;width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--surface)}

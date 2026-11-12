@@ -14,6 +14,13 @@ Reglas:
 
 ## 2026-11-12
 
+- Día 1 desplazado (capturas de Nicolas): al entrar desde la Ruta después
+  de bajar un poco, el día se abría con el título cortado. El día guardaba
+  abajo el hueco de la barra de navegación (112 px) aunque no la tiene, así
+  que un día corto tenía scroll de sobra. Se quitó ese hueco en el día y,
+  si iOS lo deja desplazado justo después de abrirlo sin haber tocado la
+  pantalla, vuelve arriba. Falta que Nicolas lo pruebe en el iPhone.
+
 - La noche de viaje dice en qué se va: "Noche en el tren", "Noche en el
   bus" (antes siempre "en el avión"), con su ícono en la Ruta, el día y el
   plan del mapa. El aviso del hotel también lo dice.

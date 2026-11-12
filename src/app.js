@@ -2410,6 +2410,8 @@ async function deleteEvent(){
 if(typeof history!=="undefined"&&"scrollRestoration" in history)history.scrollRestoration="manual";
 var view="home",dayFrom=null;   // dayFrom: de dónde se llegó al día (el botón ‹ vuelve ahí)
 function setBand(color){document.body.style.setProperty("--band",color)}
+var lastTouch=0;
+if(typeof document!=="undefined")document.addEventListener("touchstart",function(){lastTouch=Date.now()},{passive:true,capture:true});
 function route(){
  applyTransit();
  var h=location.hash.replace(/^#/,""),day=null,v="home";
@@ -2420,7 +2422,7 @@ function route(){
  if(v==="map"&&view!=="day")mapFrom=null;   // entrar desde la barra de abajo: sin ‹
  view=v;
  ["home","day","docs","cal","map"].forEach(function(k){V[k].hidden=k!==v});
- $("#bnav").hidden=v==="day";
+ $("#bnav").hidden=v==="day";document.body.classList.toggle("nobnav",v==="day");   // sin barra de abajo: sin su hueco (si no, un día corto tenía scroll de sobra y a veces se abría desplazado)
  $("#nav-home").setAttribute("aria-current",v==="home"?"page":"false");$("#nav-docs").setAttribute("aria-current",v==="docs"?"page":"false");$("#nav-cal").setAttribute("aria-current",v==="cal"?"page":"false");$("#nav-map").setAttribute("aria-current",v==="map"?"page":"false");
  if(v==="home"){renderHome();setBand("var(--bg)")}
  else if(v==="docs"){renderDocsView();setBand("var(--bg)")}
@@ -2429,7 +2431,9 @@ function route(){
  else{if(V.day.dataset.id!==day.d){tab="general"}V.day.dataset.id=day.d;renderDay(day);setBand("var(--bg)")}
  mapFull();
  if(changed&&pageLock){var y1=v==="day"?0:(scrollPos[v]||0);pageLock.y=y1;document.body.style.top=-y1+"px"}   // con una hoja abierta: se aplica al cerrarla
- else if(changed){var y0=v==="day"?0:(scrollPos[v]||0);window.scrollTo(0,y0);if(v==="day")requestAnimationFrame(function(){if(view==="day"&&window.scrollY!==0)window.scrollTo(0,0)})}
+ else if(changed){var y0=v==="day"?0:(scrollPos[v]||0);window.scrollTo(0,y0);if(v==="day"){var t0=lastTouch;requestAnimationFrame(function(){if(view==="day"&&window.scrollY!==0)window.scrollTo(0,0)});
+  // iOS a veces deja el día desplazado un momento después (al terminar de pintarlo): si no se ha tocado la pantalla, arriba otra vez
+  setTimeout(function(){if(view==="day"&&lastTouch===t0&&window.scrollY!==0)window.scrollTo(0,0)},150)}}
  if(v==="cal"&&calTab==="dias"&&!calScrolled){calScrolled=true;var ce=document.getElementById("c-"+todayStr());if(ce)requestAnimationFrame(function(){ce.scrollIntoView({block:"start"});window.scrollBy(0,-12)})}
  if(v==="home"&&!homeScrolled){homeScrolled=true;var te=document.getElementById("d-"+todayStr());if(te)requestAnimationFrame(function(){te.scrollIntoView({block:"center"})})}
  updateFab();updateDayMini();
