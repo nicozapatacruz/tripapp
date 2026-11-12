@@ -14,6 +14,11 @@ Reglas:
 
 ## 2026-11-12
 
+- Teclado del iPhone: se quitaron los tres intentos de arreglo (pedido por
+  Nicolas, para no dejar código que no sirve). Queda como al principio: con
+  el teclado abierto, entre la hoja y el teclado se ve un poco la página de
+  detrás. Anotado en PENDIENTES.
+
 - Teclado del iPhone, tercer intento. Lo anterior probablemente ni se
   activaba, porque el cálculo de si el teclado estaba abierto fallaba, y se
   quitó. Ahora hay dos arreglos que no dependen de detectar el teclado:

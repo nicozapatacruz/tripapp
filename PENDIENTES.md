@@ -33,6 +33,12 @@ En este orden:
      Hoy los sitios solo son Qué ver y Comer; tienda o parking pedirían un
      tipo nuevo (decidir si va como "Otros" o tipos propios).
 
+   - iPhone: con el teclado abierto en una hoja, entre la hoja y el teclado
+     (que es translúcido) se ve un poco la página de detrás. Hubo tres
+     intentos el 12 nov (ajustar la hoja con visualViewport, fondo debajo
+     de la hoja) y ninguno lo quitó, así que se deshicieron. Retomarlo
+     solo probando directamente en el iPhone.
+
 ### Diseño del mapa (acordado con Nicolas, 10 nov)
 
 Para planear el orden de cada día y no alejarse de los puntos de traslado.
