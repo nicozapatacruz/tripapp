@@ -10,9 +10,12 @@ Antes de seguir con las fases 2 y 3, Nicolas quiere pulir la app.
 En este orden:
 
 1. [x] Diseño del mapa acordado (10 nov), ver abajo "Diseño del mapa".
-2. [ ] Probar el mapa en el iPhone y en el computador (`npm run dev` →
-       http://localhost:5180/tripapp/#mapa). Revisar en Google Cloud que
-       los sitios de la clave terminen en `*`.
+2. [ ] Mapa: lo que queda (probado por Nicolas el 12 nov: claves de Google
+       Cloud con `*`, sin scroll de sobra en el mapa, arrastrar en el Plan
+       del día y ubicaciones corregidas).
+   - Bug: el día 1 se abre con un poco de scroll, también si se entra
+     desde la Ruta después de haber bajado un poco. El ‹ vuelve, pero a
+     veces se traba.
    - Google Cloud está en **prueba gratuita** (300 USD ≈ 269 € de crédito):
      no cobra y no deja poner límites diarios. Termina hacia el **8 feb
      2027** (90 días desde el 10 nov), después del viaje. Desde entonces el
@@ -21,23 +24,32 @@ En este orden:
    - Quizás: agrupar los puntos cercanos cuando el mapa está alejado (un
      círculo con el número de sitios que se abre al acercarse). Hoy, en
      "Todo el viaje", los sitios de una ciudad quedan uno encima del otro.
-   - Volver a probar en el iPhone (10 nov, después de la cabecera nueva):
-     sin scroll de sobra en el mapa, arrastrar en el Plan del día, y el
-     día 1 que se abría con un poco de scroll y a veces no respondía el ‹.
-   - Corregir las ubicaciones con "N sin ubicar" → Revisar ubicaciones
-     (documentos con enlace corto: pegar el largo) y mirar los sitios con
-     borde punteado.
    - Idea para más adelante: botón "Guardar dónde estoy" en el mapa. Guarda
      la ubicación del GPS (exacta, sin Google Maps) y pregunta qué es: un
      sitio para ver, un restaurante, una tienda, un parking, el hotel…
      Hoy los sitios solo son Qué ver y Comer; tienda o parking pedirían un
      tipo nuevo (decidir si va como "Otros" o tipos propios).
 
-   - iPhone: con el teclado abierto en una hoja, entre la hoja y el teclado
-     (que es translúcido) se ve un poco la página de detrás. Hubo tres
-     intentos el 12 nov (ajustar la hoja con visualViewport, fondo debajo
-     de la hoja) y ninguno lo quitó, así que se deshicieron. Retomarlo
-     solo probando directamente en el iPhone.
+3. [ ] Lo que quedó de la revisión completa (11 nov). Mejoras de uso:
+   - Volver dos veces al mismo sitio en un día (p. ej. Atocha al llegar y
+     al salir): hoy sale una sola vez en el plan.
+   - Reencuadrar el mapa cuando cambia el número de puntos.
+   - El aviso "oculto por los filtros" no encuadra el mapa en ese punto.
+   - Pendientes: el título viene escrito como valor ("Check-out · Hotel en
+     Madrid") en vez de como ejemplo.
+   - Botones pequeños ("Añadir parada", "Quitar"): revisar tamaños para el
+     dedo.
+   - El zoom con pellizco está bloqueado en toda la app y hay textos de
+     10–11 px.
+   - Ajustes: mostrar si los datos están protegidos y la fecha de la última
+     copia de seguridad.
+   - theme-color (color de la barra del sistema) según el tema.
+   - Texto del botón "Siguiente →".
+   Para más adelante (técnico):
+   - Patrón `oldVersion` en `onupgradeneeded` para futuras migraciones.
+   - Cifrado: normalizar la contraseña (NFC) para que la misma escrita en
+     otro teléfono siempre abra la copia.
+   - Dos pestañas abiertas a la vez se pisan los cambios.
 
 ### Diseño del mapa (acordado con Nicolas, 10 nov)
 

@@ -692,7 +692,7 @@ describe("formulario: ubicaciones", () => {
     click($('[data-act="dtab"][data-v="docs"]'));
     location.hash = "#inicio";
     window.dispatchEvent(new HashChangeEvent("hashchange"));
-    expect($("#d-" + JAN15).textContent).toContain("Noche en el avión"); // sigue llegando +1, ya sin escala
+    expect($("#d-" + JAN15).textContent).toContain("Noche en el tren");  // sigue llegando +1, ya sin escala (es un tren)
   });
 
   it("33) «Quitar archivo»: se quita al guardar; Cancelar lo deshace", async () => {
@@ -1607,5 +1607,24 @@ describe("formulario: ubicaciones", () => {
     click($('[data-act="ev-add"]'));
     drag(300); await new Promise((r) => setTimeout(r, 250));
     expect($("#sheet").hidden).toBe(true);
+  });
+  it("61) noche en un bus o tren que llega +1: «Noche en el bus»; el último día no deja poner hotel", async () => {
+    const D = "2027-01-04";
+    openNew(D, "bus");
+    $("#f-t1").value = "23:30"; $("#f-t1").dispatchEvent(new Event("input", { bubbles: true }));
+    $("#f-t2").value = "06:00"; $("#f-t2").dispatchEvent(new Event("input", { bubbles: true }));
+    expect($("#f-arr").textContent).toContain("+1");
+    await save();
+    location.hash = "#inicio"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect($("#d-" + D).textContent).toContain("Noche en el bus");
+    openNew(D, "hotel");
+    click($('.ty[data-type="hotel"]'));
+    expect($("#f-tynote").textContent).toContain("es en el bus");
+    click($('[data-act="close"]'));
+    openNew("2027-01-17", "hotel");
+    expect($('.ty[data-type="hotel"]').getAttribute("aria-disabled")).toBe("true");
+    click($('.ty[data-type="hotel"]'));
+    expect($("#f-tynote").textContent).toMatch(/último día del viaje|es en el avión/);   // (en los tests el 17 ya tiene un vuelo que llega +1)
+    click($('[data-act="close"]'));
   });
 });

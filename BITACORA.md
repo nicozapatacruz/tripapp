@@ -14,6 +14,20 @@ Reglas:
 
 ## 2026-11-12
 
+- La noche de viaje dice en qué se va: "Noche en el tren", "Noche en el
+  bus" (antes siempre "en el avión"), con su ícono en la Ruta, el día y el
+  plan del mapa. El aviso del hotel también lo dice.
+- No se puede poner un hotel el último día del viaje (17 ene): no tiene
+  noche. Aviso: "es el último día del viaje: no hay noche de hotel".
+
+- Probado por Nicolas: las claves de Google Cloud terminan en `*`, el mapa
+  no tiene scroll de sobra, se puede arrastrar en el Plan del día y las
+  ubicaciones están corregidas. Sigue el bug del scroll del día 1.
+
+- Fijar la página de atrás también quitó lo de ver la página entre la hoja
+  y el teclado (probado por Nicolas). Sale de PENDIENTES. Ahí se anotó lo
+  que quedó sin hacer de la revisión completa del 11 nov.
+
 - Hojas: se pueden bajar arrastrando desde la rayita de arriba o desde el
   título. Más de 90 px la cierra; si hay cambios sin guardar, avisa y vuelve
   a su sitio, igual que al tocar fuera. Antes no existía: lo que parecía

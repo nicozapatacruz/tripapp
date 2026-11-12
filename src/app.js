@@ -490,14 +490,17 @@ function fmtDt(dt){return WD3[dt.getDay()].toLowerCase()+" "+dt.getDate()+" "+MO
    la llegada (+1, +2) es en el avión (no se pide hotel ni se deja poner); si es una escala nocturna
    larga, es "noche de escala": tampoco se pide hotel, pero sí se puede añadir uno. */
 function applyTransit(){
- DAYS.forEach(function(d){d.sleep=d.sleep0;d.plane=false;d.layover=null});
+ DAYS.forEach(function(d){d.sleep=d.sleep0;d.plane=false;d.planeT=null;d.layover=null});
  docs.forEach(function(d){
   var na=docArr(d);if(!(na>0))return;var a=dayById(d.dayId);if(!a)return;
   var lay={};layoversOf(d,docSegs(d)).forEach(function(l){if(l&&l.night)lay[l.off]=l.city});
-  for(var k=0;k<na;k++){var n=DAYS[a.i+k];if(!n)break;n.sleep=null;if(lay[k]!=null&&!n.plane)n.layover=lay[k];else{n.plane=true;n.layover=null}}
+  for(var k=0;k<na;k++){var n=DAYS[a.i+k];if(!n)break;n.sleep=null;if(lay[k]!=null&&!n.plane)n.layover=lay[k];else{n.plane=true;n.planeT=n.planeT||d.type;n.layover=null}}
  });
 }
-function nightLabel(d){return d.plane?"Noche en el avión":d.layover?"Noche de escala en "+d.layover:""}
+/* La noche de viaje dice en qué se va: avión, tren o bus (planeT: tipo del billete que llega +1) */
+function nightIn(d){return {tren:"en el tren",bus:"en el bus",coche:"en el coche"}[d.planeT]||"en el avión"}
+function nightLabel(d){return d.plane?"Noche "+nightIn(d):d.layover?"Noche de escala en "+d.layover:""}
+function nightIcon(d){return d.plane&&TYPE_ICON[d.planeT]?TYPE_ICON[d.planeT]:"vuelo"}
 /* Noches de hotel y pendientes */
 function staysOf(){var out=[];DAYS.forEach(function(d){if(!d.sleep)return;var l=out[out.length-1];if(l&&l.city===d.sleep&&l.nights[l.nights.length-1].i===d.i-1)l.nights.push(d);else out.push({city:d.sleep,nights:[d]})});return out}
 function stayOfDay(id){var st=staysOf();for(var k=0;k<st.length;k++)for(var n=0;n<st[k].nights.length;n++)if(st[k].nights[n].d===id)return st[k];return null}
@@ -819,7 +822,7 @@ function renderHome(){
    if(d.start)meta.push('<span class="pill">Inicio del viaje'+pdT+'</span>');
    else if(d.legs)meta.push('<span class="pill">'+svg(legIcon(d,0),14)+esc(dayLabel(d))+pdT+'</span>');
    if(d.sleep)meta.push('<span>'+svg("bed",15)+esc(nm(d.sleep))+(cov[d.d]?"":'<i class="pdot" title="Falta hotel"></i>')+'</span>');
-   else if(nightLabel(d))meta.push('<span>'+svg("vuelo",15)+esc(nightLabel(d))+'</span>');
+   else if(nightLabel(d))meta.push('<span>'+svg(nightIcon(d),15)+esc(nightLabel(d))+'</span>');
    else if(d.last)meta.push('<span>Último día</span>');
    if(n)meta.push('<span>'+svg("clip",15)+n+(n===1?" documento":" documentos")+'</span>');
    return '<a class="day'+(d.d===t?" today":"")+'" id="d-'+d.d+'" href="#dia-'+d.d+'" style="--c:'+c.c1+'"><div class="rail"><small>'+WD3[d.dt.getDay()]+'</small><b>'+d.dt.getDate()+'</b></div><div class="dcard"><div class="stops">'+stopsHTML(d)+'</div><div class="meta">'+meta.join("")+'</div></div></a>';
@@ -934,7 +937,7 @@ function renderDay(day){
  V.day.style.setProperty("--c1",c[0]);V.day.style.setProperty("--c2",c[1]);
  var rbar=day.stops.map(function(s){return '<i style="background:'+CITIES[s].c1+'"></i>'}).join("");
  V.day.innerHTML='<div class="dbar"><div class="in"><a class="back" href="'+dayBack+'" aria-label="Volver">'+svg("back",20)+'</a><b class="dbt" aria-hidden="true">'+esc(day.stops.map(nm).join(" → "))+'</b><button type="button" class="dmapb" data-act="map-day" data-day="'+day.d+'" aria-label="Ver este día en el mapa">'+svg("route",20)+'</button><span class="dnum">'+(isToday?"Hoy · ":"")+'Día '+(i+1)+' de '+DAYS.length+'</span></div></div>'+
- '<header class="dh"><div class="in"><p class="dwd">'+esc(longDate(day))+'</p><h1>'+titleHTML(day)+'</h1><div class="rbar">'+rbar+'</div>'+(day.sleep?'<p class="sleep">'+svg("bed",17)+'Dormimos en '+esc(nm(day.sleep))+'</p>':nightLabel(day)?'<p class="sleep">'+svg("vuelo",17)+(day.start?"Inicio del viaje · ":day.last?"Fin del viaje · ":"")+esc(nightLabel(day))+'</p>':'<p class="sleep">'+(day.start?"Inicio del viaje":"Fin del viaje")+'</p>')+'</div></header>'+
+ '<header class="dh"><div class="in"><p class="dwd">'+esc(longDate(day))+'</p><h1>'+titleHTML(day)+'</h1><div class="rbar">'+rbar+'</div>'+(day.sleep?'<p class="sleep">'+svg("bed",17)+'Dormimos en '+esc(nm(day.sleep))+'</p>':nightLabel(day)?'<p class="sleep">'+svg(nightIcon(day),17)+(day.start?"Inicio del viaje · ":day.last?"Fin del viaje · ":"")+esc(nightLabel(day))+'</p>':'<p class="sleep">'+(day.start?"Inicio del viaje":"Fin del viaje")+'</p>')+'</div></header>'+
  '<nav class="tabs" role="tablist" aria-label="Secciones del día"><div class="in"><div class="trk">'+tabList.map(function(t){return '<button type="button" role="tab" class="tab" data-act="tab" data-tab="'+t[0]+'" aria-selected="'+(tab===t[0])+'">'+t[1]+(t[0]==="docs"&&n?' <em>'+n+'</em>':"")+'</button>'}).join("")+'</div></div></nav>'+
  '<main class="in panel" role="tabpanel">'+panels[tab]+'</main>'+
  '<div class="in dnav">'+(prev?'<a href="#dia-'+prev.d+'"><small>← Anterior</small><b>'+esc(shortDay(prev))+' · '+esc(nm(prev.stops[prev.stops.length-1]))+'</b></a>':'<span style="flex:1"></span>')+(next?'<a class="next" href="#dia-'+next.d+'"><small>Siguiente →</small><b>'+esc(shortDay(next))+' · '+esc(nm(next.stops[0]))+'</b></a>':'<span style="flex:1"></span>')+'</div>';
@@ -1185,13 +1188,14 @@ function openDocView(id){
 var NOLEG="Este día no tiene traslados. Elige un día con trayecto o, para una excursión, usa Entrada u Otro.";
 function typeOk(t,dayId){
  var dy=dayById(dayId);
- if(t==="hotel")return !(dy&&dy.plane);              // noche en el avión: no hay hotel que poner
+ if(t==="hotel")return !(dy&&(dy.plane||!DAYS[dy.i+1]));   // noche de viaje o último día: no hay hotel que poner
  if(t!=="vuelo"&&t!=="tren"&&t!=="bus")return true;
  return !!(dy&&dy.legs);
 }
 function typeNote(t,dayId){
  var dy=dayById(dayId);
- if(t==="hotel"&&dy&&dy.plane)return "La noche del "+dy.dt.getDate()+" es en el avión: no hace falta hotel. Si es para otra noche, elige ese día.";
+ if(t==="hotel"&&dy&&dy.plane)return "La noche del "+dy.dt.getDate()+" es "+nightIn(dy)+": no hace falta hotel. Si es para otra noche, elige ese día.";
+ if(t==="hotel"&&dy&&!DAYS[dy.i+1])return "El "+dy.dt.getDate()+" "+MO3[dy.dt.getMonth()]+" es el último día del viaje: no hay noche de hotel. Si es para otra noche, elige ese día.";
  return NOLEG;
 }
 /* clicked: tipo deshabilitado que se acaba de tocar (se explica por qué) */
@@ -1623,7 +1627,7 @@ function planHotels(dd,all){
  var prev=DAYS[dy.i-1],hs=all.filter(function(p){return p.cat==="hotel"});
  out.top=prev?hs.filter(function(p){return p.days[prev.d]}):[];
  out.bottom=hs.filter(function(p){return p.days[dd]&&out.top.indexOf(p)<0});
- if(!out.top.length&&prev)out.night=nightLabel(prev);
+ if(!out.top.length&&prev){out.night=nightLabel(prev);out.nightIco=nightIcon(prev)}
  return out;
 }
 /* Lo que se ve: con «Solo el plan» (y un día elegido), el plan completo y sus hoteles aunque haya
@@ -1804,7 +1808,7 @@ function renderMap(){
   if(dy){
    var seenN={};
    var hl=function(l,lab){return l.length?'<ul class="rows mhot">'+l.map(function(p){return planHotelRow(p,typeof lab==="function"?lab(p):lab)}).join("")+'</ul>':""};
-   var nr=hot.night?'<ul class="rows mhot"><li class="pl mrow mnight"><span class="adri" style="--t:var(--muted)">'+svg(TYPE_ICON.vuelo,18)+'</span><div class="adrt"><b>'+esc(hot.night)+'</b></div></li></ul>':"";
+   var nr=hot.night?'<ul class="rows mhot"><li class="pl mrow mnight"><span class="adri" style="--t:var(--muted)">'+svg(hot.nightIco||"vuelo",18)+'</span><div class="adrt"><b>'+esc(hot.night)+'</b></div></li></ul>':"";
    ph='<section class="adrg"><h3 class="lab">Plan del día</h3>'+nr+hl(hot.top,function(p){return p.days[dd]?"Hotel de la noche":"Hotel de anoche · check-out"})+(plan.length?'<ul class="rows" id="m-plan">'+plan.map(function(x){if(x.free)return planRow(x,nums[x.k]);var n=nums[x.pid];var r=seenN[x.pid]?"":planRow(x,n);seenN[x.pid]=1;return r}).join("")+'</ul>'+(plan.some(function(x){return tmin(x.t)==null})?'<p class="foot">Lo que tiene hora va en su hora. Lo demás se ordena arrastrando desde ≡.</p>':""):'<p class="foot">Nada todavía. Añade sitios de Qué ver y Comer y ordénalos.</p>')+hl(hot.bottom,"Hotel de esta noche · check-in")+
     (dy.stops.some(hasInfo)?'<div><button type="button" class="mini" data-act="plan-add">'+svg("plus",14)+'Añadir sitio</button></div>':"")+'</section>';
   }
