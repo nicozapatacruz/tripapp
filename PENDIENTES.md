@@ -27,21 +27,8 @@ En este orden:
      Hoy los sitios solo son Qué ver y Comer; tienda o parking pedirían un
      tipo nuevo (decidir si va como "Otros" o tipos propios).
 
-3. [ ] Lo que quedó de la revisión completa (11 nov). Mejoras de uso:
-   - Volver dos veces al mismo sitio en un día (p. ej. Atocha al llegar y
-     al salir): hoy sale una sola vez en el plan.
-   - Reencuadrar el mapa cuando cambia el número de puntos.
-   - El aviso "oculto por los filtros" no encuadra el mapa en ese punto.
-   - Pendientes: el título viene escrito como valor ("Check-out · Hotel en
-     Madrid") en vez de como ejemplo.
-   - Botones pequeños ("Añadir parada", "Quitar"): revisar tamaños para el
-     dedo.
-   - El zoom con pellizco está bloqueado en toda la app y hay textos de
-     10–11 px.
-   - Ajustes: mostrar si los datos están protegidos y la fecha de la última
-     copia de seguridad.
-   - theme-color (color de la barra del sistema) según el tema.
-   - Texto del botón "Siguiente →".
+3. [ ] Lo que quedó de la revisión completa (11 nov). Las mejoras de uso
+       se hicieron el 12 nov (ver bitácora).
    Para más adelante (técnico):
    - Patrón `oldVersion` en `onupgradeneeded` para futuras migraciones.
    - Cifrado: normalizar la contraseña (NFC) para que la misma escrita en

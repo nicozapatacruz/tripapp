@@ -86,6 +86,13 @@ export function planNumbers(order) {
   const out = {};
   let n = 0;
   // lo que no tiene lugar (pid vacío) también lleva número, por su clave
-  order.forEach((x) => { const id = x.pid || x.k; if (out[id] == null) out[id] = ++n; });
+  // cada paso del plan lleva su número; un sitio al que se vuelve (Atocha al llegar y al salir) se queda con el primero
+  order.forEach((x) => { const id = x.pid || x.k; n++; if (out[id] == null) out[id] = n; });
+  return out;
+}
+/* Todos los números de cada sitio del plan, en orden: { atocha: [1, 5] } (el pin muestra el primero y un circulito con el resto) */
+export function planNumberList(order) {
+  const out = {};
+  order.forEach((x, i) => { const id = x.pid || x.k; (out[id] = out[id] || []).push(i + 1); });
   return out;
 }

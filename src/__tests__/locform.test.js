@@ -1627,4 +1627,33 @@ describe("formulario: ubicaciones", () => {
     expect($("#f-tynote").textContent).toMatch(/último día del viaje|es en el avión/);   // (en los tests el 17 ya tiene un vuelo que llega +1)
     click($('[data-act="close"]'));
   });
+  it("62) volver dos veces al mismo sitio el mismo día: dos filas en el plan, cada una con su número", async () => {
+    const D = "2027-01-12";
+    openNew(D, "entrada"); $("#f-title").value = "Visita A"; typeLoc("Estadio El Sadar https://www.google.com/maps/place/S/@42.796,-1.637,17z");
+    $("#f-t1").value = "10:00"; await save();
+    openNew(D, "entrada"); $("#f-title").value = "Visita B"; typeLoc("Ciudadela https://www.google.com/maps/place/C/@42.812,-1.650,17z");
+    $("#f-t1").value = "13:00"; await save();
+    openNew(D, "entrada"); $("#f-title").value = "Visita C"; typeLoc("Estadio El Sadar https://www.google.com/maps/place/S/@42.796,-1.637,17z");
+    $("#f-t1").value = "18:00"; await save();
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const lm = $('#v-map [data-act=mmode][data-v="list"]'); if (lm) click(lm);
+    setSel("m-day", D);
+    const rows = [...document.querySelectorAll("#m-plan li")].map((li) => [li.querySelector(".mnum").textContent, li.querySelector("b").textContent]);
+    expect(rows).toEqual([["1", "Estadio El Sadar"], ["2", "Ciudadela"], ["3", "Estadio El Sadar"]]);
+    setSel("m-day", "all");
+  });
+  it("63) desde Pendientes el título va de ejemplo; Ajustes dice la última copia y si los datos están protegidos", () => {
+    location.hash = "#documentos"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    click($('[data-act="dtab"][data-v="pend"]'));
+    const hb = $('#v-docs [data-act="add"][data-type="hotel"]');
+    click(hb);
+    expect($("#f-title").value).toBe("");
+    expect($("#f-title").placeholder).toBe(hb.dataset.title);           // «Hotel en …» como ejemplo
+    click($('[data-act="close"]'));
+    click($('[data-act="dtab"][data-v="docs"]'));
+    const b = document.createElement("button"); b.dataset.act = "settings"; document.body.appendChild(b); click(b); b.remove();
+    expect($("#s-last").textContent).toContain("Todavía no has hecho ninguna copia");
+    expect($("#s-persist")).toBeTruthy();
+    click($('#sheet [data-act="close"]'));
+  });
 });

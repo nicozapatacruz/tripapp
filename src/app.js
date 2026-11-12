@@ -4,7 +4,7 @@ import {
   buildBackup, encryptBackup, decryptBackup, parseBackupText, importPlan, itineraryKV,
   cryptoAvailable, WrongPasswordError,
 } from "./backup.js";
-import { coordsOf, distKm, walkMin, distText, minText as walkText, placeDays, planOrder, planNumbers } from "./mapdata.js";
+import { coordsOf, distKm, walkMin, distText, minText as walkText, placeDays, planOrder, planNumbers, planNumberList } from "./mapdata.js";
 import {
   extractMapsUrl, normName, slotCities, needsCityChoice, cityChoices, cityMismatch,
   resolvePlace, freeName, placeSuggestions,
@@ -622,7 +622,7 @@ function removeFormFile(){
 /* ---- Traslados en el formulario: compañía, número, horarios por tramo y llegada +1 ----
    fx guarda lo escrito para no perderlo al cambiar de tipo o de trayecto (esas partes se redibujan). */
 var CO={vuelo:["Aerolínea","Ej. Iberia","N.º de vuelo","Ej. IB6800"],tren:["Compañía","Ej. Renfe","N.º de tren","Ej. 03123"],bus:["Compañía","Ej. ALSA","N.º de bus","Ej. 1405"],coche:["Compañía","Ej. Hertz"]};
-var fx={co:"",no:"",t1:"",t2:"",hops:[],arr:0,arrManual:false,title:""};
+var fx={co:"",no:"",t1:"",t2:"",hops:[],arr:0,arrManual:false,title:"",ph:""};
 function formRange(){return rangeSegs(dayById(curDay()),parseLeg(curLeg()))}
 function isMulti(){return !!ARRT[selType]&&formRange().length>1}
 function fxVal(id){var e=document.getElementById(id);return e?e.value:null}
@@ -649,7 +649,7 @@ function syncFxShape(){
 }
 function fxDoc(){return {t1:fx.t1,t2:fx.t2,hops:isMulti()?fx.hops:null}}
 function titleArea(){
- if(!TRIPT[selType])return '<div class="field"><label for="f-title">Título</label><input id="f-title" type="text" placeholder="'+esc(TITLEPH[selType]||"")+'" value="'+esc(fx.title||"")+'" autocomplete="off"></div>';
+ if(!TRIPT[selType])return '<div class="field"><label for="f-title">Título</label><input id="f-title" type="text" placeholder="'+esc(fx.ph||TITLEPH[selType]||"")+'" value="'+esc(fx.title||"")+'" autocomplete="off"></div>';
  var c=CO[selType],co='<input id="f-co" type="text" placeholder="'+esc(c[1])+'" value="'+esc(fx.co)+'" autocomplete="off">';
  if(!c[2]||isMulti())return '<div class="field"><label for="f-co">'+c[0]+'</label>'+co+'</div>';
  return '<div class="row2"><div class="field"><label for="f-co">'+c[0]+'</label>'+co+'</div><div class="field"><label for="f-no">'+c[2]+'</label><input id="f-no" type="text" class="code" placeholder="'+esc(c[3])+'" value="'+esc(fx.no)+'" autocomplete="off" autocapitalize="characters"></div></div>';
@@ -1061,7 +1061,7 @@ function openDocSheet(o){
  if(!d&&!typeOk(selType,dayId))selType=Object.keys(TYPES).filter(function(k){return typeOk(k,dayId)})[0]||"otro";
  if(d&&d.noLeg)legSel="none";
  if(!legSel&&!d){legSel=defLeg(dayId);if(legSel)legManual=true}
- fx={co:d&&d.company||"",no:d&&d.no||"",t1:d&&d.t1||"",t2:d&&d.t2||"",hops:d&&d.hops?d.hops.map(function(h){return Object.assign({},h)}):[],arr:d?docArr(d):0,arrManual:false,title:d?(d.titleAuto?"":d.title||""):(o.title||"")};
+ fx={co:d&&d.company||"",no:d&&d.no||"",t1:d&&d.t1||"",t2:d&&d.t2||"",hops:d&&d.hops?d.hops.map(function(h){return Object.assign({},h)}):[],arr:d?docArr(d):0,arrManual:false,title:d?(d.titleAuto?"":d.title||""):"",ph:d?"":(o.title||"")};   // lo que propone Pendientes («Hotel en Madrid») va de ejemplo
  if(d&&ARRT[d.type])fx.arrManual=fx.arr!==autoArr(d);   // lo ajustó a mano (p. ej. +2): se respeta
  syncFxShape();
  var types=Object.keys(TYPES).map(function(k){return '<button type="button" class="ty" role="radio" data-act="type" data-type="'+k+'" aria-checked="'+(k===selType)+'" aria-disabled="'+!typeOk(k,dayId)+'" style="--t:'+TYPES[k].t+'">'+svg(TYPE_ICON[k],22)+TYPES[k].l+'</button>'}).join("")+'<p class="tynote" id="f-tynote"'+(typeOk(selType,dayId)?" hidden":"")+'>'+esc(typeNote(selType,dayId))+'</p><p class="dupnote" id="f-dupnote"'+(dupTicketText(selType,dayId)?"":" hidden")+'>'+esc(dupTicketText(selType,dayId))+'</p>';
@@ -1399,7 +1399,7 @@ function refreshItemDup(){var i=$("#i-n"),w=$("#i-dup");if(!i||!w||!listCtx)retu
    Google Maps · Día · Hora y Nota. Lo que cambia según desde dónde se abra es qué día viene elegido.
    Por dentro se guarda como antes: el sitio en su lista (pl:ciudad:tipo) y cada día de su plan como
    un evento con pk (ahí van su hora y su nota); el evento suelto, en events. */
-var fx=null;   // {kind:"see"|"eat"|"ev", cid, p: sitio, pk, ev: visita o evento que se edita, lastDay}
+var fm=null;   // formulario único (no confundir con fx, el del documento): {kind:"see"|"eat"|"ev", cid, p: sitio, pk, ev: visita o evento que se edita, lastDay}
 function placeVisits(pk){return evList().filter(function(e){return e.pk===pk&&dayById(e.day)}).sort(function(a,b){return dayById(a.day).i-dayById(b.day).i})}
 function dayOpt(d,sel){var dy=dayById(d);return '<option value="'+d+'"'+(d===sel?" selected":"")+'>'+esc(cap(shortDay(dy)))+' · '+esc(routeText(dy))+'</option>'}
 /* o: {kind, cid, id: sitio, ev: id del evento o de la visita, day: día desde el que se abre, add: viene elegido ese día} */
@@ -1424,7 +1424,7 @@ function openForm(o){
   opts='<option value="">Sin planear</option>'+ids.map(function(d){return dayOpt(d,sel)}).join("");
  }
  var withDay=isEv||!!sel;
- fx={kind:o.kind,cid:o.cid,p:p,pk:pk,ev:ev,withDay:withDay};
+ fm={kind:o.kind,cid:o.cid,p:p,pk:pk,ev:ev,withDay:withDay};
  var also=pk?placeVisits(pk).filter(function(e){return e!==ev}).map(function(e){return shortDay(dayById(e.day))}):[];
  var alsoP=also.length?'<p class="foot" id="i-also">'+(withDay?"También en el plan del ":"En el plan del ")+esc(also.join(", del "))+'</p>':"";
  var note0=ev?ev.note||"":(pk?offNote(pk):"");
@@ -1452,7 +1452,7 @@ async function dropPlanKey(dd,key){var pl0=(kv.plan||{})[dd];if(Array.isArray(pl
 var saving=false;
 async function once(fn){if(saving)return;saving=true;try{await fn()}finally{saving=false}}
 async function saveItem(){
- var f=fx;if(!f)return;
+ var f=fm;if(!f)return;
  var err=function(t){$("#i-err").textContent=t};
  var n=$("#i-n").value.trim(),u=onlyUrl($("#i-u").value),day=f.withDay?$("#i-day").value:"";
  var t1=day?$("#i-t1").value||"":"",t2=day?$("#i-t2").value||"":"",note=day?$("#i-note").value.trim():"";
@@ -1499,7 +1499,7 @@ async function saveItem(){
  refresh();if(!revReturn())openListSheet(c.cid,c.kind);toast("Guardado");
 }
 async function deleteItem(){
- if(fx&&fx.kind==="ev"){await deleteEvent();return}
+ if(fm&&fm.kind==="ev"){await deleteEvent();return}
  // el sitio y su plan (sus visitas de cada día): es lo mismo
  var c=listCtx,pk=itemKey(c.kind,c.cid,itemEd),l=listOf(c.cid,c.kind).filter(function(x){return x.id!==itemEd.id});
  await setKV("pl:"+c.cid+":"+c.kind,l);await delKV(pk);
@@ -1508,8 +1508,8 @@ async function deleteItem(){
 }
 /* Eliminar un sitio que está en el plan: antes de confirmar se dice de qué días sale */
 function delWarn(b){
- var er=$("#i-err");if(!er||!fx||fx.kind==="ev"||!fx.pk||(tapArm&&tapArm.el===b))return;
- var ds=placeVisits(fx.pk).map(function(e){return shortDay(dayById(e.day))});if(!ds.length)return;
+ var er=$("#i-err");if(!er||!fm||fm.kind==="ev"||!fm.pk||(tapArm&&tapArm.el===b))return;
+ var ds=placeVisits(fm.pk).map(function(e){return shortDay(dayById(e.day))});if(!ds.length)return;
  var t="Está en el plan del "+ds.slice(0,-1).join(", del ")+(ds.length>1?" y del ":"")+ds[ds.length-1]+". Se quitará también de ahí.";
  er.textContent=t;setTimeout(function(){if(er.textContent===t)er.textContent=""},4000);
 }
@@ -1519,9 +1519,9 @@ function onlyUrl(v){var m=String(v||"").match(/https?:\/\/\S+/i);return m?m[0]:S
 function cleanUrlField(el){
  var v=el.value,u=onlyUrl(v),w=$("#i-unote");if(!/^https?:/i.test(u)||u===v.trim())return;
  var rest=v.replace(u,"").replace(/\s+/g," ").trim();el.value=u;
- if(w&&rest){w.hidden=false;w.textContent="Quité «"+rest+"»: en este campo solo va el enlace."+(fx&&fx.kind==="ev"?" Si es el nombre del sitio, ponlo en la Nota.":"")}
+ if(w&&rest){w.hidden=false;w.textContent="Quité «"+rest+"»: en este campo solo va el enlace."+(fm&&fm.kind==="ev"?" Si es el nombre del sitio, ponlo en la Nota.":"")}
 }
-function itemBack(){if(revReturn())return;if(fx&&fx.kind==="ev"){if(fx.ev)openEvCard(fx.ev.id);else closeSheet()}else if(listCtx)openListSheet(listCtx.cid,listCtx.kind);else closeSheet()}
+function itemBack(){if(revReturn())return;if(fm&&fm.kind==="ev"){if(fm.ev)openEvCard(fm.ev.id);else closeSheet()}else if(listCtx)openListSheet(listCtx.cid,listCtx.kind);else closeSheet()}
 
 /* ================= Mapa (pestaña Mapa | Lista) =================
    Diseño acordado en PENDIENTES.md → "Diseño del mapa". Puntos: ubicaciones de los documentos
@@ -1782,12 +1782,13 @@ function renderMap(){
  var unloc=vis.filter(function(p){return !p.ll}).length,segs=[],gaps={un:[],fil:[]};
  if(dd){
   // la línea sale del hotel de la mañana y sigue 1 → 2 → 3 (sin volver al hotel al final)
-  var h0=hot.top[0],last=h0&&h0.ll&&vis.indexOf(h0)>=0?h0.ll:null,gap=false,done={};
-  plan.forEach(function(x){
-   if(!x.p||done[x.pid])return;done[x.pid]=1;   // lo que no tiene lugar no corta la línea
+  var h0=hot.top[0],last=h0&&h0.ll&&vis.indexOf(h0)>=0?h0.ll:null,gap=false;
+  plan.forEach(function(x,i){
+   if(!x.p)return;   // lo que no tiene lugar no corta la línea
    var shown=x.p.ll&&vis.indexOf(x.p)>=0;
-   if(!shown){gap=true;(x.p.ll?gaps.fil:gaps.un).push(nums[x.pid]);return}
-   if(last)segs.push({a:last,b:x.p.ll,gap:gap});
+   if(!shown){gap=true;(x.p.ll?gaps.fil:gaps.un).push(i+1);return}
+   // si se vuelve a un sitio (Atocha al llegar y al salir), la línea vuelve a él
+   if(last&&!(last[0]===x.p.ll[0]&&last[1]===x.p.ll[1]))segs.push({a:last,b:x.p.ll,gap:gap});
    last=x.p.ll;gap=false;
   });
  }
@@ -1806,10 +1807,9 @@ function renderMap(){
  }else{
   var ph="";
   if(dy){
-   var seenN={};
    var hl=function(l,lab){return l.length?'<ul class="rows mhot">'+l.map(function(p){return planHotelRow(p,typeof lab==="function"?lab(p):lab)}).join("")+'</ul>':""};
    var nr=hot.night?'<ul class="rows mhot"><li class="pl mrow mnight"><span class="adri" style="--t:var(--muted)">'+svg(hot.nightIco||"vuelo",18)+'</span><div class="adrt"><b>'+esc(hot.night)+'</b></div></li></ul>':"";
-   ph='<section class="adrg"><h3 class="lab">Plan del día</h3>'+nr+hl(hot.top,function(p){return p.days[dd]?"Hotel de la noche":"Hotel de anoche · check-out"})+(plan.length?'<ul class="rows" id="m-plan">'+plan.map(function(x){if(x.free)return planRow(x,nums[x.k]);var n=nums[x.pid];var r=seenN[x.pid]?"":planRow(x,n);seenN[x.pid]=1;return r}).join("")+'</ul>'+(plan.some(function(x){return tmin(x.t)==null})?'<p class="foot">Lo que tiene hora va en su hora. Lo demás se ordena arrastrando desde ≡.</p>':""):'<p class="foot">Nada todavía. Añade sitios de Qué ver y Comer y ordénalos.</p>')+hl(hot.bottom,"Hotel de esta noche · check-in")+
+   ph='<section class="adrg"><h3 class="lab">Plan del día</h3>'+nr+hl(hot.top,function(p){return p.days[dd]?"Hotel de la noche":"Hotel de anoche · check-out"})+(plan.length?'<ul class="rows" id="m-plan">'+plan.map(function(x,i){return planRow(x,i+1)}).join("")+'</ul>'+(plan.some(function(x){return tmin(x.t)==null})?'<p class="foot">Lo que tiene hora va en su hora. Lo demás se ordena arrastrando desde ≡.</p>':""):'<p class="foot">Nada todavía. Añade sitios de Qué ver y Comer y ordénalos.</p>')+hl(hot.bottom,"Hotel de esta noche · check-in")+
     (dy.stops.some(hasInfo)?'<div><button type="button" class="mini" data-act="plan-add">'+svg("plus",14)+'Añadir sitio</button></div>':"")+'</section>';
   }
   vis.forEach(function(p){if(nums[p.id]||(dy&&hotIds[p.id]))return;var k=p.city&&order.indexOf(p.city)>=0?p.city:"_";(groups[k]=groups[k]||[]).push(p)});
@@ -1831,7 +1831,7 @@ function renderMap(){
   (dy?'<button type="button" class="mtog" role="switch" data-act="monly" aria-checked="'+!!mapState.only+'"><span>Solo el plan</span><i></i></button>':"")+'</div>'+gapNote+
   '<div class="dgroups">'+body+'</div>'+(isMap?"":'<div class="fabspace"></div>')+'</div>';
  mapFull();
- if(isMap&&V.map.querySelector(".mapbox"))mountMap(vis,nums,segs);
+ if(isMap&&V.map.querySelector(".mapbox"))mountMap(vis,nums,segs,dd?planNumberList(plan):{});
  if(!isMap&&$("#m-plan"))bindReorder($("#m-plan"),savePlan,true);
  geoRun(all);   // ubica por nombre lo que falte (con internet y con Google conectado)
 }
@@ -1930,7 +1930,7 @@ function backToCard(gk,dd){return function(){var q=mapPoints().filter(function(x
 function cardEdit(b){
  if(b.dataset.ev){var eid=b.dataset.ev;openForm({kind:"ev",ev:eid});revBack=function(){openEvCard(eid)};return}
  var pk=b.dataset.pk,dd=b.dataset.day||"",lp=placeByKey(pk);if(!lp)return;
- openForm({kind:lp.kind,cid:lp.cid,id:lp.p.id,day:dd});var f=fx;
+ openForm({kind:lp.kind,cid:lp.cid,id:lp.p.id,day:dd});var f=fm;
  revBack=function(){openPlaceCard(pk,f.lastDay||dd)};
 }
 /* Deshacer «No es aquí»: vuelve al punto de antes; si no se guardó (quitado antes de esto), se busca otra vez */
@@ -1973,12 +1973,14 @@ async function geoRun(list){
  }catch(e){}
  geoBusy=false;
 }
-function gmPin(p,num){
+/* Pin: su número del plan; si se vuelve a ese sitio el mismo día, un circulito con el otro número (o «+2» si son más) */
+function gmPin(p,num,all){
  var el=document.createElement("div");el.className="gpin"+(num?" num":"")+(p.geo?" byname":"");el.style.setProperty("--t",mapColor(p));
- el.innerHTML=num?String(num):svg(mapIcon(p),15);return el;
+ var more=all&&all.length>1?all.slice(1):[];
+ el.innerHTML=(num?String(num):svg(mapIcon(p),15))+(more.length?'<i class="gpin2">'+(more.length===1?more[0]:"+"+more.length)+'</i>':"");return el;
 }
 function mapFull(){document.body.classList.toggle("mapfull",view==="map"&&mapState.mode==="map")}
-async function mountMap(vis,nums,segs){
+async function mountMap(vis,nums,segs,numl){
  var box=V.map.querySelector(".mapbox");if(!box)return;
  // alto: hasta justo encima de la barra de abajo (así los botones y el logo de Google no quedan tapados)
  var nb=$("#bnav"),top=box.getBoundingClientRect().top+window.scrollY,navH=nb&&!nb.hidden?nb.offsetHeight:0;
@@ -1991,7 +1993,7 @@ async function mountMap(vis,nums,segs){
   if(!gm)gm=new maps.Map(gmEl,{mapId:GM_MAPID,center:{lat:40.2,lng:-3.7},zoom:6,disableDefaultUI:true,zoomControl:false,clickableIcons:false,gestureHandling:"greedy"});
   gmMarkers.forEach(function(m){m.map=null});gmMarkers=[];
   vis.filter(function(p){return p.ll}).forEach(function(p){
-   var m=new mk.AdvancedMarkerElement({map:gm,position:{lat:p.ll[0],lng:p.ll[1]},content:gmPin(p,nums[p.id]),title:p.name,zIndex:nums[p.id]?100-nums[p.id]:1,gmpClickable:true});
+   var m=new mk.AdvancedMarkerElement({map:gm,position:{lat:p.ll[0],lng:p.ll[1]},content:gmPin(p,nums[p.id],(numl||{})[p.id]),title:p.name,zIndex:nums[p.id]?100-nums[p.id]:1,gmpClickable:true});
    m.addListener("click",function(){openMapCard(p.id)});gmMarkers.push(m);
   });
   // plan del día: línea punteada 1 → 2 → 3
@@ -1999,17 +2001,22 @@ async function mountMap(vis,nums,segs){
   (segs||[]).forEach(function(sg){gmLines.push(new maps.Polyline({map:gm,path:[sg.a,sg.b].map(function(ll){return {lat:ll[0],lng:ll[1]}}),strokeOpacity:0,zIndex:0,
    icons:[sg.gap?{icon:{path:google.maps.SymbolPath.CIRCLE,fillColor:"#D6246E",fillOpacity:1,strokeOpacity:0,scale:2.2},offset:"0",repeat:"9px"}
     :{icon:{path:"M 0,-1 0,1",strokeOpacity:.85,strokeColor:"#1D2433",strokeWeight:3,scale:3},offset:"0",repeat:"13px"}]}))});
-  var fk=mapState.day+"|"+Object.keys(mapState.cats).join(",")+"|"+Object.keys(mapState.st).join(",")+"|"+mapState.only+"|"+gmMarkers.length;
+  if(!gm.__mv){gm.__mv=1;gm.addListener("dragstart",function(){gmMoved=true});gm.addListener("zoom_changed",function(){if(!gmFitting)gmMoved=true})}
+  var fk=mapState.day+"|"+Object.keys(mapState.cats).join(",")+"|"+Object.keys(mapState.st).join(",")+"|"+mapState.only,cnt=gmMarkers.length;
   if(gmKeep){
    // al tocar «Solo el plan» el mapa se queda quieto; solo encuadra si no queda nada a la vista
-   gmKeep=false;gmFitKey=fk;var bb=gm.getBounds();
+   gmKeep=false;gmFitKey=fk;gmFitCnt=cnt;var bb=gm.getBounds();
    if(bb&&!vis.some(function(p){return p.ll&&bb.contains({lat:p.ll[0],lng:p.ll[1]})}))gmFit(vis);
-  }else if(fk!==gmFitKey){gmFitKey=fk;gmFit(vis)}
+  }else if(fk!==gmFitKey){gmFitKey=fk;gmFitCnt=cnt;gmMoved=false;gmFit(vis)}
+  // aparecen pines nuevos (p. ej. al terminar la búsqueda por nombre): se encuadra solo si no has movido el mapa
+  else if(cnt!==gmFitCnt){gmFitCnt=cnt;if(!gmMoved)gmFit(vis)}
  }catch(e){gFail=true;renderMap()}
 }
 /* Encuadrar: todo lo visible; en "Todo el viaje" sin Medellín (si no, España se ve diminuta) */
+var gmMoved=false,gmFitting=false,gmFitCnt=-1;
 function gmFit(vis){
  if(!gm||typeof google==="undefined")return;
+ gmFitting=true;google.maps.event.addListenerOnce(gm,"idle",function(){gmFitting=false});
  var pts=vis.filter(function(p){return p.ll});
  if(mapState.day==="all"){var es=pts.filter(function(p){return p.city!=="medellin"});if(es.length)pts=es}
  if(!pts.length)return;
@@ -2115,13 +2122,21 @@ function openSettings(){
  openSheet('<div class="sh-head"><h2 id="sh-title">Ajustes</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
  '<div class="kv"><div><h3 class="lab">Almacenamiento</h3><p id="s-store">Calculando...</p></div>'+(db?"":'<div class="note">'+svg("flag",20)+'<p>Este navegador no permite guardar datos. Lo que añadas se perderá al cerrar la página.</p></div>')+
  '<div><h3 class="lab">Apariencia</h3><div class="chips">'+[["light","Claro"],["dark","Oscuro"],["auto","Automático"]].map(function(t){return '<button type="button" class="chip" data-act="theme" data-v="'+t[0]+'" aria-pressed="'+((kv.theme||"light")===t[0])+'">'+t[1]+'</button>'}).join("")+'</div></div>'+
- '<div><h3 class="lab">Copia de seguridad</h3><p>Guarda un archivo con todos tus documentos y estados, protegido con contraseña si quieres. Hazlo antes de salir de viaje y cada vez que añadas algo importante.</p></div>'+
+ '<div><h3 class="lab">Copia de seguridad</h3><p>Guarda un archivo con todos tus documentos y estados, protegido con contraseña si quieres. Hazlo antes de salir de viaje y cada vez que añadas algo importante.</p><p id="s-last"><b>'+esc(lastBackupText())+'</b></p></div>'+
  '<div class="actions"><button type="button" class="btn" data-act="export">Exportar copia</button><label class="btn" for="s-import">Importar copia</label><input id="s-import" type="file" accept="application/json,.json" hidden></div>'+
- '<div class="actions"><button type="button" class="btn" data-act="persist">Proteger datos del borrado</button></div>'+
+ '<div><p id="s-persist">Comprobando si los datos están protegidos…</p><div class="actions" id="s-persist-a" hidden><button type="button" class="btn" data-act="persist">Proteger datos del borrado</button></div></div>'+
  '<p>Todo se guarda solo en este dispositivo. Instala la app en la pantalla de inicio del iPhone para que Safari no borre los datos por falta de uso.</p>'+
  '<p class="ver">'+esc(versionText())+'</p></div>');
  if(navigator.storage&&navigator.storage.estimate){navigator.storage.estimate().then(function(e){var el=$("#s-store");if(el)el.textContent="Usado: "+fmtSize(e.usage||0)+(e.quota?" de "+fmtSize(e.quota)+" disponibles":"")+". "+docs.length+(docs.length===1?" documento.":" documentos.")}).catch(function(){var el=$("#s-store");if(el)el.textContent=docs.length+" documentos."})}
  else{$("#s-store").textContent=docs.length+" documentos."}
+ showPersist();
+}
+/* ¿Puede el navegador borrar los datos por falta de espacio? (persisted = protegidos) */
+function showPersist(){
+ var el=$("#s-persist"),a=$("#s-persist-a");if(!el)return;
+ if(!(navigator.storage&&navigator.storage.persisted)){el.textContent="Este navegador no dice si los datos están protegidos del borrado.";if(a)a.hidden=false;return}
+ navigator.storage.persisted().then(function(ok){var e2=$("#s-persist"),a2=$("#s-persist-a");if(!e2)return;
+  e2.innerHTML=ok?'<b>Datos protegidos:</b> el navegador no los borrará para liberar espacio.':'<b>Datos sin proteger:</b> si el teléfono se queda sin espacio, el navegador podría borrarlos.';if(a2)a2.hidden=!!ok}).catch(function(){})
 }
 /* "Versión a1b2c3d · 5 nov, 15:40": el código coincide con el último commit de GitHub
    si el teléfono ya tiene la versión publicada */
@@ -2207,7 +2222,7 @@ async function makeExport(btn){
   if(p1){var head=JSON.stringify(Object.assign({},out,{data:""}));parts=[head.slice(0,-2),out.data,'"}'];out=null}
   else parts=[JSON.stringify(out)];
   backup.docs=backup.docs.length;   // solo hace falta el número para el aviso; suelta los archivos
-  expFile=new File(parts,name,{type:"application/json"});parts=null;
+  expFile=new File(parts,name,{type:"application/json"});parts=null;expKind=kind;
   var canShare=!!(navigator.canShare&&navigator.share&&navigator.canShare({files:[expFile]}));
   var o=$("#e-out");
   if(o)o.innerHTML='<div class="note ok">'+svg("check",20)+'<p><b>Copia lista</b> · '+fmtSize(expFile.size)+(p1?" · cifrada":" · sin cifrar")+(kind==="full"?" · "+backup.docs+(backup.docs===1?" documento":" documentos"):"")+'</p></div>'+
@@ -2216,8 +2231,17 @@ async function makeExport(btn){
  }catch(e){toast("No se pudo generar la copia")}
  idle(btn,label);
 }
+/* Última copia hecha en este dispositivo (solo aquí: no va en las copias) */
+var expKind="full";
+function markBackup(){try{localStorage.setItem("journest:lastBackup",JSON.stringify({t:Date.now(),k:expKind}))}catch(_){}}
+function lastBackup(){try{return JSON.parse(localStorage.getItem("journest:lastBackup")||"null")}catch(_){return null}}
+function lastBackupText(){
+ var b=lastBackup();if(!b||!b.t)return "Todavía no has hecho ninguna copia en este dispositivo.";
+ var t=new Date(b.t),days=Math.floor((Date.now()-b.t)/864e5);
+ return "Última copia: "+t.getDate()+" "+MO3[t.getMonth()]+(b.k==="itinerary"?" (solo itinerario)":"")+" · "+(days<1?"hoy":days===1?"hace 1 día":"hace "+days+" días")+".";
+}
 function downloadFile(f){
- if(!f)return;
+ if(!f)return;markBackup();
  var u=URL.createObjectURL(f),a=document.createElement("a");
  a.href=u;a.download=f.name;document.body.appendChild(a);a.click();a.remove();
  setTimeout(function(){URL.revokeObjectURL(u)},60000);
@@ -2230,7 +2254,7 @@ function shareExport(){
  // Mientras iOS guarda o envía (con copias grandes tarda), el botón queda en "Compartiendo…".
  var b=$('[data-act="exp-share"]'),label=b?b.textContent:"Compartir";
  var p=navigator.share({files:[expFile]});busy(b,"Compartiendo…");
- p.then(function(){idle(b,label);toast("Listo")},function(e){idle(b,label);if(!e||e.name!=="AbortError")downloadFile(expFile)});
+ p.then(function(){idle(b,label);markBackup();toast("Listo")},function(e){idle(b,label);if(!e||e.name!=="AbortError")downloadFile(expFile)});
 }
 
 /* ---- Importar ---- */
@@ -2370,7 +2394,7 @@ function monthGrid(){
  for(var dt=new Date(s),first=true;dt<=e;dt=new Date(dt.getFullYear(),dt.getMonth(),dt.getDate()+1)){
   var id=dsOf(dt),day=dayById(id),mo=(first||dt.getDate()===1)?'<span class="mo">'+MO3[dt.getMonth()]+'</span>':"";first=false;
   if(!day){h+='<div class="cc out"><span class="tp"><span class="n">'+dt.getDate()+'</span>'+mo+'</span></div>';continue}
-  var its=agendaOf(day).all,dots=its.slice(0,4).map(function(x){return '<i style="background:'+colOf(x.type)+'"></i>'}).join("")+(its.length>4?'<span style="font-size:9.5px;color:var(--muted)">+'+(its.length-4)+'</span>':"");
+  var its=agendaOf(day).all,dots=its.slice(0,4).map(function(x){return '<i style="background:'+colOf(x.type)+'"></i>'}).join("")+(its.length>4?'<span style="font-size:12px;color:var(--muted)">+'+(its.length-4)+'</span>':"");
   h+='<button type="button" class="cc'+(id===calSel?" sel":"")+(id===t?" td":"")+'" style="--c:'+CITIES[day.base].c1+'" data-act="csel" data-d="'+id+'" aria-label="'+esc(longDate(day))+', '+its.length+' elementos"><span class="tp"><span class="n">'+dt.getDate()+'</span>'+mo+'</span><span class="cy">'+esc(nm(day.base).slice(0,3).toUpperCase())+'</span><span class="ds">'+dots+'</span></button>';
  }
  return '<div class="mg">'+h+'</div>';
@@ -2402,7 +2426,7 @@ function openEvCard(id){
 }
 function setEvSt(id,sv){return setKV("events",evAll().map(function(e){if(e.id!==id)return e;var c=Object.assign({},e);if(sv)c.st=sv;else delete c.st;return c}))}
 async function deleteEvent(){
- if(!fx||!fx.ev)return;var id=fx.ev.id,dd=fx.ev.day;
+ if(!fm||!fm.ev)return;var id=fm.ev.id,dd=fm.ev.day;
  await setKV("events",evAll().filter(function(x){return x.id!==id}));await dropPlanKey(dd,"e:"+id);closeSheet();refresh();toast("Evento eliminado");
 }
 
@@ -2580,10 +2604,10 @@ document.addEventListener("click",function(e){
  else if(a==="mcat"){var mc=b.dataset.c;if(mapState.cats[mc])delete mapState.cats[mc];else mapState.cats[mc]=1;renderMap();if(b.closest("#sheet"))openMapFilters()}
  else if(a==="mcard"){openMapCard(b.dataset.id)}
  else if(a==="m-me"){gmLocate()}
- else if(a==="m-fit"){gmFit(mapShown(mapPoints()))}
+ else if(a==="m-fit"){gmMoved=false;gmFit(mapShown(mapPoints()))}
  else if(a==="m-retry"){if(gRetry())renderMap()}
  else if(a==="monly"){mapState.only=!mapState.only;gmKeep=true;renderMap()}
- else if(a==="monly-on"){mapState.only=true;gmKeep=true;renderMap()}
+ else if(a==="monly-on"){mapState.only=true;gmKeep=false;gmFitKey="";renderMap()}   // «oculto por los filtros»: encuadra el plan entero, con ese número
  else if(a==="map-day"){mapState.day=b.dataset.day;if(b.dataset.mode)mapState.mode=b.dataset.mode;mapFrom=location.hash||"#inicio";location.hash="#mapa"}
  else if(a==="spend"){openSpend()}
  else if(a==="sumtog"){setKV("sumOpen",!kv.sumOpen);renderDocsView()}
@@ -2596,7 +2620,7 @@ document.addEventListener("click",function(e){
  else if(a==="exp-dl"){downloadFile(expFile)}
  else if(a==="imp-pass"){unlockImport(b)}
  else if(a==="imp-apply"){applyImport(b.dataset.v,b)}
- else if(a==="persist"){if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().then(function(ok){toast(ok?"Datos protegidos":"El navegador no lo ha concedido")})}else toast("No disponible en este navegador")}
+ else if(a==="persist"){if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().then(function(ok){toast(ok?"Datos protegidos":"El navegador no lo ha concedido");showPersist()})}else toast("No disponible en este navegador")}
 });
 document.addEventListener("change",function(e){
  clearBad(e.target);

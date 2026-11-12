@@ -14,6 +14,29 @@ Reglas:
 
 ## 2026-11-12
 
+- Mejoras de la revisión completa (decididas con Nicolas):
+  - Volver dos veces al mismo sitio el mismo día (Atocha al llegar y al
+    salir): sale en el plan una vez por paso, cada una con su número, y la
+    línea del mapa vuelve a él. El pin muestra el primer número y un
+    circulito con el otro (o "+2" si son más). Se eligió frente a "1 · 5"
+    en el pin o a dos pines separados.
+  - Mapa: si aparecen pines nuevos (p. ej. al terminar la búsqueda por
+    nombre), solo se reencuadra si no lo has movido. "El 3 está oculto por
+    los filtros" activa "Solo el plan" y encuadra todo el plan.
+  - Desde Pendientes, el título propuesto ("Hotel en Madrid") va como
+    ejemplo en gris, no como texto escrito.
+  - Ajustes: dice la fecha de la última copia hecha en este dispositivo
+    (guardada solo en el teléfono, no va en las copias) y si los datos están
+    protegidos del borrado. El botón "Proteger" sale solo si no lo están.
+  - Letra: mínimo 12 px en etiquetas cortas y 13 px en lo que se lee (la
+    guía de Apple pone 11 pt de mínimo). El texto normal sigue en 15 px y
+    el zoom con pellizco sigue bloqueado.
+  - Botones pequeños ("Añadir parada", "Quitar", lápices, chips…): zona
+    táctil de unos 44 px sin cambiar cómo se ven.
+- La variable del formulario único se llamaba igual que la del formulario
+  de documentos (`fx`). No se pisaban porque nunca están abiertos a la vez,
+  pero se renombró a `fm`.
+
 - Probado por Nicolas en el iPhone: el día 1 ya se abre arriba (bug
   corregido, sale de PENDIENTES) y el aviso del calendario funciona en los
   cuatro casos (una cosa dentro de otra, rangos que se pisan, sin pisarse y
