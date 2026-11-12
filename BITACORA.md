@@ -14,6 +14,25 @@ Reglas:
 
 ## 2026-11-12
 
+- Formulario único, ajustado con Nicolas: desde la lista de Qué ver / Comer
+  solo se edita el sitio (Nombre, Descripción, Enlace) y, si está planeado,
+  sale "En el plan del…" como información. Día, Hora y Nota salen solo al
+  abrirlo desde el plan de un día (o con el 📅+ del día) y en los eventos.
+  Para planear, el plan. Si en el enlace se pega texto junto con el enlace,
+  se queda el enlace y se avisa de lo que se quitó ("Quité «Txiriti»: en
+  este campo solo va el enlace."; en eventos sugiere ponerlo en la Nota).
+  Se decidió no hacer un campo "Lugar" como el de los documentos.
+
+- Arreglos del formulario único (probado por Nicolas en el iPhone):
+  - Eliminar un sitio que está en el plan avisa antes de confirmar ("Está
+    en el plan del mié 30 dic. Se quitará también de ahí.").
+  - Hora y Nota guardan entre sí el mismo espacio que los otros campos.
+  - En el enlace de Google Maps solo queda el enlace: si se pega junto con
+    texto ("Txiriti https://…"), se quita el texto.
+  - iPhone con el teclado abierto: la hoja se ajusta a lo que queda visible
+    (antes se veía la página de detrás entre la hoja y el teclado). Sin
+    probar todavía en el teléfono.
+
 - Sitios (Qué ver / Comer) y eventos unificados (acordado con Nicolas el
   11–12 nov). Por dentro se guardan igual que antes; solo hay dos campos
   nuevos opcionales en el evento: `u` (enlace de Google Maps) y `st` (estado).

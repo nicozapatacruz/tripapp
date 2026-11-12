@@ -1368,14 +1368,17 @@ function openForm(o){
   pk=p?itemKey(o.kind,o.cid,p):null;
   // qué día se edita: el de la visita pedida, el del día desde el que se abre o, desde la lista, el primero
   var vs=pk?placeVisits(pk):[];
-  ev=(o.ev&&vs.filter(function(e){return e.id===o.ev})[0])||(o.day&&vs.filter(function(e){return e.day===o.day})[0])||(o.add?null:vs[0])||null;
+  // desde el plan de un día se edita también esa visita (día, hora y nota); desde la lista, solo el sitio
+  ev=(o.ev&&vs.filter(function(e){return e.id===o.ev})[0])||(o.day&&vs.filter(function(e){return e.day===o.day})[0])||null;
   sel=ev?ev.day:(o.add&&dayById(o.day)?o.day:"");
   var ids=DAYS.filter(function(d){return d.stops.indexOf(o.cid)>=0}).map(function(d){return d.d});
   if(sel&&ids.indexOf(sel)<0)ids.push(sel);
   opts='<option value="">Sin planear</option>'+ids.map(function(d){return dayOpt(d,sel)}).join("");
  }
- fx={kind:o.kind,cid:o.cid,p:p,pk:pk,ev:ev};
+ var withDay=isEv||!!sel;
+ fx={kind:o.kind,cid:o.cid,p:p,pk:pk,ev:ev,withDay:withDay};
  var also=pk?placeVisits(pk).filter(function(e){return e!==ev}).map(function(e){return shortDay(dayById(e.day))}):[];
+ var alsoP=also.length?'<p class="foot" id="i-also">'+(withDay?"También en el plan del ":"En el plan del ")+esc(also.join(", del "))+'</p>':"";
  var note0=ev?ev.note||"":(pk?offNote(pk):"");
  // quitado del mapa con «No es aquí» (y sin enlace con coordenadas): nota + deshacer
  var gk=p?"pl|"+pk:"",gn=p&&!coordsOf(p.u)&&geoOf(gk),gno=gn&&gn.no?'<div class="bnbox"><p class="adrw">Quitado del mapa («No es aquí»). Pega el enlace de Google Maps del sitio correcto. Si no lo tienes ahora, toca «Más tarde»: no saldrá en el mapa y quedará en Sin ubicar hasta que pegues el enlace.</p><button type="button" class="btn" data-act="geo-undo" data-gk="'+esc(gk)+'">Estaba bien, deshacer</button></div>':"";
@@ -1383,12 +1386,10 @@ function openForm(o){
  openSheet('<div class="sh-head"><h2 id="sh-title">'+title+'</h2><button type="button" class="x" data-act="item-back">'+(gno?"Más tarde":"Cancelar")+'</button></div>'+gno+
   '<div class="field"><label for="i-n">Nombre'+REQ+'</label><input id="i-n" type="text" placeholder="'+(isEv?"Ej. Recoger el paquete":o.kind==="see"?"Ej. Museo del Prado":"Ej. Casa Lucio")+'" value="'+esc(p?p.n:ev?ev.title:(o.title||""))+'" autocomplete="off"><p class="locnote warn" id="i-dup" hidden></p></div>'+
   (isEv?"":'<div class="field"><label for="i-d">Descripción</label><textarea id="i-d" placeholder="Qué es, qué pedir, horarios...">'+esc(p?p.d:"")+'</textarea></div>')+
-  '<div class="field"><label for="i-u">Enlace de Google Maps</label><input id="i-u" type="text" placeholder="'+(isEv?"Si lo dejas vacío, no sale en el mapa":"Si lo dejas vacío, el mapa busca por nombre")+'" value="'+esc(isEv?(ev&&ev.u||""):(p?p.u:""))+'" autocomplete="off"></div>'+
-  '<div class="field"><label for="i-day">Día'+(isEv?REQ:"")+'</label><select id="i-day">'+opts+'</select>'+
-   (isEv?"":'<p class="foot" id="i-dayhint"'+(sel?" hidden":"")+'>Elige un día para añadirlo a su plan y ponerle hora o nota.</p>')+
-   (also.length?'<p class="foot" id="i-also">También en el plan del '+esc(also.join(", del "))+'</p>':"")+'</div>'+
+  '<div class="field"><label for="i-u">Enlace de Google Maps</label><input id="i-u" type="text" placeholder="'+(isEv?"Si lo dejas vacío, no sale en el mapa":"Si lo dejas vacío, el mapa busca por nombre")+'" value="'+esc(isEv?(ev&&ev.u||""):(p?p.u:""))+'" autocomplete="off"><p class="locnote warn" id="i-unote" hidden></p></div>'+
+  (withDay?'<div class="field"><label for="i-day">Día'+(isEv?REQ:"")+'</label><select id="i-day">'+opts+'</select>'+alsoP+'</div>'+
   '<div id="i-when"><div class="field"><span class="fl">Hora de inicio y fin</span><div class="timerow">'+timeBox("i-t1",ev&&ev.t1,"Hora de inicio")+'<span>–</span>'+timeBox("i-t2",ev&&ev.t2,"Hora de fin")+'</div></div>'+
-  '<div class="field"><label for="i-note">Nota</label><input id="i-note" type="text" placeholder="'+(isEv?"Ej. Recoger en recepción":"Algo de ese día. Ej. Entrar por la puerta de Goya")+'" value="'+esc(note0)+'" autocomplete="off"></div></div>',
+  '<div class="field"><label for="i-note">Nota</label><input id="i-note" type="text" placeholder="'+(isEv?"Ej. Recoger en recepción":"Algo de ese día. Ej. Entrar por la puerta de Goya")+'" value="'+esc(note0)+'" autocomplete="off"></div></div>':alsoP),
   '<p class="err" id="i-err" role="alert"></p><div class="actions">'+(p||(isEv&&ev)?'<button type="button" class="btn danger" data-act="item-del">Eliminar</button>':"")+'<button type="button" class="btn primary" style="--c1:var(--accent)" data-act="item-save">Guardar</button></div>');
  fxWhen();
 }
@@ -1397,7 +1398,6 @@ function fxWhen(){
  var s=$("#i-day"),w=$("#i-when");if(!s||!w)return;var on=!!s.value;
  w.classList.toggle("fxoff",!on);["i-t1","i-t2","i-note"].forEach(function(id){var el=$("#"+id);if(el)el.disabled=!on});
  w.querySelectorAll(".tclr").forEach(function(b){b.disabled=!on});
- var hn=$("#i-dayhint");if(hn)hn.hidden=on;
 }
 async function dropPlanKey(dd,key){var pl0=(kv.plan||{})[dd];if(Array.isArray(pl0)&&pl0.indexOf(key)>=0){var pl=Object.assign({},kv.plan);pl[dd]=pl0.filter(function(k){return k!==key});await setKV("plan",pl)}}
 /* Un doble toque en Guardar creaba dos copias (de un sitio, un evento o un documento nuevo) */
@@ -1406,7 +1406,7 @@ async function once(fn){if(saving)return;saving=true;try{await fn()}finally{savi
 async function saveItem(){
  var f=fx;if(!f)return;
  var err=function(t){$("#i-err").textContent=t};
- var n=$("#i-n").value.trim(),u=$("#i-u").value.trim(),day=$("#i-day").value;
+ var n=$("#i-n").value.trim(),u=onlyUrl($("#i-u").value),day=f.withDay?$("#i-day").value:"";
  var t1=day?$("#i-t1").value||"":"",t2=day?$("#i-t2").value||"":"",note=day?$("#i-note").value.trim():"";
  if(!n){err(f.kind==="ev"?"Escribe un nombre para el evento.":"Escribe un nombre.");return}
  if(u&&!/^https?:\/\/\S+$/i.test(u)){err("El enlace debe empezar por https://");return}
@@ -1437,11 +1437,11 @@ async function saveItem(){
  list=list.map(function(e){if(e.pk===pk&&e.title!==n){ch=true;return Object.assign({},e,{title:n})}return e});
  var cur=f.ev?list.filter(function(e){return e.id===f.ev.id})[0]:null;
  if(cur&&day){list=list.map(function(e){return e===cur?Object.assign({},e,{day:day,t1:t1,t2:t2,note:note}):e});ch=true;if(cur.day!==day)await dropPlanKey(cur.day,"e:"+cur.id)}
- else if(cur){
+ else if(cur&&f.withDay){
   // «Sin planear»: sale del plan; si tenía nota, queda guardada y escondida (como al quitarlo del plan)
   list=cur.note?list.map(function(e){return e===cur?Object.assign({},e,{off:1}):e}):list.filter(function(e){return e!==cur});ch=true;
   await dropPlanKey(cur.day,"e:"+cur.id);
- }else if(day){
+ }else if(day&&f.withDay){
   var hid=list.filter(function(e){return e.off&&e.pk===pk})[0];   // la nota escondida de cuando se quitó del plan
   if(hid)list=list.filter(function(e){return e!==hid});
   var ne=Object.assign({},hid||{id:uid()},{title:n,day:day,t1:t1,t2:t2,note:note,pk:pk});delete ne.off;list.push(ne);ch=true;
@@ -1457,6 +1457,21 @@ async function deleteItem(){
  await setKV("pl:"+c.cid+":"+c.kind,l);await delKV(pk);
  if(evAll().some(function(e){return e.pk===pk}))await setKV("events",evAll().filter(function(e){return e.pk!==pk}));
  refresh();if(!revReturn())openListSheet(c.cid,c.kind);toast("Eliminado");
+}
+/* Eliminar un sitio que está en el plan: antes de confirmar se dice de qué días sale */
+function delWarn(b){
+ var er=$("#i-err");if(!er||!fx||fx.kind==="ev"||!fx.pk||(tapArm&&tapArm.el===b))return;
+ var ds=placeVisits(fx.pk).map(function(e){return shortDay(dayById(e.day))});if(!ds.length)return;
+ var t="Está en el plan del "+ds.slice(0,-1).join(", del ")+(ds.length>1?" y del ":"")+ds[ds.length-1]+". Se quitará también de ahí.";
+ er.textContent=t;setTimeout(function(){if(er.textContent===t)er.textContent=""},4000);
+}
+/* En el campo del enlace solo va el enlace: si se pega junto con texto («Txiriti https://…»), queda el enlace */
+function onlyUrl(v){var m=String(v||"").match(/https?:\/\/\S+/i);return m?m[0]:String(v||"").trim()}
+/* Si se escribió algo y después se pegó el enlace (o al revés), queda solo el enlace y se avisa de qué se quitó */
+function cleanUrlField(el){
+ var v=el.value,u=onlyUrl(v),w=$("#i-unote");if(!/^https?:/i.test(u)||u===v.trim())return;
+ var rest=v.replace(u,"").replace(/\s+/g," ").trim();el.value=u;
+ if(w&&rest){w.hidden=false;w.textContent="Quité «"+rest+"»: en este campo solo va el enlace."+(fx&&fx.kind==="ev"?" Si es el nombre del sitio, ponlo en la Nota.":"")}
 }
 function itemBack(){if(revReturn())return;if(fx&&fx.kind==="ev"){if(fx.ev)openEvCard(fx.ev.id);else closeSheet()}else if(listCtx)openListSheet(listCtx.cid,listCtx.kind);else closeSheet()}
 
@@ -2485,7 +2500,7 @@ document.addEventListener("click",function(e){
  else if(a==="ord-done"){saveOrder()}
  else if(a==="item-back"){itemBack()}
  else if(a==="item-save"){once(saveItem)}
- else if(a==="item-del"){confirmTap(b,"Confirmar",deleteItem)}
+ else if(a==="item-del"){delWarn(b);confirmTap(b,"Confirmar",deleteItem)}
  else if(a==="list-reset"){confirmTap(b,"Confirmar",function(){var rc=listCtx;delKV("pl:"+rc.cid+":"+rc.kind).then(function(){refresh();openListSheet(rc.cid,rc.kind);toast("Lista restaurada")})})}
  else if(a==="save"){once(saveFromSheet)}
  else if(a==="delete"){confirmTap(b,"Confirmar",function(){removeDoc(editing.id).then(function(){closeSheet();refresh();toast("Documento eliminado")})})}
@@ -2580,7 +2595,13 @@ document.addEventListener("input",function(e){
 });
 document.addEventListener("keydown",function(e){if(e.key!=="Escape")return;if(vw){closeViewer();return}if(!sheet.hidden&&sheetCanDismiss())closeSheet()});
 ["input","change"].forEach(function(t){document.addEventListener(t,function(e){if(!sheet.hidden&&e.target&&e.target.closest&&e.target.closest("#sheet-body"))sheetDirty=true},true)});
-document.addEventListener("input",function(e){if(e.target&&e.target.id==="i-n")refreshItemDup()});
+document.addEventListener("input",function(e){if(e.target&&e.target.id==="i-n")refreshItemDup();if(e.target&&e.target.id==="i-u")cleanUrlField(e.target)});
+/* iPhone: con el teclado abierto, la hoja se ajusta a lo que queda visible (si no, entre la hoja y el
+   teclado se ve la página de detrás y sobra el margen de abajo de la pantalla) */
+if(typeof window!=="undefined"&&window.visualViewport){(function(){var vv=window.visualViewport;
+ function fit(){var bd=$("#sheet");if(!bd)return;var kb=window.innerHeight-vv.height>120;bd.classList.toggle("kb",kb);
+  if(kb){bd.style.top=vv.offsetTop+"px";bd.style.height=vv.height+"px";bd.style.bottom="auto"}else{bd.style.top="";bd.style.height="";bd.style.bottom=""}}
+ vv.addEventListener("resize",fit);vv.addEventListener("scroll",fit)})()}
 window.addEventListener("hashchange",route);
 // Es una app: sin zoom con dos dedos. iOS ignora user-scalable=no del viewport, así que se frena el gesto.
 ["gesturestart","gesturechange"].forEach(function(t){document.addEventListener(t,function(e){e.preventDefault()},{passive:false})});

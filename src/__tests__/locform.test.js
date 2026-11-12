@@ -1480,23 +1480,32 @@ describe("formulario: ubicaciones", () => {
     const plaza = [...document.querySelectorAll("#c-2026-12-29 .ag")].find((x) => x.textContent.includes("Plaza Mayor"));
     expect(plaza.getAttribute("style")).toContain("#7C3AED");             // sitio con hora: sale, con el color de Qué ver
   });
-  it("57) formulario único: «Sin planear» desactiva hora y nota; elegir un día lo añade al plan y volver a «Sin planear» lo quita", async () => {
+  it("57) formulario único: desde la lista solo el sitio; desde el plan, también el día, la hora y la nota", async () => {
     const b = document.createElement("button");
     b.dataset.act = "list"; b.dataset.city = "madrid"; b.dataset.kind = "see";
     document.body.appendChild(b); click(b); b.remove();
     click($('[data-act="item-add"]'));
-    expect($("#i-day").value).toBe("");                                  // desde la lista: «Sin planear»
-    expect($("#i-t1").disabled).toBe(true);
-    expect($("#i-note").disabled).toBe(true);
+    expect($("#i-day")).toBeNull();                                      // desde la lista: sin día, hora ni nota
+    expect($("#i-note")).toBeNull();
     $("#i-n").value = "Casa de Campo";
-    setSel("i-day", "2026-12-30");
-    expect($("#i-t1").disabled).toBe(false);
-    $("#i-note").value = "Llevar agua";
+    $("#i-u").value = "Casa de Campo https://www.google.com/maps/place/C/@40.42,-3.75,15z";
+    $("#i-u").dispatchEvent(new Event("input", { bubbles: true }));
+    expect($("#i-u").value).toBe("https://www.google.com/maps/place/C/@40.42,-3.75,15z");
+    expect($("#i-unote").textContent).toBe("Quité «Casa de Campo»: en este campo solo va el enlace.");
     click($('[data-act="item-save"]')); await tick();
     location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
     const lm = $('#v-map [data-act=mmode][data-v="list"]'); if (lm) click(lm);
     const row = () => [...document.querySelectorAll("#v-map .mrow")].find((x) => x.querySelector("b").textContent === "Casa de Campo");
     setSel("m-day", "2026-12-30");
+    click($("#v-map [data-act=plan-add]"));
+    click([...document.querySelectorAll("#sheet-body .ppick")].find((x) => x.textContent.includes("Casa de Campo"))); await tick();
+    click($('#sheet [data-act="close"]'));
+    click(row());
+    click($('#sheet .sh-head [data-act="mc-edit"]'));                   // desde el plan del 30: con el día
+    expect($("#i-day").value).toBe("2026-12-30");
+    $("#i-note").value = "Llevar agua";
+    click($('[data-act="item-save"]')); await tick();
+    click($('#sheet [data-act="close"]'));
     expect(row().closest("#m-plan")).toBeTruthy();                       // en el plan del 30
     expect(row().textContent).toContain("Nota: Llevar agua");
     // otro día desde su ficha; el formulario edita el del día de la ficha y avisa del otro
@@ -1524,7 +1533,9 @@ describe("formulario: ubicaciones", () => {
     expect(row().closest("#m-plan")).toBeTruthy();                       // el del 30 sigue
     // eliminar el sitio quita también su plan
     click(row()); click($('#sheet .sh-head [data-act="mc-edit"]'));
-    const del = $('[data-act="item-del"]'); click(del); click(del); await tick();
+    const del = $('[data-act="item-del"]'); click(del);
+    expect($("#i-err").textContent).toBe("Está en el plan del mié 30 dic. Se quitará también de ahí.");
+    click(del); await tick();
     expect(row()).toBeFalsy();
     location.hash = "#calendario"; window.dispatchEvent(new HashChangeEvent("hashchange"));
     expect($("#c-2026-12-30").textContent).not.toContain("Casa de Campo");
@@ -1535,7 +1546,7 @@ describe("formulario: ubicaciones", () => {
     expect($("#i-day").value).toBe("2027-01-09");
     expect([...$("#i-day").options].some((o) => o.value === "")).toBe(false);   // el evento siempre tiene día
     $("#i-n").value = "Cena con Ana"; $("#i-t1").value = "21:00";
-    $("#i-u").value = "https://www.google.com/maps/place/X/@28.4682,-16.2546,17z";
+    $("#i-u").value = "Txiriti https://www.google.com/maps/place/X/@28.4682,-16.2546,17z";   // texto + enlace: queda el enlace
     click($('[data-act="item-save"]')); await tick();
     location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
     const lm = $('#v-map [data-act=mmode][data-v="list"]'); if (lm) click(lm);
