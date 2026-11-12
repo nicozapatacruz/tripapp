@@ -629,5 +629,6 @@ body.mapfull .app{padding-bottom:0}
 #i-when{display:flex;flex-direction:column;gap:16px}   /* mismo espacio que entre los otros campos */
 #i-when.fxoff{opacity:.45}   /* «Sin planear»: hora y nota no aplican */
 .ptap{cursor:pointer}
-.backdrop.kb .sheet{padding-bottom:0;max-height:100%}   /* teclado abierto: sin el margen de la barra de inicio */
-.backdrop.kb::after{content:"";position:absolute;left:0;right:0;top:100%;height:100vh;background:var(--surface)}   /* detrás del teclado, el fondo de la hoja */
+/* Debajo de la hoja, el mismo fondo: con el teclado abierto (translúcido) iOS deja ver lo que queda
+   por debajo de la pantalla; así se ve la hoja y no la página. Sin teclado queda fuera de la pantalla. */
+.backdrop::after{content:"";position:absolute;left:0;right:0;top:100%;height:100vh;background:var(--surface);pointer-events:none}

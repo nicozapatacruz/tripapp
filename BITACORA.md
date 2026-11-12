@@ -14,6 +14,13 @@ Reglas:
 
 ## 2026-11-12
 
+- Teclado del iPhone, tercer intento. Lo anterior probablemente ni se
+  activaba, porque el cálculo de si el teclado estaba abierto fallaba, y se
+  quitó. Ahora hay dos arreglos que no dependen de detectar el teclado:
+  debajo de la hoja siempre sigue su fondo (fuera de la pantalla si no hay
+  teclado), y el campo con el foco se desplaza dentro de la hoja hasta
+  quedar encima del pie.
+
 - Teclado del iPhone, segundo intento: el primero dejaba ver la página
   entre la hoja y el teclado (que es translúcido) y el campo con el foco
   quedaba tapado. Ahora, detrás del teclado sigue el fondo de la hoja, y el
