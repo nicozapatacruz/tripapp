@@ -1589,4 +1589,23 @@ describe("formulario: ubicaciones", () => {
     expect(document.body.style.position).toBe("");
     expect(document.documentElement.classList.contains("locked")).toBe(false);
   });
+  it("60) bajar la hoja arrastrando desde el título la cierra; con cambios sin guardar, no", async () => {
+    location.hash = "#calendario"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const drag = (to) => {
+      const t = (y) => [{ clientX: 10, clientY: y, identifier: 0 }];
+      $("#sh-title").dispatchEvent(Object.assign(new Event("touchstart", { bubbles: true }), { touches: t(100) }));
+      $("#sh-title").dispatchEvent(Object.assign(new Event("touchmove", { bubbles: true, cancelable: true }), { touches: t(to) }));
+      $("#sh-title").dispatchEvent(Object.assign(new Event("touchend", { bubbles: true }), { touches: [] }));
+    };
+    click($('[data-act="ev-add"]'));
+    drag(140); await new Promise((r) => setTimeout(r, 250));
+    expect($("#sheet").hidden).toBe(false);                             // poco: vuelve a su sitio
+    $("#i-n").value = "X"; $("#i-n").dispatchEvent(new Event("input", { bubbles: true }));
+    drag(300); await new Promise((r) => setTimeout(r, 250));
+    expect($("#sheet").hidden).toBe(false);                             // con cambios: no se cierra
+    click($('#sheet [data-act="item-back"]'));
+    click($('[data-act="ev-add"]'));
+    drag(300); await new Promise((r) => setTimeout(r, 250));
+    expect($("#sheet").hidden).toBe(true);
+  });
 });

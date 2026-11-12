@@ -1021,10 +1021,22 @@ function canScrollY(el,dy){
  }
  return false;
 }
+/* Bajar la hoja arrastrando desde la rayita o el título: más de 90 px la cierra (si hay cambios sin
+   guardar, avisa y vuelve a su sitio, como al tocar fuera) */
+var sheetDrag=null;
+function sheetDragEnd(){
+ if(!sheetDrag)return;var d=sheetDrag,dlg=d.dlg;sheetDrag=null;
+ dlg.style.transition="transform .2s ease";
+ if(d.dy>90&&sheetCanDismiss()){dlg.style.transform="translateY(100%)";setTimeout(function(){dlg.style.transition="";dlg.style.transform="";closeSheet()},200)}
+ else{dlg.style.transform="";setTimeout(function(){dlg.style.transition=""},200)}
+}
 (function(){var tx=0,ty=0;
- sheet.addEventListener("touchstart",function(e){if(e.touches.length===1){tx=e.touches[0].clientX;ty=e.touches[0].clientY}},{passive:true});
+ sheet.addEventListener("touchstart",function(e){if(e.touches.length===1){tx=e.touches[0].clientX;ty=e.touches[0].clientY;
+  var dlg=sheet.querySelector(".sheet");if(dlg&&e.target.closest&&e.target.closest(".grab,#sheet-head"))sheetDrag={dlg:dlg,y0:ty,dy:0}}},{passive:true});
+ sheet.addEventListener("touchend",sheetDragEnd);sheet.addEventListener("touchcancel",sheetDragEnd);
  sheet.addEventListener("touchmove",function(e){
   if(e.touches.length!==1)return;var t=e.touches[0],dx=t.clientX-tx,dy=t.clientY-ty;tx=t.clientX;ty=t.clientY;
+  if(sheetDrag){sheetDrag.dy=Math.max(0,t.clientY-sheetDrag.y0);sheetDrag.dlg.style.transform=sheetDrag.dy?"translateY("+sheetDrag.dy+"px)":"";if(e.cancelable)e.preventDefault();return}
   if(Math.abs(dx)>Math.abs(dy))return;   // horizontal: lo decide el navegador
   if(!canScrollY(e.target,dy)&&e.cancelable)e.preventDefault();
  },{passive:false});

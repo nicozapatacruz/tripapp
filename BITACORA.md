@@ -14,6 +14,12 @@ Reglas:
 
 ## 2026-11-12
 
+- Hojas: se pueden bajar arrastrando desde la rayita de arriba o desde el
+  título. Más de 90 px la cierra; si hay cambios sin guardar, avisa y vuelve
+  a su sitio, igual que al tocar fuera. Antes no existía: lo que parecía
+  cerrarla era iOS moviendo toda la vista, y eso se frenó al fijar la página
+  de atrás.
+
 - Hojas en el iPhone (todas): mientras hay una hoja abierta, la página de
   atrás queda fija donde estaba y vuelve al mismo punto al cerrarla. Antes,
   con el teclado abierto, se desplazaba por detrás y asomaba entre la hoja

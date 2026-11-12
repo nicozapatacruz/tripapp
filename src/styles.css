@@ -630,3 +630,4 @@ body.mapfull .app{padding-bottom:0}
 #i-when.fxoff{opacity:.45}   /* «Sin planear»: hora y nota no aplican */
 .ptap{cursor:pointer}
 html.locked{background:var(--surface)}   /* hoja abierta: por debajo de la página fija, el fondo de la hoja */
+.grab{position:relative}.grab::before{content:"";position:absolute;inset:-12px -80px}   /* más fácil de agarrar para bajar la hoja */
