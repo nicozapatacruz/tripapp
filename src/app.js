@@ -2596,12 +2596,15 @@ document.addEventListener("input",function(e){
 document.addEventListener("keydown",function(e){if(e.key!=="Escape")return;if(vw){closeViewer();return}if(!sheet.hidden&&sheetCanDismiss())closeSheet()});
 ["input","change"].forEach(function(t){document.addEventListener(t,function(e){if(!sheet.hidden&&e.target&&e.target.closest&&e.target.closest("#sheet-body"))sheetDirty=true},true)});
 document.addEventListener("input",function(e){if(e.target&&e.target.id==="i-n")refreshItemDup();if(e.target&&e.target.id==="i-u")cleanUrlField(e.target)});
-/* iPhone: con el teclado abierto, la hoja se ajusta a lo que queda visible (si no, entre la hoja y el
-   teclado se ve la página de detrás y sobra el margen de abajo de la pantalla) */
+/* iPhone con el teclado abierto: la hoja ocupa justo lo que queda visible encima del teclado y, por
+   debajo (detrás del teclado, que es translúcido), sigue el fondo de la hoja (.kb::after en el CSS):
+   así no se ve la página de detrás. El campo con el foco se desplaza para que quede a la vista. */
 if(typeof window!=="undefined"&&window.visualViewport){(function(){var vv=window.visualViewport;
- function fit(){var bd=$("#sheet");if(!bd)return;var kb=window.innerHeight-vv.height>120;bd.classList.toggle("kb",kb);
-  if(kb){bd.style.top=vv.offsetTop+"px";bd.style.height=vv.height+"px";bd.style.bottom="auto"}else{bd.style.top="";bd.style.height="";bd.style.bottom=""}}
- vv.addEventListener("resize",fit);vv.addEventListener("scroll",fit)})()}
+ function fit(){var bd=$("#sheet");if(!bd)return;var kb=!bd.hidden&&window.innerHeight-vv.height>120;bd.classList.toggle("kb",kb);
+  if(kb){bd.style.top=vv.offsetTop+"px";bd.style.height=vv.height+"px";bd.style.bottom="auto";
+   requestAnimationFrame(function(){var f=document.activeElement;if(f&&sheetBody.contains(f)&&f.scrollIntoView)f.scrollIntoView({block:"nearest"})})}
+  else{bd.style.top="";bd.style.height="";bd.style.bottom=""}}
+ vv.addEventListener("resize",fit);vv.addEventListener("scroll",fit);document.addEventListener("focusin",function(){setTimeout(fit,0)})})()}
 window.addEventListener("hashchange",route);
 // Es una app: sin zoom con dos dedos. iOS ignora user-scalable=no del viewport, así que se frena el gesto.
 ["gesturestart","gesturechange"].forEach(function(t){document.addEventListener(t,function(e){e.preventDefault()},{passive:false})});

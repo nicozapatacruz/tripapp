@@ -14,6 +14,11 @@ Reglas:
 
 ## 2026-11-12
 
+- Teclado del iPhone, segundo intento: el primero dejaba ver la página
+  entre la hoja y el teclado (que es translúcido) y el campo con el foco
+  quedaba tapado. Ahora, detrás del teclado sigue el fondo de la hoja, y el
+  campo con el foco se desplaza para quedar a la vista.
+
 - Formulario único, ajustado con Nicolas: desde la lista de Qué ver / Comer
   solo se edita el sitio (Nombre, Descripción, Enlace) y, si está planeado,
   sale "En el plan del…" como información. Día, Hora y Nota salen solo al
