@@ -199,8 +199,9 @@ var TYPES={
  seguro:{l:"Seguro",t:"#475569"},comida:{l:"Comida",t:"#B45309"},otro:{l:"Otro",t:"#64748B"}
 };
 var TYPE_ICON={hotel:"hotel",tren:"tren",vuelo:"vuelo",bus:"bus",coche:"coche",entrada:"entrada",seguro:"seguro",comida:"comida",otro:"file"};
-var STATUS=["Sin marcar","Quiero ir","Reservado","Ya fui"];
-function statSel(k){var s=kv[k]||0;return '<select class="stat statsel s'+s+'" data-k="'+k+'" aria-label="Estado">'+STATUS.map(function(t,i){return '<option value="'+i+'"'+(i===s?" selected":"")+'>'+t+'</option>'}).join("")+'</select>'}
+var STATUS=["Sin estado","Quiero ir","Reservado","Ya fui"];
+/* Estado de un sitio (kv[pk]) o de un evento suelto (campo nuevo opcional st en el evento) */
+function statSel(k,evId,evS){var s=evId?(evS||0):(kv[k]||0);return '<select class="stat statsel s'+s+'" '+(evId?'data-ev="'+esc(evId)+'"':'data-k="'+k+'"')+' aria-label="Estado">'+STATUS.map(function(t,i){return '<option value="'+i+'"'+(i===s?" selected":"")+'>'+t+'</option>'}).join("")+'</select>'}
 var TRIPT={vuelo:1,tren:1,bus:1,coche:1};
 
 /* ---- Ubicaciones: enlaces de Google Maps, sugerencias y ciudad ---- */
@@ -836,7 +837,7 @@ function listOf(id,kind){
 function itemKey(kind,cid,p){return (kind==="see"?"s:":"r:")+cid+":"+p.id}
 function itemRow(cid,kind,p,idx){
  var href=p.u&&/^https?:\/\//i.test(p.u)?p.u:mapUrl(p.n,cid);
- return '<li class="pl pin"><span class="pinn" style="--c:'+CITIES[cid].c1+'">'+(idx+1)+'</span><div><b>'+esc(p.n)+'</b>'+(p.d?'<p>'+esc(p.d)+'</p>':"")+'<div class="pact">'+statSel(itemKey(kind,cid,p))+'<span class="pgap"></span><button type="button" class="agb2" data-act="ev-add" data-pk="'+esc(itemKey(kind,cid,p))+'" data-title="'+esc(p.n)+'" data-day="'+esc(curDayId||"")+'" aria-label="Añadir '+esc(p.n)+' al calendario">'+svg("calplus",18)+'</button><a class="map ico" href="'+esc(href)+'" target="_blank" rel="noopener" aria-label="Abrir '+esc(p.n)+' en el mapa">'+svg("pin",18)+'</a></div></div></li>';
+ return '<li class="pl pin"><span class="pinn" style="--c:'+CITIES[cid].c1+'">'+(idx+1)+'</span><div><div class="ptap" data-act="pcard" data-pk="'+esc(itemKey(kind,cid,p))+'" data-day="'+esc(curDayId||"")+'"><b>'+esc(p.n)+'</b>'+(p.d?'<p>'+esc(p.d)+'</p>':"")+'</div><div class="pact">'+statSel(itemKey(kind,cid,p))+'<span class="pgap"></span><button type="button" class="agb2" data-act="ev-add" data-pk="'+esc(itemKey(kind,cid,p))+'" data-title="'+esc(p.n)+'" data-day="'+esc(curDayId||"")+'" aria-label="Añadir '+esc(p.n)+' al plan del día">'+svg("calplus",18)+'</button><a class="map ico" href="'+esc(href)+'" target="_blank" rel="noopener" aria-label="Abrir '+esc(p.n)+' en el mapa">'+svg("pin",18)+'</a></div></div></li>';
 }
 function listHead(title,cid,kind){
  return '<div class="lh"><h3 class="lab">'+title+'</h3><button type="button" class="pen" data-act="list" data-city="'+cid+'" data-kind="'+kind+'" aria-label="Editar lista: '+title+'">'+svg("pencil",18)+'</button></div>';
@@ -1341,51 +1342,133 @@ async function saveOrder(){
  if(!same){await setKV("pl:"+c.cid+":"+c.kind,nl.map(function(p){return Object.assign({},p)}));refresh();toast("Orden guardado")}
  openListSheet(c.cid,c.kind);
 }
-function itemDupName(n){var c=listCtx;return !!n&&listOf(c.cid,c.kind).some(function(x){return (!itemEd||x.id!==itemEd.id)&&normName(x.n)===normName(n)})}
+function itemDupName(n){var c=listCtx;return !!n&&!!c&&listOf(c.cid,c.kind).some(function(x){return (!itemEd||x.id!==itemEd.id)&&normName(x.n)===normName(n)})}
 /* Nombre libre para un repetido: «Museo del Prado (2)», (3)… */
 function itemFreeName(n){var base=n.replace(/\s*\(\d+\)$/,""),k=2;while(itemDupName(base+" ("+k+")"))k++;return base+" ("+k+")"}
-function refreshItemDup(){var i=$("#i-n"),w=$("#i-dup");if(!i||!w)return;var n=i.value.trim(),d=itemDupName(n);w.hidden=!d;w.textContent=d?"Ya hay un «"+n+"» en "+listTitle(listCtx.kind)+" de "+nm(listCtx.cid)+". Se guardará como «"+itemFreeName(n)+"».":""}
-function openItemForm(id){
- var c=listCtx,p=id==null?null:listOf(c.cid,c.kind).filter(function(x){return x.id===id})[0]||null;
- itemEd=p;
+function refreshItemDup(){var i=$("#i-n"),w=$("#i-dup");if(!i||!w||!listCtx)return;var n=i.value.trim(),d=itemDupName(n);w.hidden=!d;w.textContent=d?"Ya hay un «"+n+"» en "+listTitle(listCtx.kind)+" de "+nm(listCtx.cid)+". Se guardará como «"+itemFreeName(n)+"».":""}
+/* ================= Formulario único: Qué ver, Comer y Evento =================
+   Siempre los mismos campos y en el mismo orden: Nombre · Descripción (solo sitios) · Enlace de
+   Google Maps · Día · Hora y Nota. Lo que cambia según desde dónde se abra es qué día viene elegido.
+   Por dentro se guarda como antes: el sitio en su lista (pl:ciudad:tipo) y cada día de su plan como
+   un evento con pk (ahí van su hora y su nota); el evento suelto, en events. */
+var fx=null;   // {kind:"see"|"eat"|"ev", cid, p: sitio, pk, ev: visita o evento que se edita, lastDay}
+function placeVisits(pk){return evList().filter(function(e){return e.pk===pk&&dayById(e.day)}).sort(function(a,b){return dayById(a.day).i-dayById(b.day).i})}
+function dayOpt(d,sel){var dy=dayById(d);return '<option value="'+d+'"'+(d===sel?" selected":"")+'>'+esc(cap(shortDay(dy)))+' · '+esc(routeText(dy))+'</option>'}
+/* o: {kind, cid, id: sitio, ev: id del evento o de la visita, day: día desde el que se abre, add: viene elegido ese día} */
+function openForm(o){
+ var isEv=o.kind==="ev",p=null,pk=null,ev=null,sel="",opts;
+ if(isEv){
+  ev=o.ev?evList().filter(function(x){return x.id===o.ev})[0]||null:null;
+  sel=ev?ev.day:(dayById(o.day)?o.day:(calSel&&dayById(calSel)?calSel:DAYS[0].d));
+  listCtx=null;itemEd=null;
+  opts=DAYS.map(function(d){return dayOpt(d.d,sel)}).join("");
+ }else{
+  listCtx={cid:o.cid,kind:o.kind};
+  p=o.id==null?null:listOf(o.cid,o.kind).filter(function(x){return x.id===o.id})[0]||null;itemEd=p;
+  pk=p?itemKey(o.kind,o.cid,p):null;
+  // qué día se edita: el de la visita pedida, el del día desde el que se abre o, desde la lista, el primero
+  var vs=pk?placeVisits(pk):[];
+  ev=(o.ev&&vs.filter(function(e){return e.id===o.ev})[0])||(o.day&&vs.filter(function(e){return e.day===o.day})[0])||(o.add?null:vs[0])||null;
+  sel=ev?ev.day:(o.add&&dayById(o.day)?o.day:"");
+  var ids=DAYS.filter(function(d){return d.stops.indexOf(o.cid)>=0}).map(function(d){return d.d});
+  if(sel&&ids.indexOf(sel)<0)ids.push(sel);
+  opts='<option value="">Sin planear</option>'+ids.map(function(d){return dayOpt(d,sel)}).join("");
+ }
+ fx={kind:o.kind,cid:o.cid,p:p,pk:pk,ev:ev};
+ var also=pk?placeVisits(pk).filter(function(e){return e!==ev}).map(function(e){return shortDay(dayById(e.day))}):[];
+ var note0=ev?ev.note||"":(pk?offNote(pk):"");
  // quitado del mapa con «No es aquí» (y sin enlace con coordenadas): nota + deshacer
- var gk=p?"pl|"+itemKey(c.kind,c.cid,p):"",gn=p&&!coordsOf(p.u)&&geoOf(gk),note=gn&&gn.no?'<div class="bnbox"><p class="adrw">Quitado del mapa («No es aquí»). Pega el enlace de Google Maps del sitio correcto. Si no lo tienes ahora, toca «Más tarde»: no saldrá en el mapa y quedará en Sin ubicar hasta que pegues el enlace.</p><button type="button" class="btn" data-act="geo-undo" data-gk="'+esc(gk)+'">Estaba bien, deshacer</button></div>':"";
- openSheet('<div class="sh-head"><h2 id="sh-title">'+(p?"Editar":"Añadir")+' · '+esc(listTitle(c.kind))+'</h2><button type="button" class="x" data-act="item-back">'+(note?"Más tarde":"Cancelar")+'</button></div>'+note+
- '<div class="field"><label for="i-n">Nombre'+REQ+'</label><input id="i-n" type="text" placeholder="'+(c.kind==="see"?"Ej. Museo del Prado":"Ej. Casa Lucio")+'" value="'+esc(p?p.n:"")+'" autocomplete="off"><p class="locnote warn" id="i-dup" hidden></p></div>'+
- '<div class="field"><label for="i-d">Descripción</label><textarea id="i-d" placeholder="Qué es, qué pedir, horarios...">'+esc(p?p.d:"")+'</textarea></div>'+
- '<div class="field"><label for="i-u">Enlace de Google Maps</label><input id="i-u" type="text" placeholder="Si lo dejas vacío, el mapa busca por nombre" value="'+esc(p?p.u:"")+'" autocomplete="off"></div>'+
- '',
- '<p class="err" id="i-err" role="alert"></p><div class="actions">'+(p?'<button type="button" class="btn danger" data-act="item-del">Eliminar</button>':"")+'<button type="button" class="btn primary" style="--c1:var(--accent)" data-act="item-save">Guardar</button></div>');
+ var gk=p?"pl|"+pk:"",gn=p&&!coordsOf(p.u)&&geoOf(gk),gno=gn&&gn.no?'<div class="bnbox"><p class="adrw">Quitado del mapa («No es aquí»). Pega el enlace de Google Maps del sitio correcto. Si no lo tienes ahora, toca «Más tarde»: no saldrá en el mapa y quedará en Sin ubicar hasta que pegues el enlace.</p><button type="button" class="btn" data-act="geo-undo" data-gk="'+esc(gk)+'">Estaba bien, deshacer</button></div>':"";
+ var title=isEv?(ev?"Editar evento":"Nuevo evento"):(p?"Editar":"Añadir")+' · '+esc(listTitle(o.kind));
+ openSheet('<div class="sh-head"><h2 id="sh-title">'+title+'</h2><button type="button" class="x" data-act="item-back">'+(gno?"Más tarde":"Cancelar")+'</button></div>'+gno+
+  '<div class="field"><label for="i-n">Nombre'+REQ+'</label><input id="i-n" type="text" placeholder="'+(isEv?"Ej. Recoger el paquete":o.kind==="see"?"Ej. Museo del Prado":"Ej. Casa Lucio")+'" value="'+esc(p?p.n:ev?ev.title:(o.title||""))+'" autocomplete="off"><p class="locnote warn" id="i-dup" hidden></p></div>'+
+  (isEv?"":'<div class="field"><label for="i-d">Descripción</label><textarea id="i-d" placeholder="Qué es, qué pedir, horarios...">'+esc(p?p.d:"")+'</textarea></div>')+
+  '<div class="field"><label for="i-u">Enlace de Google Maps</label><input id="i-u" type="text" placeholder="'+(isEv?"Si lo dejas vacío, no sale en el mapa":"Si lo dejas vacío, el mapa busca por nombre")+'" value="'+esc(isEv?(ev&&ev.u||""):(p?p.u:""))+'" autocomplete="off"></div>'+
+  '<div class="field"><label for="i-day">Día'+(isEv?REQ:"")+'</label><select id="i-day">'+opts+'</select>'+
+   (isEv?"":'<p class="foot" id="i-dayhint"'+(sel?" hidden":"")+'>Elige un día para añadirlo a su plan y ponerle hora o nota.</p>')+
+   (also.length?'<p class="foot" id="i-also">También en el plan del '+esc(also.join(", del "))+'</p>':"")+'</div>'+
+  '<div id="i-when"><div class="field"><span class="fl">Hora de inicio y fin</span><div class="timerow">'+timeBox("i-t1",ev&&ev.t1,"Hora de inicio")+'<span>–</span>'+timeBox("i-t2",ev&&ev.t2,"Hora de fin")+'</div></div>'+
+  '<div class="field"><label for="i-note">Nota</label><input id="i-note" type="text" placeholder="'+(isEv?"Ej. Recoger en recepción":"Algo de ese día. Ej. Entrar por la puerta de Goya")+'" value="'+esc(note0)+'" autocomplete="off"></div></div>',
+  '<p class="err" id="i-err" role="alert"></p><div class="actions">'+(p||(isEv&&ev)?'<button type="button" class="btn danger" data-act="item-del">Eliminar</button>':"")+'<button type="button" class="btn primary" style="--c1:var(--accent)" data-act="item-save">Guardar</button></div>');
+ fxWhen();
 }
+/* «Sin planear»: hora y nota son de un día, así que no se pueden rellenar */
+function fxWhen(){
+ var s=$("#i-day"),w=$("#i-when");if(!s||!w)return;var on=!!s.value;
+ w.classList.toggle("fxoff",!on);["i-t1","i-t2","i-note"].forEach(function(id){var el=$("#"+id);if(el)el.disabled=!on});
+ w.querySelectorAll(".tclr").forEach(function(b){b.disabled=!on});
+ var hn=$("#i-dayhint");if(hn)hn.hidden=on;
+}
+async function dropPlanKey(dd,key){var pl0=(kv.plan||{})[dd];if(Array.isArray(pl0)&&pl0.indexOf(key)>=0){var pl=Object.assign({},kv.plan);pl[dd]=pl0.filter(function(k){return k!==key});await setKV("plan",pl)}}
 /* Un doble toque en Guardar creaba dos copias (de un sitio, un evento o un documento nuevo) */
 var saving=false;
 async function once(fn){if(saving)return;saving=true;try{await fn()}finally{saving=false}}
 async function saveItem(){
- var c=listCtx,n=$("#i-n").value.trim(),d=$("#i-d").value.trim(),u=$("#i-u").value.trim();
- if(!n){$("#i-err").textContent="Escribe un nombre.";return}
- if(u&&!/^https?:\/\/\S+$/i.test(u)){$("#i-err").textContent="El enlace debe empezar por https://";return}
- // mismo nombre que otro sitio de la lista: se avisa una vez; tocar Guardar otra vez lo guarda igual
+ var f=fx;if(!f)return;
+ var err=function(t){$("#i-err").textContent=t};
+ var n=$("#i-n").value.trim(),u=$("#i-u").value.trim(),day=$("#i-day").value;
+ var t1=day?$("#i-t1").value||"":"",t2=day?$("#i-t2").value||"":"",note=day?$("#i-note").value.trim():"";
+ if(!n){err(f.kind==="ev"?"Escribe un nombre para el evento.":"Escribe un nombre.");return}
+ if(u&&!/^https?:\/\/\S+$/i.test(u)){err("El enlace debe empezar por https://");return}
+ if(f.kind==="ev"&&!dayById(day)){err("Elige un día.");return}
+ if(t2&&!t1){err("Pon también la hora de inicio.");return}
+ if(t1&&t2&&t2===t1){err("La hora de fin es igual a la de inicio. Si termina al día siguiente, pon la hora real (por ejemplo 01:00).");return}
+ var list=evAll().slice();
+ if(f.kind==="ev"){
+  var ev=f.ev?Object.assign({},f.ev):{id:uid()};
+  ev.title=n;ev.day=day;ev.t1=t1;ev.t2=t2;ev.note=note;
+  if(u)ev.u=u;else delete ev.u;   // u: enlace de Google Maps (campo nuevo opcional)
+  var k=-1;list.forEach(function(x,i){if(x.id===ev.id)k=i});if(k>=0)list[k]=ev;else list.push(ev);
+  await setKV("events",list);calSel=day;refresh();
+  if(!revReturn()){if(f.ev)openEvCard(ev.id);else closeSheet()}
+  toast("Evento guardado");return;
+ }
+ var c=listCtx;
+ if(day&&f.pk&&placeVisits(f.pk).some(function(e){return e!==f.ev&&e.day===day})){err("Ya está en el plan del "+shortDay(dayById(day))+".");return}
  if(itemDupName(n))n=itemFreeName(n);   // repetido: se guarda como «… (2)» (el aviso ya lo dijo mientras se escribía)
+ var d=$("#i-d").value.trim(),id=itemEd?itemEd.id:"u"+Date.now().toString(36);
  var l=listOf(c.cid,c.kind).map(function(x){return {id:x.id,n:x.n,d:x.d,u:x.u||""}});
  if(itemEd){l.forEach(function(x){if(x.id===itemEd.id){x.n=n;x.d=d;x.u=u}})
   if(n!==itemEd.n||u!==(itemEd.u||"")){var gk="pl|"+itemKey(c.kind,c.cid,itemEd);if(kv.geo&&kv.geo[gk]){var g0=Object.assign({},kv.geo);delete g0[gk];await setKV("geo",g0)}delete geoTried[gk]}}
- else l.push({id:"u"+Date.now().toString(36),n:n,d:d,u:u});
- await setKV("pl:"+c.cid+":"+c.kind,l);refresh();if(!revReturn())openListSheet(c.cid,c.kind);toast("Guardado");
+ else l.push({id:id,n:n,d:d,u:u});
+ await setKV("pl:"+c.cid+":"+c.kind,l);
+ // el plan: el nombre del sitio es el de sus visitas (lo que sale en el calendario)
+ var pk=itemKey(c.kind,c.cid,{id:id}),ch=false;
+ list=list.map(function(e){if(e.pk===pk&&e.title!==n){ch=true;return Object.assign({},e,{title:n})}return e});
+ var cur=f.ev?list.filter(function(e){return e.id===f.ev.id})[0]:null;
+ if(cur&&day){list=list.map(function(e){return e===cur?Object.assign({},e,{day:day,t1:t1,t2:t2,note:note}):e});ch=true;if(cur.day!==day)await dropPlanKey(cur.day,"e:"+cur.id)}
+ else if(cur){
+  // «Sin planear»: sale del plan; si tenía nota, queda guardada y escondida (como al quitarlo del plan)
+  list=cur.note?list.map(function(e){return e===cur?Object.assign({},e,{off:1}):e}):list.filter(function(e){return e!==cur});ch=true;
+  await dropPlanKey(cur.day,"e:"+cur.id);
+ }else if(day){
+  var hid=list.filter(function(e){return e.off&&e.pk===pk})[0];   // la nota escondida de cuando se quitó del plan
+  if(hid)list=list.filter(function(e){return e!==hid});
+  var ne=Object.assign({},hid||{id:uid()},{title:n,day:day,t1:t1,t2:t2,note:note,pk:pk});delete ne.off;list.push(ne);ch=true;
+ }
+ if(ch)await setKV("events",list);
+ f.lastDay=day;
+ refresh();if(!revReturn())openListSheet(c.cid,c.kind);toast("Guardado");
 }
 async function deleteItem(){
- var c=listCtx,l=listOf(c.cid,c.kind).filter(function(x){return x.id!==itemEd.id});
- await setKV("pl:"+c.cid+":"+c.kind,l);await delKV(itemKey(c.kind,c.cid,itemEd));refresh();if(!revReturn())openListSheet(c.cid,c.kind);toast("Eliminado");
+ if(fx&&fx.kind==="ev"){await deleteEvent();return}
+ // el sitio y su plan (sus visitas de cada día): es lo mismo
+ var c=listCtx,pk=itemKey(c.kind,c.cid,itemEd),l=listOf(c.cid,c.kind).filter(function(x){return x.id!==itemEd.id});
+ await setKV("pl:"+c.cid+":"+c.kind,l);await delKV(pk);
+ if(evAll().some(function(e){return e.pk===pk}))await setKV("events",evAll().filter(function(e){return e.pk!==pk}));
+ refresh();if(!revReturn())openListSheet(c.cid,c.kind);toast("Eliminado");
 }
+function itemBack(){if(revReturn())return;if(fx&&fx.kind==="ev"){if(fx.ev)openEvCard(fx.ev.id);else closeSheet()}else if(listCtx)openListSheet(listCtx.cid,listCtx.kind);else closeSheet()}
 
 /* ================= Mapa (pestaña Mapa | Lista) =================
    Diseño acordado en PENDIENTES.md → "Diseño del mapa". Puntos: ubicaciones de los documentos
    (unidas por nombre + enlace) y sitios de Qué ver / Comer de cada ciudad. Las coordenadas salen
    de los enlaces largos de Google Maps; el resto queda "Sin ubicar" hasta conectar Google.
    El mapa en sí (Google Maps) está pendiente de la clave: mientras, se ve un aviso y la Lista. */
-var mapState={mode:"list",day:"all",cats:{hotel:1,trans:1,see:1,eat:1,other:1},st:{0:1,1:1,2:1},only:false},mapFrom=null;
-var MCATS=[["hotel","Hoteles"],["trans","Traslados"],["see","Qué ver"],["eat","Comer"],["other","Otros documentos"]];
+var mapState={mode:"list",day:"all",cats:{hotel:1,trans:1,see:1,eat:1,ev:1,other:1},st:{0:1,1:1,2:1},only:false},mapFrom=null;
+var MCATS=[["hotel","Hoteles"],["trans","Traslados"],["see","Qué ver"],["eat","Comer"],["ev","Eventos"],["other","Otros documentos"]];
 /* Filtros (hoja): Logística, Planes y Estado (el estado solo afecta a los sitios de Planes). */
-var MGROUPS={log:["hotel","trans","other"],plan:["see","eat"]},MST_ALL=["0","1","2","3"],MST_DEF=["0","1","2"];
+var MGROUPS={log:["hotel","trans","other"],plan:["see","eat","ev"]},MST_ALL=["0","1","2","3"],MST_DEF=["0","1","2"];
 function mapCatsIs(l){var k=Object.keys(mapState.cats);return k.length===l.length&&l.every(function(c){return mapState.cats[c]})}
 function mapStIs(l){var k=Object.keys(mapState.st);return k.length===l.length&&l.every(function(x){return mapState.st[x]})}
 function mapFiltered(){return !mapCatsIs(MGROUPS.log.concat(MGROUPS.plan))||!mapStIs(MST_DEF)}
@@ -1435,6 +1518,12 @@ function mapPoints(){
    evs.forEach(function(e){p.refs.push({day:e.day,t:e.t1||"",k:"e:"+e.id,ev:e.id})});
   })});
  });
+ // eventos sueltos con enlace de Google Maps: salen en el mapa su día
+ evList().forEach(function(e){
+  if(e.pk&&placeByKey(e.pk))return;var u=e.u&&/^https?:\/\//i.test(e.u)?e.u:"",dy=dayById(e.day);if(!u||!dy)return;
+  var p=add("ev|"+e.id,{kind:"event",cat:"ev",ev:e.id,name:e.title,url:u,city:dy.base,cities:[dy.base],ll:coordsOf(u),docIds:[],evIds:[e.id],days:{},refs:[]});
+  p.days[e.day]=1;p.refs.push({day:e.day,t:e.t1||"",k:"e:"+e.id,ev:e.id});
+ });
  applyGeo(list);
  return list;
 }
@@ -1444,6 +1533,7 @@ function mapVisible(list){
   if(!mapState.cats[p.cat])return false;
   if(mapState.day!=="all"&&(!dd||!p.days[dd]))return false;
   if(p.kind==="place")return !!mapState.st[kv[p.pk]||0];
+  if(p.kind==="event"){var e=evList().filter(function(x){return x.id===p.ev})[0];return !!mapState.st[e&&e.st||0]}
   return true;   // los documentos no tienen estado
  });
 }
@@ -1500,7 +1590,7 @@ function planRow(x,num){
  if(x.free)return planFreeRow(x,num);
  var p=x.p,tm=tmin(x.t)!=null,sub=[tm?x.t:"Sin hora"];
  if(x.doc){var d=docs.filter(function(y){return y.id===x.doc})[0];if(d)sub.push(d.title||(TYPES[d.type]||TYPES.otro).l)}
- else sub.push(listTitle(p.cat));
+ else sub.push(p.kind==="event"?"Evento":listTitle(p.cat));
  if(x.ev){var ne=evList().filter(function(e){return e.id===x.ev})[0];if(ne&&ne.note)sub.push("Nota: "+ne.note)}
  return '<li class="pl mrow tap'+(tm?"":" ord")+'" data-act="mcard" data-id="'+p.id+'" data-k="'+esc(x.k)+'"><span class="adri mnum'+(p.ll?"":" un")+'" style="--t:'+mapColor(p)+'">'+num+'</span><div class="adrt"><b>'+esc(p.name)+'</b><p>'+esc(sub.join(" · "))+'</p>'+(p.ll?"":'<p class="adrw">Sin ubicar</p>')+'</div>'+
   (tm?'<span class="ptm" aria-label="Con hora: va en su hora">'+svg("clock",17)+'</span>':'<span class="hdl" data-act="hdl" role="button" aria-label="Mover '+esc(p.name)+'">'+svg("grip",20)+'</span>')+'</li>';
@@ -1516,7 +1606,6 @@ async function planToggle(pk,dd){
  var lp=placeByKey(pk);if(!lp||!dayById(dd))return;
  var evs=planEvs(pk,dd),list=evAll().slice(),dy=dayById(dd);
  if(evs.length){
-  if(evs.some(function(e){return e.t1}))return;   // con hora: se cambia desde el calendario
   var gone={};evs.forEach(function(e){gone["e:"+e.id]=1});
   list=list.filter(function(e){return !(!e.off&&e.pk===pk&&e.day===dd&&!e.note)}).map(function(e){if(!e.off&&e.pk===pk&&e.day===dd)return Object.assign({},e,{off:1});return e});
   await setKV("events",list);
@@ -1524,7 +1613,7 @@ async function planToggle(pk,dd){
  }else{
   // si tenía un evento escondido con nota (se quitó del plan), vuelve ese, en este día
   var hid=list.filter(function(e){return e.off&&e.pk===pk})[0];
-  if(hid){var c0=Object.assign({},hid,{day:dd});delete c0.off;list=list.filter(function(e){return e!==hid});list.push(c0)}   // al final: es lo último añadido
+  if(hid){var c0=Object.assign({},hid,{day:dd,t1:"",t2:""});delete c0.off;list=list.filter(function(e){return e!==hid});list.push(c0)}   // al final: es lo último añadido
   else list.push({id:uid(),title:lp.p.n,day:dd,t1:"",t2:"",note:"",pk:pk});
   await setKV("events",list);toast("Añadido al plan del "+shortDay(dy));
  }
@@ -1537,13 +1626,13 @@ function openPlanPicker(){
   var l=listOf(cid,kind);if(!l.length)return;
   h+='<section class="adrg"><h3 class="lab">'+esc(listTitle(kind))+(dy.stops.filter(hasInfo).length>1?" · "+esc(nm(cid)):"")+'</h3><ul class="rows">'+l.map(function(it){
    var pk=itemKey(kind,cid,it),evs=planEvs(pk,dd),tm=evs.filter(function(e){return e.t1})[0],on=evs.length>0;
-   return '<li class="pl"><button type="button" class="ppick" data-act="plan-pick" data-pk="'+esc(pk)+'" aria-pressed="'+on+'"'+(tm?" disabled":"")+'><span class="mchk">'+(on?svg("check",16):"")+'</span><span><b>'+esc(it.n)+'</b>'+(tm?'<small>Con hora ('+esc(tm.t1)+'): se cambia en el calendario</small>':"")+'</span></button></li>'}).join("")+'</ul></section>';
+   return '<li class="pl"><button type="button" class="ppick" data-act="plan-pick" data-pk="'+esc(pk)+'" aria-pressed="'+on+'"><span class="mchk">'+(on?svg("check",16):"")+'</span><span><b>'+esc(it.n)+'</b>'+(tm?'<small>A las '+esc(tm.t1)+'</small>':"")+'</span></button></li>'}).join("")+'</ul></section>';
  })});
  openSheet('<div class="sh-head"><h2 id="sh-title">Añadir al plan · '+esc(shortDay(dy))+'</h2><button type="button" class="x" data-act="close">Listo</button></div>'+
-  '<p class="foot" style="margin:0">Se añade sin hora y lo ordenas arrastrando en el plan. Si le pones hora (en el calendario), va en su hora.</p>'+(h||'<p class="foot">Este día no tiene sitios de Qué ver ni Comer.</p>'));
+  '<p class="foot" style="margin:0">Se añade sin hora y lo ordenas arrastrando en el plan. Si le pones hora (con el lápiz de su ficha), va en su hora.</p>'+(h||'<p class="foot">Este día no tiene sitios de Qué ver ni Comer.</p>'));
 }
-function mapColor(p){return p.kind==="place"?MCOL[p.cat]:(TYPES[p.type]||TYPES.otro).t}
-function mapIcon(p){return p.kind==="place"?MICO[p.cat]:(TYPE_ICON[p.type]||"file")}
+function mapColor(p){return p.kind==="place"?MCOL[p.cat]:p.kind==="event"?colOf("evento"):(TYPES[p.type]||TYPES.otro).t}
+function mapIcon(p){return p.kind==="place"?MICO[p.cat]:p.kind==="event"?"cal":(TYPE_ICON[p.type]||"file")}
 /* Abrir en Maps: el enlace del usuario manda siempre (lo encontrado por nombre solo pone el punto) */
 function mapHref(p){if(p.url)return p.url;if(p.pid)return gmap(p.name)+"&query_place_id="+encodeURIComponent(p.pid);return gmap(p.name+(p.city?", "+nm(p.city):""))}
 /* Cómo llegar: con coordenadas de su enlace, la ruta a ese punto; con un enlace sin coordenadas
@@ -1565,6 +1654,7 @@ function dayAnchors(dd,list){
  return out.sort(function(a,b){return (a.p.cat==="hotel"?0:1)-(b.p.cat==="hotel"?0:1)}).slice(0,3);
 }
 function mapSub(p){
+ if(p.kind==="event"){var e=evList().filter(function(x){return x.id===p.ev})[0];if(!e)return "Evento";var edy=dayById(e.day),eo=["Evento"];if(e.st)eo.push(STATUS[e.st]);if(edy)eo.push(cap(shortDay(edy))+(e.t1?" "+e.t1:""));return eo.join(" · ")}
  if(p.kind==="doc")return p.docIds.map(function(id){var d=docs.filter(function(x){return x.id===id})[0];return d?(d.title||(TYPES[d.type]||TYPES.otro).l):""}).filter(Boolean).join(" · ");
  var s=kv[p.pk]||0,o=[listTitle(p.cat)],on=offNote(p.pk);if(s)o.push(STATUS[s]);if(on&&!p.evIds.length)o.push("Nota: "+on);
  p.evIds.forEach(function(id){var e=evList().filter(function(x){return x.id===id})[0];var dy=e&&dayById(e.day);if(dy)o.push(cap(shortDay(dy))+(e.t1?" "+e.t1:""))});
@@ -1572,6 +1662,7 @@ function mapSub(p){
 }
 function unlocWhy(p){
  if(p.kind==="doc")return isShortMaps(p.url)?"el enlace es corto y no trae la ubicación exacta. Ábrelo en Safari, copia la dirección larga de la barra y pégala en el documento.":p.url?"el enlace no trae coordenadas. Pega el enlace largo de Google Maps en el documento.":"no tiene enlace de Google Maps. Pégalo en el documento.";
+ if(p.kind==="event")return isShortMaps(p.url)?"el enlace es corto y no trae la ubicación exacta. Ábrelo en Safari, copia la dirección larga de la barra y pégala en el evento.":"el enlace no trae coordenadas. Pega el enlace largo de Google Maps en el evento.";
  var g=geoOf(p.gk);
  if(g&&g.no)return "lo quitaste del mapa («No es aquí»). Pega su enlace largo de Google Maps en la lista.";
  if(!GM_ON||gFail)return p.url?"el enlace no trae coordenadas.":"no tiene enlace de Google Maps.";
@@ -1581,22 +1672,22 @@ function unlocWhy(p){
 var revBack=false;   // a dónde volver al guardar o cancelar la edición (Revisar ubicaciones o el mapa)
 function revReturn(){if(!revBack)return false;var f=revBack;revBack=false;f();return true}
 function revEdit(b){
- revBack=openReview;
- if(b.dataset.doc){openDocSheet({id:b.dataset.doc});return}
- var lp=placeByKey(b.dataset.pk);if(!lp){revBack=false;return}
- listCtx={cid:lp.cid,kind:lp.kind};openItemForm(lp.p.id);
+ if(b.dataset.doc){revBack=openReview;openDocSheet({id:b.dataset.doc});return}
+ if(b.dataset.ev){openForm({kind:"ev",ev:b.dataset.ev});revBack=openReview;return}
+ var lp=placeByKey(b.dataset.pk);if(!lp)return;
+ openForm({kind:lp.kind,cid:lp.cid,id:lp.p.id,day:mapDayId()});revBack=openReview;
 }
 function reviewRow(p,why,num){
- var act=p.kind==="doc"?'data-act="rev-edit" data-doc="'+esc(p.docIds[0])+'"':'data-act="rev-edit" data-pk="'+esc(p.pk)+'"';
+ var act=p.kind==="doc"?'data-act="rev-edit" data-doc="'+esc(p.docIds[0])+'"':p.kind==="event"?'data-act="rev-edit" data-ev="'+esc(p.ev)+'"':'data-act="rev-edit" data-pk="'+esc(p.pk)+'"';
  return '<li class="pl mrow tap" '+act+'><span class="adri'+(num?" mnum":"")+(num&&!p.ll?" un":"")+'" style="--t:'+mapColor(p)+'">'+(num?num:svg(mapIcon(p),18))+'</span><div class="adrt"><b>'+esc(p.name)+'</b><p>'+esc(why)+'</p></div><span class="pen" aria-hidden="true">'+svg("pencil",17)+'</span></li>';
 }
 function openReview(){
- var all=mapPoints(),vis=mapShown(all),dd=mapDayId(),dy=dayById(dd),nums=mapNumbers(all),inPlan=[],seen={};
+ var all=mapPoints(),vis=mapShown(all),dd=mapDayId(),dy=dayById(dd),nums=mapNumbers(all),inPlan=[],seen={};revBack=false;
  // lo del plan del día sin ubicar o ubicado por nombre va primero: es lo que más importa revisar
  dayPlan(dd,all).forEach(function(x){var p=x.p;if(!p||seen[p.id])return;seen[p.id]=1;if(!p.ll||p.geo)inPlan.push(p)});
  var rest=function(p){return inPlan.indexOf(p)<0};
  var un=vis.filter(function(p){return !p.ll&&rest(p)}),bn=vis.filter(function(p){return p.geo&&rest(p)});
- var why=function(p){var g=geoOf(p.gk);return p.kind==="doc"?(isShortMaps(p.url)?"Enlace corto":p.url?"Enlace sin coordenadas":"Sin enlace"):((g&&g.no?"Quitado del mapa":"No encontrado por nombre")+" · "+listTitle(p.cat)+(p.city?" · "+nm(p.city):""))};
+ var why=function(p){var g=geoOf(p.gk);return p.kind!=="place"?(isShortMaps(p.url)?"Enlace corto":p.url?"Enlace sin coordenadas":"Sin enlace"):((g&&g.no?"Quitado del mapa":"No encontrado por nombre")+" · "+listTitle(p.cat)+(p.city?" · "+nm(p.city):""))};
  openSheet('<div class="sh-head"><h2 id="sh-title">Revisar ubicaciones</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+
   (inPlan.length?'<section class="adrg"><h3 class="lab">En el plan del '+esc(shortDay(dy))+' <small>'+inPlan.length+'</small></h3><ul class="rows">'+inPlan.map(function(p){return reviewRow(p,p.ll?"Ubicado por su nombre: comprueba que esté bien":"Sin ubicar · "+why(p),nums[p.id])}).join("")+'</ul></section>':"")+
   (un.length?'<section class="adrg"><h3 class="lab">Sin ubicar <small>'+un.length+'</small></h3><p class="foot" style="margin:0 0 8px">Para que salgan en el mapa, pega su enlace largo de Google Maps. Si tienes uno corto: ábrelo en Safari y copia la dirección de la barra.</p><ul class="rows">'+un.map(function(p){return reviewRow(p,why(p))}).join("")+'</ul></section>':"")+
@@ -1659,7 +1750,7 @@ function renderMap(){
     (dy.stops.some(hasInfo)?'<div><button type="button" class="mini" data-act="plan-add">'+svg("plus",14)+'Añadir sitio</button></div>':"")+'</section>';
   }
   vis.forEach(function(p){if(nums[p.id]||(dy&&hotIds[p.id]))return;var k=p.city&&order.indexOf(p.city)>=0?p.city:"_";(groups[k]=groups[k]||[]).push(p)});
-  var co={hotel:0,trans:1,other:2,see:3,eat:4};
+  var co={hotel:0,trans:1,other:2,see:3,eat:4,ev:5};
   var keys=order.filter(function(k){return groups[k]}).concat(groups._?["_"]:[]);
   body=keys.map(function(k){var g=groups[k].sort(function(a,b){var na=nums[a.id]||1e3,nb=nums[b.id]||1e3;return na-nb||co[a.cat]-co[b.cat]||a.name.localeCompare(b.name)});
    return '<section class="adrg"><h3 class="lab">'+(dy?"Más en ":"")+(k==="_"?"Sin ciudad definida":esc(nm(k)))+' <small>'+g.length+'</small></h3><ul class="rows">'+g.map(function(p){return mapRow(p,nums[p.id])}).join("")+'</ul></section>'}).join("")||(ph?"":'<p class="foot">Nada con estos filtros.</p>');
@@ -1681,9 +1772,20 @@ function renderMap(){
  if(!isMap&&$("#m-plan"))bindReorder($("#m-plan"),savePlan,true);
  geoRun(all);   // ubica por nombre lo que falte (con internet y con Google conectado)
 }
-function openMapCard(id){
- var all=mapPoints(),p=all.filter(function(x){return x.id===id})[0];if(!p)return;
- var dd=mapDayId()||inTripToday(),h=vType(mapIcon(p),mapColor(p),p.kind==="place"?listTitle(p.cat):(TYPES[p.type]||TYPES.otro).l,p.city?nm(p.city):"");
+/* Ficha única de Qué ver, Comer y Evento (y de los documentos del mapa). Arriba, la cosa: tipo,
+   ciudad, descripción, dónde y estado; debajo, el día desde el que se mira (hora y nota). */
+var cardDay=null;
+function openMapCard(id,dd0){var all=mapPoints(),p=all.filter(function(x){return x.id===id})[0];if(p)showCard(p,all,dd0)}
+function openPlaceCard(pk,dd){var all=mapPoints(),q=all.filter(function(x){return x.gk==="pl|"+pk})[0];if(q)showCard(q,all,dd);else closeSheet()}
+function visitBlock(lab,e){
+ return vField(lab,(vTimes("evento",e.t1,e.t2)||'<p class="vtxt" style="margin:0">Sin hora</p>'))+(e.note?vField("Nota",'<p class="vtxt" style="margin:0">'+esc(e.note)+'</p>'):"");
+}
+function showCard(p,all,dd0){
+ var dd=dd0||mapDayId()||inTripToday(),e=p.kind==="event"?evList().filter(function(x){return x.id===p.ev})[0]:null;if(p.kind==="event"&&!e){closeSheet();return}
+ cardDay=dd;
+ var lp=p.kind==="place"?placeByKey(p.pk):null;
+ var h=vType(mapIcon(p),mapColor(p),p.kind==="place"?listTitle(p.cat):p.kind==="event"?"Evento":(TYPES[p.type]||TYPES.otro).l,p.city?nm(p.city):"");
+ if(lp&&lp.p.d)h+='<p class="vtxt" style="margin:0">'+esc(lp.p.d)+'</p>';
  if(p.ll){
   var an=dayAnchors(dd,all).filter(function(a){return a.p!==p});
   // a más de 3 km no se pone tiempo a pie (nadie va andando): solo la distancia en línea recta
@@ -1691,23 +1793,28 @@ function openMapCard(id){
   if(an.length)h+='<ul class="mdist">'+an.map(function(a,i){var km=distKm(p.ll,a.p.ll),w=km<=WALK_KM;return '<li>'+svg(w?"clock":"pin",15)+'<span><b><span class="dk" data-i="'+i+'">'+distText(km)+'</span> '+esc(a.l)+'</b>'+(w?' · <span class="wk" data-i="'+i+'">≈ '+walkText(walkMin(km))+' a pie</span>':"")+'</span></li>'}).join("")+'</ul>'+
    '<p class="foot" style="margin:0">'+(anyW?'<span id="md-note">Estimado en línea recta'+(isOnline()?"":" (sin internet)")+'.</span>':"")+(anyF?(anyW?" ":"")+"A más de 3 km, solo la distancia aproximada.":"")+'</p>';
   if(p.geo)h+='<div class="bnbox"><p class="adrw">Ubicado buscando el nombre: puede no ser exacto.</p><button type="button" class="btn" data-act="geo-no" data-gk="'+esc(p.gk)+'" data-pk="'+esc(p.pk)+'" data-id="'+p.id+'">No es aquí</button></div>';
- }else{h+='<p class="adrw" style="align-self:flex-start">Sin ubicar: '+unlocWhy(p)+'</p>';
+ }else if(!p.free){h+='<p class="adrw" style="align-self:flex-start">Sin ubicar: '+unlocWhy(p)+'</p>';
   var gq=p.kind==="place"&&geoOf(p.gk);
   if(gq&&gq.no)h+='<div><button type="button" class="btn" data-act="geo-undo" data-gk="'+esc(p.gk)+'">'+(gq.prev?"Volver a ponerlo donde estaba":"Volver a buscarlo por su nombre")+'</button></div>';
  }
  if(p.kind==="place")h+=vField("Estado",statSel(p.pk));
+ if(e)h+=vField("Estado",statSel("",e.id,e.st));
  var pdy=dayById(dd);
- if(p.kind==="place"&&pdy&&p.city&&pdy.stops.indexOf(p.city)>=0){
-  var pev=planEvs(p.pk,dd),ptm=pev.filter(function(e){return e.t1})[0];
-  h+=ptm?'<p class="foot" style="margin:0">En el plan del '+esc(shortDay(pdy))+' a las '+esc(ptm.t1)+' (la hora se cambia en el calendario).</p>'
-   :'<div><button type="button" class="btn'+(pev.length?"":" primary")+'" style="--c1:var(--accent)" data-act="plan-one" data-pk="'+esc(p.pk)+'" data-day="'+dd+'">'+(pev.length?"Quitar del plan del "+esc(shortDay(pdy)):svg("plus",18)+"Añadir al plan del "+esc(shortDay(pdy)))+'</button></div>';
+ if(e){var edy=dayById(e.day);if(edy)h+=visitBlock(esc(cap(shortDay(edy)))+' · '+esc(routeText(edy)),e)}
+ if(p.kind==="place"){
+  var pev=pdy&&p.city&&pdy.stops.indexOf(p.city)>=0?planEvs(p.pk,dd):null;
+  if(pev&&pev.length)h+=visitBlock("En el plan del "+esc(shortDay(pdy)),pev[0]);
+  else{var onx=!p.evIds.length&&offNote(p.pk);if(onx)h+=vField("Nota",'<p style="margin:0">'+esc(onx)+'</p><p class="foot" style="margin:4px 0 0">Del plan del que lo quitaste. Se puede editar si vuelves a añadirlo al plan.</p>')}
+  if(pev)h+='<div><button type="button" class="btn'+(pev.length?"":" primary")+'" style="--c1:var(--accent)" data-act="plan-one" data-pk="'+esc(p.pk)+'" data-day="'+dd+'">'+(pev.length?"Quitar del plan del "+esc(shortDay(pdy)):svg("plus",18)+"Añadir al plan del "+esc(shortDay(pdy)))+'</button></div>';
+  // los otros días de su plan, solo como información
+  var oth=placeVisits(p.pk).filter(function(x){return !(pev&&pev.length&&x===pev[0])}).map(function(x){return shortDay(dayById(x.day))});
+  if(oth.length)h+='<p class="foot" style="margin:0">'+(pev&&pev.length?"También en el plan del ":"En el plan del ")+esc(oth.join(", del "))+'</p>';
  }
  if(p.docIds.length)h+=vField(p.docIds.length>1?"Documentos":"Documento",'<ul class="adru">'+p.docIds.map(function(did){var d=docs.filter(function(x){return x.id===did})[0];if(!d)return "";var dy=dayById(d.dayId);return '<li><button type="button" class="mini" data-act="view" data-id="'+d.id+'">'+esc(d.title||(TYPES[d.type]||TYPES.otro).l)+(dy?' · '+esc(shortDay(dy)):"")+'</button></li>'}).join("")+'</ul>');
- var onx=p.kind==="place"&&!p.evIds.length&&offNote(p.pk);
- if(onx)h+=vField("Nota",'<p style="margin:0">'+esc(onx)+'</p><p class="foot" style="margin:4px 0 0">Del plan del que lo quitaste. Se puede editar si vuelves a añadirlo al plan.</p>');
- if(p.evIds.length)h+=vField("En el calendario",'<ul class="adru">'+p.evIds.map(function(eid){var e=evList().filter(function(x){return x.id===eid})[0];var dy=e&&dayById(e.day);return e?'<li><button type="button" class="mini" data-act="ev-view" data-id="'+e.id+'">'+esc(dy?cap(shortDay(dy)):"")+(e.t1?' · '+esc(e.t1):"")+'</button></li>':""}).join("")+'</ul>');
- openSheet('<div class="sh-head"><h2 id="sh-title">'+esc(p.name)+'</h2>'+'<div class="sh-acts">'+(p.kind==="place"?'<button type="button" class="pen" data-act="mc-edit" data-pk="'+esc(p.pk)+'" data-gk="'+esc(p.gk)+'" aria-label="Editar '+esc(p.name)+'">'+svg("pencil",17)+'</button>':"")+'<button type="button" class="x" data-act="close">Cerrar</button></div></div>'+h,
-  '<div class="actions"><a class="btn" href="'+esc(mapHref(p))+'" target="_blank" rel="noopener">Abrir en Maps</a><a class="btn primary" style="--c1:var(--accent)" href="'+esc(dirHref(p))+'" target="_blank" rel="noopener">Cómo llegar</a></div>');
+ var pen=p.kind==="place"?'<button type="button" class="pen" data-act="mc-edit" data-pk="'+esc(p.pk)+'" data-day="'+esc(dd||"")+'" aria-label="Editar '+esc(p.name)+'">'+svg("pencil",17)+'</button>'
+  :e?'<button type="button" class="pen" data-act="mc-edit" data-ev="'+esc(e.id)+'" aria-label="Editar '+esc(e.title)+'">'+svg("pencil",17)+'</button>':"";
+ openSheet('<div class="sh-head"><h2 id="sh-title">'+esc(e?e.title:p.name)+'</h2>'+'<div class="sh-acts">'+pen+'<button type="button" class="x" data-act="close">Cerrar</button></div></div>'+h,
+  p.free?"":'<div class="actions"><a class="btn" href="'+esc(mapHref(p))+'" target="_blank" rel="noopener">Abrir en Maps</a><a class="btn primary" style="--c1:var(--accent)" href="'+esc(dirHref(p))+'" target="_blank" rel="noopener">Cómo llegar</a></div>');
  // con internet, el tiempo a pie real de Google reemplaza al estimado
  var tok=++cardTok;   // si se abre otra tarjeta antes de que llegue la respuesta, no se escribe en ella
  if(GM_ON&&!gFail&&isOnline()&&p.ll){var an2=dayAnchors(dd,all).filter(function(a){return a.p!==p});
@@ -1742,20 +1849,27 @@ function loadGM(){
 var GEO_DAYS=30,geoTried={},geoBusy=false;
 function geoOf(k){var g=kv.geo&&kv.geo[k];return g||null}
 function geoFresh(g){return !!g&&Date.now()-(g.t||0)<GEO_DAYS*864e5}
-function applyGeo(list){list.forEach(function(p){if(p.ll||p.kind==="doc")return;var g=geoOf(p.gk);if(g&&g.no)return;if(geoFresh(g)&&g.ll){p.ll=g.ll;p.pid=g.pid||"";p.geo=true}})}
+function applyGeo(list){list.forEach(function(p){if(p.ll||p.kind!=="place")return;var g=geoOf(p.gk);if(g&&g.no)return;if(geoFresh(g)&&g.ll){p.ll=g.ll;p.pid=g.pid||"";p.geo=true}})}
 /* «No es aquí»: el sitio queda sin ubicar (y no se vuelve a buscar) hasta que se le pegue un enlace */
 async function geoNo(gk,pk,id){
  // se guarda el punto que tenía (prev) para poder deshacerlo sin volver a buscarlo
  var geo=Object.assign({},kv.geo||{}),old=geo[gk];geo[gk]={no:1,t:Date.now()};if(old&&old.ll)geo[gk].prev=old;await setKV("geo",geo);
  if(view==="map")renderMap();
  var lp=placeByKey(pk);if(!lp){closeSheet();toast("Quitado del mapa");return}
- listCtx={cid:lp.cid,kind:lp.kind};openItemForm(lp.p.id);
+ var dd=cardDay;openForm({kind:lp.kind,cid:lp.cid,id:lp.p.id,day:dd});
  // al guardar, deshacer o «Más tarde», de vuelta a la tarjeta (buscada por su clave: si se eliminó, se cierra)
- revBack=backToCard(gk);
+ revBack=backToCard(gk,dd);
 }
 /* Volver a la tarjeta de un sitio buscándolo por su clave (los ids cambian al redibujar; si ya no existe, se cierra) */
-function backToCard(gk){return function(){var q=mapPoints().filter(function(x){return x.gk===gk})[0];if(q)openMapCard(q.id);else closeSheet()}}
-function cardEdit(b){var lp=placeByKey(b.dataset.pk);if(!lp)return;listCtx={cid:lp.cid,kind:lp.kind};openItemForm(lp.p.id);revBack=backToCard(b.dataset.gk)}
+function backToCard(gk,dd){return function(){var q=mapPoints().filter(function(x){return x.gk===gk})[0];if(q)openMapCard(q.id,dd);else closeSheet()}}
+/* Lápiz de la ficha: el formulario único, en el día de la ficha; al guardar o cancelar, de vuelta a la ficha
+   (en el día que haya quedado elegido) */
+function cardEdit(b){
+ if(b.dataset.ev){var eid=b.dataset.ev;openForm({kind:"ev",ev:eid});revBack=function(){openEvCard(eid)};return}
+ var pk=b.dataset.pk,dd=b.dataset.day||"",lp=placeByKey(pk);if(!lp)return;
+ openForm({kind:lp.kind,cid:lp.cid,id:lp.p.id,day:dd});var f=fx;
+ revBack=function(){openPlaceCard(pk,f.lastDay||dd)};
+}
 /* Deshacer «No es aquí»: vuelve al punto de antes; si no se guardó (quitado antes de esto), se busca otra vez */
 async function geoUndo(gk){
  var geo=Object.assign({},kv.geo||{}),g=geo[gk];
@@ -2123,7 +2237,7 @@ function confirmTap(b,msg,fn){
  tapArm={el:b,txt:b.textContent,t:setTimeout(function(){if(tapArm&&tapArm.el===b){b.textContent=tapArm.txt;b.classList.remove("armed");tapArm=null}},4000)};
  b.textContent=msg;b.classList.add("armed");
 }
-var calTab="dias",calSel=null,curDayId=null,calScrolled=false,evEditing=null,evPk=null;   // evPk: sitio del que sale el evento nuevo (📅+)
+var calTab="dias",calSel=null,curDayId=null,calScrolled=false,evEditing=null;
 /* evAll: todos los eventos guardados; evList: los que se ven. Un evento con nota que se quitó del
    plan queda guardado y escondido (off, campo nuevo opcional) para recuperar la nota si vuelve. */
 function evAll(){return Array.isArray(kv.events)?kv.events:[]}
@@ -2168,6 +2282,7 @@ function agendaOf(day){
   if(a.e>a.s&&b.e>b.s)hit=a.s<b.e&&b.s<a.e;
   else if(a.e>a.s)hit=a.s<b.s&&b.s<a.e;
   else if(b.e>b.s)hit=b.s<a.s&&a.s<b.e;
+  else hit=a.s===b.s;   // dos cosas sin hora de fin a la misma hora
   if(hit){timed[i].clash=true;timed[j].clash=true}
  }
  return {top:top,timed:timed,un:un,seq:seq,all:items,planN:planN};
@@ -2212,44 +2327,20 @@ function renderCal(){
  V.cal.innerHTML='<div class="in"><div class="page-h chd"><div><h1>Calendario</h1><p>Qué hay cada día, con horas.</p></div><button type="button" class="btn primary" data-act="ev-add" data-day="'+(calTab==="mes"?calSel:(dayById(todayStr())?todayStr():calSel))+'">'+svg("plus",18)+'Evento</button></div>'+
   '<div class="seg"><div class="trk" role="tablist">'+[["dias","Días"],["mes","Mes"]].map(function(t){return '<button type="button" role="tab" class="tab" data-act="ctab" data-v="'+t[0]+'" aria-selected="'+(calTab===t[0])+'">'+t[1]+'</button>'}).join("")+'</div></div>'+body+'<div style="height:24px"></div></div>';
 }
-function openEventSheet(o){
- var e=o.id?evList().filter(function(x){return x.id===o.id})[0]:null;evEditing=e||null;
- evPk=e?(e.pk||null):(o.pk&&placeByKey(o.pk)?o.pk:null);var lp=placeByKey(evPk);
- var day=e?e.day:(dayById(o.day)?o.day:(calSel&&dayById(calSel)?calSel:DAYS[0].d));
- openSheet('<div class="sh-head"><h2 id="sh-title">'+(e?"Editar evento":"Nuevo evento")+'</h2>'+(e?'<button type="button" class="x" data-act="ev-view" data-id="'+esc(e.id)+'">Cancelar</button>':'<button type="button" class="x" data-act="close">Cancelar</button>')+'</div>'+
- '<div class="field"><label for="e-title">Nombre'+REQ+'</label><input id="e-title" type="text" placeholder="Ej. Visita a Plaza de España" value="'+esc(e?e.title:(o.title||""))+'" autocomplete="off"></div>'+
- '<div class="field"><label for="e-day">Día'+REQ+'</label><select id="e-day">'+DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===day?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'</select></div>'+
- '<div class="field"><span class="fl">Hora de inicio y fin</span><div class="timerow">'+timeBox("e-t1",e&&e.t1,"Hora de inicio")+'<span>–</span>'+timeBox("e-t2",e&&e.t2,"Hora de fin")+'</div></div>'+
- '<div class="field"><label for="e-note">Nota o lugar</label><input id="e-note" type="text" placeholder="Ej. Entrada por la puerta principal" value="'+esc(e&&e.note||"")+'" autocomplete="off"></div>'+
- '',
- '<p class="err" id="e-err" role="alert"></p><div class="actions">'+(e?'<button type="button" class="btn danger" data-act="ev-del">Eliminar</button>':"")+'<button type="button" class="btn primary" style="--c1:var(--accent)" data-act="ev-save">Guardar</button></div>');
-}
-function openEventView(id){
+/* Ficha de un evento: si es la visita de un sitio, la del sitio en ese día; si tiene enlace, la de su
+   punto del mapa; si no, la misma ficha sin la parte del mapa */
+function openEvCard(id){
  var e=evList().filter(function(x){return x.id===id})[0];if(!e){closeSheet();return}
- evEditing=null;
- var dy=dayById(e.day),h=vType("cal","var(--accent)","Evento",dy?cap(shortDay(dy))+" · "+routeText(dy):"");
- h+=vTimes("evento",e.t1,e.t2);
- var lp=placeByKey(e.pk);if(lp)h+=vField("Lugar",'<div class="loc"><span>'+esc(lp.p.n)+'</span>'+mapBtn(lp.p.u&&/^https?:\/\//i.test(lp.p.u)?lp.p.u:mapUrl(lp.p.n,lp.cid))+'</div>');
- if(e.note)h+='<div class="field"><span class="fl">Nota o lugar</span><p class="vtxt">'+esc(e.note)+'</p></div>';
- openSheet('<div class="sh-head"><h2 id="sh-title">'+esc(e.title)+'</h2><button type="button" class="x" data-act="close">Cerrar</button></div>'+h,
-  '<div class="actions"><button type="button" class="btn primary" style="--c1:var(--accent)" data-act="ev-edit" data-id="'+esc(e.id)+'">Editar</button></div>');
+ if(e.pk&&placeByKey(e.pk)){openPlaceCard(e.pk,e.day);return}
+ var all=mapPoints(),q=all.filter(function(x){return x.gk==="ev|"+id})[0];
+ if(q){showCard(q,all,e.day);return}
+ var dy=dayById(e.day);
+ showCard({kind:"event",cat:"ev",ev:e.id,name:e.title,url:"",city:dy?dy.base:null,ll:null,docIds:[],evIds:[e.id],days:{},refs:[],gk:"ev|"+e.id,free:true},all,e.day);
 }
-async function saveEvent(){
- var title=$("#e-title").value.trim(),t1=$("#e-t1").value||"",t2=$("#e-t2").value||"";
- if(!title){$("#e-err").textContent="Escribe un nombre para el evento.";return}
- if(t2&&!t1){$("#e-err").textContent="Pon también la hora de inicio.";return}
- if(t1&&t2&&t2===t1){$("#e-err").textContent="La hora de fin es igual a la de inicio. Si termina al día siguiente, pon la hora real (por ejemplo 01:00).";return}
- var list=evAll().slice(),ev=evEditing?Object.assign({},evEditing):{id:uid()};
- ev.title=title;ev.day=$("#e-day").value;ev.t1=t1;ev.t2=t2;ev.note=$("#e-note").value.trim();
- if(evPk)ev.pk=evPk;   // campo nuevo opcional: los eventos viejos siguen valiendo
- var k=-1;list.forEach(function(x,i){if(x.id===ev.id)k=i});if(k>=0)list[k]=ev;else list.push(ev);
- var wasEdit=!!evEditing;await setKV("events",list);calSel=ev.day;refresh();
- if(wasEdit)openEventView(ev.id);else closeSheet();
- toast("Evento guardado");
-}
+function setEvSt(id,sv){return setKV("events",evAll().map(function(e){if(e.id!==id)return e;var c=Object.assign({},e);if(sv)c.st=sv;else delete c.st;return c}))}
 async function deleteEvent(){
- if(!evEditing)return;var id=evEditing.id;
- await setKV("events",evAll().filter(function(x){return x.id!==id}));closeSheet();refresh();toast("Evento eliminado");
+ if(!fx||!fx.ev)return;var id=fx.ev.id,dd=fx.ev.day;
+ await setKV("events",evAll().filter(function(x){return x.id!==id}));await dropPlanKey(dd,"e:"+id);closeSheet();refresh();toast("Evento eliminado");
 }
 
 // el scroll de cada pestaña lo pone la app (scrollPos); que el navegador no lo recoloque por su cuenta
@@ -2321,11 +2412,9 @@ document.addEventListener("click",function(e){
  else if(a==="add"){openDocSheet({day:b.dataset.day,type:b.dataset.type,title:b.dataset.title,leg:b.dataset.leg,to:b.dataset.to})}
  else if(a==="ctab"){calTab=b.dataset.v;renderCal()}
  else if(a==="csel"){calSel=b.dataset.d;renderCal()}
- else if(a==="ev-add"){openEventSheet({day:b.dataset.day,title:b.dataset.title,pk:b.dataset.pk})}
- else if(a==="ev-view"){openEventView(b.dataset.id)}
- else if(a==="ev-edit"){openEventSheet({id:b.dataset.id})}
- else if(a==="ev-save"){once(saveEvent)}
- else if(a==="ev-del"){confirmTap(b,"Confirmar",deleteEvent)}
+ else if(a==="ev-add"){var alp=b.dataset.pk&&placeByKey(b.dataset.pk);if(alp){openForm({kind:alp.kind,cid:alp.cid,id:alp.p.id,day:b.dataset.day,add:true});revBack=closeSheet}else openForm({kind:"ev",day:b.dataset.day})}
+ else if(a==="ev-view"){openEvCard(b.dataset.id)}
+ else if(a==="pcard"){openPlaceCard(b.dataset.pk,b.dataset.day)}
  else if(a==="dtab"){docsTab=b.dataset.v;renderDocsView()}
  else if(a==="via"){openViaSheet(b.dataset.day,Number(b.dataset.leg))}
  else if(a==="via-add"){addVia()}
@@ -2389,12 +2478,12 @@ document.addEventListener("click",function(e){
  else if(a==="cfold"){var ck=b.dataset.k;colap[ck]=!colap[ck];b.setAttribute("aria-expanded",String(!colap[ck]));b.parentNode.classList.toggle("fold",!!colap[ck])}
  else if(a==="go"){var ge=document.getElementById(b.dataset.id);if(ge)ge.scrollIntoView({behavior:"smooth",block:"start"})}
  else if(a==="list"){openListSheet(b.dataset.city,b.dataset.kind)}
- else if(a==="item-edit"){openItemForm(b.dataset.id)}
- else if(a==="item-add"){openItemForm(null)}
+ else if(a==="item-edit"){openForm({kind:listCtx.kind,cid:listCtx.cid,id:b.dataset.id})}
+ else if(a==="item-add"){openForm({kind:listCtx.kind,cid:listCtx.cid,id:null})}
  else if(a==="ord-start"){openListSheet(listCtx.cid,listCtx.kind,true)}
  else if(a==="ord-cancel"){openListSheet(listCtx.cid,listCtx.kind)}
  else if(a==="ord-done"){saveOrder()}
- else if(a==="item-back"){if(!revReturn())openListSheet(listCtx.cid,listCtx.kind)}
+ else if(a==="item-back"){itemBack()}
  else if(a==="item-save"){once(saveItem)}
  else if(a==="item-del"){confirmTap(b,"Confirmar",deleteItem)}
  else if(a==="list-reset"){confirmTap(b,"Confirmar",function(){var rc=listCtx;delKV("pl:"+rc.cid+":"+rc.kind).then(function(){refresh();openListSheet(rc.cid,rc.kind);toast("Lista restaurada")})})}
@@ -2410,7 +2499,7 @@ document.addEventListener("click",function(e){
   else{var gl=MGROUPS[b.dataset.g],gon=gl.every(function(c){return mapState.cats[c]});gl.forEach(function(c){if(gon)delete mapState.cats[c];else mapState.cats[c]=1})}
   renderMap();openMapFilters()}
  else if(a==="mst"){var sv0=b.dataset.v;if(mapState.st[sv0])delete mapState.st[sv0];else mapState.st[sv0]=1;renderMap();openMapFilters()}
- else if(a==="mreset"){mapState.cats={hotel:1,trans:1,see:1,eat:1,other:1};mapState.st={0:1,1:1,2:1};renderMap();openMapFilters()}
+ else if(a==="mreset"){mapState.cats={hotel:1,trans:1,see:1,eat:1,ev:1,other:1};mapState.st={0:1,1:1,2:1};renderMap();openMapFilters()}
  else if(a==="mstep"){mapStep(+b.dataset.d)}
  else if(a==="mreview"){openReview()}
  else if(a==="rev-edit"){revEdit(b)}
@@ -2448,7 +2537,8 @@ document.addEventListener("change",function(e){
  if(e.target.id==="m-day"){mapState.day=e.target.value;renderMap();return}
  if(e.target.dataset&&e.target.dataset.spinc){saveIncl(e.target);return}
  if(e.target.dataset&&(e.target.dataset.paid||e.target.dataset.paidc)){savePaid(e.target.dataset.paid||e.target.dataset.paidc);return}
- if(e.target.classList&&e.target.classList.contains("statsel")){var sv=+e.target.value;e.target.className="stat statsel s"+sv;setKV(e.target.dataset.k,sv);if(view==="map")renderMap();return}
+ if(e.target.classList&&e.target.classList.contains("statsel")){var sv=+e.target.value;e.target.className="stat statsel s"+sv;if(e.target.dataset.ev)setEvSt(e.target.dataset.ev,sv);else setKV(e.target.dataset.k,sv);if(view==="map")renderMap();return}
+ if(e.target.id==="i-day"){fxWhen();return}
  if(e.target.id==="f-file"){var f=e.target.files[0];if(f){var fd=$("#f-filedel");if(fd)fd.hidden=false;$("#f-name").innerHTML=esc(f.name)+"<small>"+fmtSize(f.size)+"</small>";var ft=$("#f-title");if(ft&&!ft.value)ft.value=f.name.replace(/\.[^.]+$/,"");
   var bn=$("#f-bignote");if(bn){bn.hidden=f.size<=BIG_FILE;bn.textContent=f.size>BIG_FILE?"Este archivo pesa "+fmtSize(f.size)+". Las copias de seguridad tardarán y pueden fallar en iPhone o iPad. Si puedes, usa un PDF más liviano o una captura.":""}}}
  else if(e.target.id==="f-day"){

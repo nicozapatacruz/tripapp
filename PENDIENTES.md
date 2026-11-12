@@ -32,25 +32,6 @@ En este orden:
      sitio para ver, un restaurante, una tienda, un parking, el hotel…
      Hoy los sitios solo son Qué ver y Comer; tienda o parking pedirían un
      tipo nuevo (decidir si va como "Otros" o tipos propios).
-3. [ ] Unificar sitios (Qué ver / Comer) y eventos (acordado 11 nov, falta
-       el visto bueno final de Nicolas al último resumen). Por dentro se
-       guardan igual que hoy (no tocar datos). Entregas:
-   1. Ficha de detalle única para Qué ver, Comer y Evento: arriba el sitio
-      (tipo, ciudad, descripción, Dónde, estado) y, si se abre desde un
-      día, debajo ese día (hora y nota). El evento, igual sin descripción.
-   2. Formulario único, mismo orden siempre: Nombre · Descripción (solo
-      sitios) · Enlace de Google Maps · Día y hora (evento: obligatorio;
-      sitio: solo si se abre desde el plan de un día) · Nota (de la visita
-      o del evento). Al abrir un sitio desde el plan, todo en una hoja.
-      Descripción (qué es el sitio) y Nota (algo de ese día) son distintas.
-      Sin lista de días: para ir dos veces, se añade al plan de cada día.
-   3. Evento con enlace de Google Maps opcional (pin y número de color);
-      estado también en eventos; "Sin marcar" pasa a llamarse "Sin estado".
-   4. Calendario: avisar también cuando dos cosas sin hora de fin empiezan
-      a la misma hora (hoy solo avisa si una cae dentro de la otra o si
-      dos rangos se solapan).
-   - Decidido: el evento es lo importante (siempre tiene día y sale en el
-     calendario); Qué ver / Comer solo salen en el calendario con hora.
 
 ### Diseño del mapa (acordado con Nicolas, 10 nov)
 

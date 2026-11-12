@@ -12,6 +12,41 @@ Reglas:
 
 ---
 
+## 2026-11-12
+
+- Sitios (Qué ver / Comer) y eventos unificados (acordado con Nicolas el
+  11–12 nov). Por dentro se guardan igual que antes; solo hay dos campos
+  nuevos opcionales en el evento: `u` (enlace de Google Maps) y `st` (estado).
+  - **Formulario único**, siempre con los mismos campos y en el mismo
+    orden: Nombre · Descripción (solo sitios) · Enlace de Google Maps
+    (opcional en todos) · Día · Hora y Nota. Según desde dónde se abra
+    cambia solo el día que viene elegido. Desde la lista viene "Sin
+    planear", desde el plan de un día viene ese día y en un evento viene su
+    día (en el evento es obligatorio). Con "Sin planear", hora y nota se
+    desactivan. Elegir un día añade el sitio a ese plan y volver a "Sin
+    planear" lo quita (la nota queda guardada, como al quitarlo del plan).
+    Si el sitio está en varios días, se edita el del día desde el que se
+    abrió (desde la lista, el primero) y se avisa "También en el plan del…".
+    Para ir dos veces se añade al plan de cada día.
+  - **Ficha única** (la tarjeta del mapa) para Qué ver, Comer y Evento.
+    Arriba va la cosa: tipo, ciudad, descripción, distancias o "Sin ubicar"
+    y estado. Debajo va el día: hora y nota, "Añadir/Quitar del plan" y
+    "También en el plan del…" como texto, sin enlaces. El lápiz abre el
+    formulario y al guardar o cancelar se vuelve a la ficha. Se quitó la
+    lista "En el calendario". En el día, tocar un sitio de la lista abre su
+    ficha, y el 📅+ abre el formulario con ese día elegido.
+  - **Evento con enlace**: sale en el mapa su día con pin y número de
+    color, y hay filtro nuevo "Eventos" en Planes. Sin enlace sigue con el
+    número hueco gris ("Sin lugar"). Los eventos tienen estado, que también
+    filtra.
+  - "Sin marcar" pasa a llamarse **"Sin estado"**.
+  - Lo que tiene hora también se puede quitar del plan (antes había que ir
+    al calendario).
+  - Eliminar un sitio elimina también su plan (sus visitas de cada día). Antes
+    quedaban eventos sueltos con su nombre en el calendario.
+  - Calendario: avisa también cuando dos cosas sin hora de fin empiezan a
+    la misma hora.
+
 ## 2026-11-11
 
 - Calendario menos cargado (decidido con Nicolas): salen los documentos,

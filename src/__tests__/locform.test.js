@@ -438,16 +438,18 @@ describe("formulario: ubicaciones", () => {
     const b = document.createElement("button");
     b.dataset.act = "ev-add"; b.dataset.day = MADRID;
     document.body.appendChild(b); click(b); b.remove();
-    $("#e-title").value = "Museo del Prado";
-    $("#e-t1").value = "10:00";
-    click($('[data-act="ev-save"]')); await tick();
+    $("#i-n").value = "Museo del Prado";
+    $("#i-t1").value = "10:00";
+    click($('[data-act="item-save"]')); await tick();
     expect($("#sheet").hidden).toBe(true);
     const ag = [...document.querySelectorAll("#c-" + MADRID + " .ag")].find((x) => x.textContent.includes("Prado"));
     click(ag);
     expect($("#sh-title").textContent).toBe("Museo del Prado");
     expect($("#sheet-body").textContent).toContain("10:00");
-    click($('[data-act="ev-edit"]'));
-    expect($("#e-title").value).toBe("Museo del Prado");
+    expect($("#sheet-body").textContent).toContain("Estado");            // estado también en eventos
+    click($('#sheet .sh-head [data-act="mc-edit"]'));                   // lápiz, como en los sitios
+    expect($("#i-n").value).toBe("Museo del Prado");
+    expect($("#i-d")).toBeNull();                                        // el evento no tiene descripción
     click($(".sh-head .x"));
     expect($("#sh-title").textContent).toBe("Museo del Prado");
     click($('[data-act="close"]'));
@@ -891,7 +893,7 @@ describe("formulario: ubicaciones", () => {
     expect(kids[0]).toContain("stat");
     expect(kids[1]).toBe("pgap");
     expect(pact.querySelector(".map.ico").textContent).toBe("");        // sin texto «Mapa»
-    expect(pact.querySelector(".agb2").getAttribute("aria-label")).toContain("al calendario");
+    expect(pact.querySelector(".agb2").getAttribute("aria-label")).toContain("al plan del día");
   });
 
   it("43) al abrir una hoja el foco va a la hoja, no al botón Cerrar", () => {
@@ -1009,8 +1011,9 @@ describe("formulario: ubicaciones", () => {
     const btn = [...document.querySelectorAll('#v-day [data-act="ev-add"][data-pk]')].find((b) => b.dataset.title === "Plaza Mayor y Puerta del Sol");
     click(btn);
     expect($("#sheet-body .evpl")).toBeNull();                          // sin el mensaje «Vinculado a…»
-    $("#e-day").value = "2026-12-29"; $("#e-t1").value = "11:00";
-    click($('[data-act="ev-save"]')); await tick();
+    expect($("#i-day").value).toBe(MADRID);                             // viene elegido el día desde el que se abre
+    $("#i-day").value = "2026-12-29"; $("#i-t1").value = "11:00";
+    click($('[data-act="item-save"]')); await tick();
     location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
     const plaza = () => [...document.querySelectorAll("#v-map .mrow")].find((x) => x.querySelector("b").textContent === "Plaza Mayor y Puerta del Sol");
     setSel("m-day", "2026-12-29");
@@ -1030,7 +1033,7 @@ describe("formulario: ubicaciones", () => {
     expect(row("Plaza Mayor y Puerta del Sol").querySelector(".hdl")).toBeNull();   // con hora: no se arrastra
     click($("#v-map [data-act=plan-add]"));
     const pick = (n) => [...document.querySelectorAll("#sheet-body .ppick")].find((b) => b.textContent.includes(n));
-    expect(pick("Plaza Mayor").disabled).toBe(true);                    // con hora: se cambia en el calendario
+    expect(pick("Plaza Mayor").textContent).toContain("A las 11:00");   // con hora: también se puede quitar
     click(pick("Gran Vía")); await tick();
     expect(pick("Gran Vía").getAttribute("aria-pressed")).toBe("true");
     click(pick("Museo del Prado")); await tick();
@@ -1335,8 +1338,8 @@ describe("formulario: ubicaciones", () => {
     const b = document.createElement("button");
     b.dataset.act = "ev-add"; b.dataset.day = DEC31;
     document.body.appendChild(b); click(b); b.remove();
-    $("#e-title").value = "Cotillón"; $("#e-t1").value = "22:00"; $("#e-t2").value = "02:00";
-    click($('[data-act="ev-save"]')); await tick();
+    $("#i-n").value = "Cotillón"; $("#i-t1").value = "22:00"; $("#i-t2").value = "02:00";
+    click($('[data-act="item-save"]')); await tick();
     expect($("#sheet").hidden).toBe(true);
     location.hash = "#calendario"; window.dispatchEvent(new HashChangeEvent("hashchange"));
     const ag = [...document.querySelectorAll("#c-" + DEC31 + " .ag")].find((x) => x.textContent.includes("Cotillón"));
@@ -1345,10 +1348,11 @@ describe("formulario: ubicaciones", () => {
     const b2 = document.createElement("button");
     b2.dataset.act = "ev-add"; b2.dataset.day = DEC31;
     document.body.appendChild(b2); click(b2); b2.remove();
-    $("#e-title").value = "Mal"; $("#e-t1").value = "10:00"; $("#e-t2").value = "10:00";
-    click($('[data-act="ev-save"]')); await tick();
-    expect($("#e-err").textContent).toMatch(/igual/);
-    click($('#sheet [data-act="close"]'));
+    $("#i-n").value = "Mal"; $("#i-t1").value = "10:00"; $("#i-t2").value = "10:00";
+    click($('[data-act="item-save"]')); await tick();
+    expect($("#i-err").textContent).toMatch(/igual/);
+    click($('#sheet [data-act="item-back"]'));
+    expect($("#sheet").hidden).toBe(true);
   });
 
   it("52) formulario con cambios: tocar fuera no lo cierra (Cancelar sí)", async () => {
@@ -1392,10 +1396,12 @@ describe("formulario: ubicaciones", () => {
     expect($('#sheet .sh-head [data-act="mc-edit"]')).toBeTruthy();       // editar desde la tarjeta
     click($('[data-act="plan-one"]')); await tick();
     open();
-    click($('#sheet-body [data-act="ev-view"]'));
-    click($('[data-act="ev-edit"]'));
-    $("#e-note").value = "Entrar por Bailén";
-    click($('[data-act="ev-save"]')); await tick();
+    click($('#sheet .sh-head [data-act="mc-edit"]'));                   // el formulario único, en ese día
+    expect($("#i-day").value).toBe("2026-12-30");
+    $("#i-note").value = "Entrar por Bailén";
+    click($('[data-act="item-save"]')); await tick();
+    expect($("#sh-title").textContent).toBe(N);                         // vuelve a la ficha
+    expect($("#sheet-body").textContent).toContain("Entrar por Bailén");
     location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
     open();
     click($('[data-act="plan-one"]')); await tick();                    // quitar del plan
@@ -1405,7 +1411,6 @@ describe("formulario: ubicaciones", () => {
     expect($("#sheet-body").textContent).toContain("Se puede editar si vuelves a añadirlo al plan");
     click($('[data-act="plan-one"]')); await tick();                    // volver a añadirlo
     open();
-    click($('#sheet-body [data-act="ev-view"]'));
     expect($("#sheet-body").textContent).toContain("Entrar por Bailén");
     click($('#sheet [data-act="close"]'));
   });
@@ -1456,8 +1461,8 @@ describe("formulario: ubicaciones", () => {
     const b = document.createElement("button");
     b.dataset.act = "ev-add"; b.dataset.day = "2026-12-30";
     document.body.appendChild(b); click(b); b.remove();
-    $("#e-title").value = "Paseo libre";
-    click($('[data-act="ev-save"]')); await tick();
+    $("#i-n").value = "Paseo libre";
+    click($('[data-act="item-save"]')); await tick();
     location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
     const lm = $('#v-map [data-act=mmode][data-v="list"]'); if (lm) click(lm);
     setSel("m-day", "2026-12-30");
@@ -1474,5 +1479,86 @@ describe("formulario: ubicaciones", () => {
     expect(cal.some((x) => x.textContent.includes("Paseo libre"))).toBe(true);   // los eventos sueltos sí salen
     const plaza = [...document.querySelectorAll("#c-2026-12-29 .ag")].find((x) => x.textContent.includes("Plaza Mayor"));
     expect(plaza.getAttribute("style")).toContain("#7C3AED");             // sitio con hora: sale, con el color de Qué ver
+  });
+  it("57) formulario único: «Sin planear» desactiva hora y nota; elegir un día lo añade al plan y volver a «Sin planear» lo quita", async () => {
+    const b = document.createElement("button");
+    b.dataset.act = "list"; b.dataset.city = "madrid"; b.dataset.kind = "see";
+    document.body.appendChild(b); click(b); b.remove();
+    click($('[data-act="item-add"]'));
+    expect($("#i-day").value).toBe("");                                  // desde la lista: «Sin planear»
+    expect($("#i-t1").disabled).toBe(true);
+    expect($("#i-note").disabled).toBe(true);
+    $("#i-n").value = "Casa de Campo";
+    setSel("i-day", "2026-12-30");
+    expect($("#i-t1").disabled).toBe(false);
+    $("#i-note").value = "Llevar agua";
+    click($('[data-act="item-save"]')); await tick();
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const lm = $('#v-map [data-act=mmode][data-v="list"]'); if (lm) click(lm);
+    const row = () => [...document.querySelectorAll("#v-map .mrow")].find((x) => x.querySelector("b").textContent === "Casa de Campo");
+    setSel("m-day", "2026-12-30");
+    expect(row().closest("#m-plan")).toBeTruthy();                       // en el plan del 30
+    expect(row().textContent).toContain("Nota: Llevar agua");
+    // otro día desde su ficha; el formulario edita el del día de la ficha y avisa del otro
+    click(row());
+    expect($("#sheet-body").textContent).toContain("En el plan del mié 30");
+    expect($("#sheet-body").textContent).toContain("Llevar agua");
+    click($('#sheet [data-act="close"]'));
+    setSel("m-day", "2026-12-29");
+    click($("#v-map [data-act=plan-add]"));
+    click([...document.querySelectorAll("#sheet-body .ppick")].find((x) => x.textContent.includes("Casa de Campo"))); await tick();
+    click($('#sheet [data-act="close"]'));
+    click(row());
+    expect($("#sheet-body").textContent).toContain("También en el plan del mié 30");
+    click($('#sheet .sh-head [data-act="mc-edit"]'));
+    expect($("#i-day").value).toBe("2026-12-29");
+    expect($("#i-also").textContent).toContain("mié 30");
+    setSel("i-day", "");                                                // «Sin planear»: sale del plan del 29
+    expect($("#i-t1").disabled).toBe(true);
+    click($('[data-act="item-save"]')); await tick();
+    expect($("#sh-title").textContent).toBe("Casa de Campo");           // de vuelta a la ficha
+    expect($('#sheet-body [data-act="plan-one"]').textContent).toContain("Añadir al plan");
+    click($('#sheet [data-act="close"]'));
+    expect(row()).toBeFalsy();                                          // ya no sale el 29 (solo los días de su plan)
+    setSel("m-day", "2026-12-30");
+    expect(row().closest("#m-plan")).toBeTruthy();                       // el del 30 sigue
+    // eliminar el sitio quita también su plan
+    click(row()); click($('#sheet .sh-head [data-act="mc-edit"]'));
+    const del = $('[data-act="item-del"]'); click(del); click(del); await tick();
+    expect(row()).toBeFalsy();
+    location.hash = "#calendario"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect($("#c-2026-12-30").textContent).not.toContain("Casa de Campo");
+  });
+  it("58) evento con enlace: sale en el mapa con número de color y su estado; misma hora sin fin → aviso", async () => {
+    const add = (day) => { const b = document.createElement("button"); b.dataset.act = "ev-add"; b.dataset.day = day; document.body.appendChild(b); click(b); b.remove(); };
+    add("2027-01-09");
+    expect($("#i-day").value).toBe("2027-01-09");
+    expect([...$("#i-day").options].some((o) => o.value === "")).toBe(false);   // el evento siempre tiene día
+    $("#i-n").value = "Cena con Ana"; $("#i-t1").value = "21:00";
+    $("#i-u").value = "https://www.google.com/maps/place/X/@28.4682,-16.2546,17z";
+    click($('[data-act="item-save"]')); await tick();
+    location.hash = "#mapa"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const lm = $('#v-map [data-act=mmode][data-v="list"]'); if (lm) click(lm);
+    setSel("m-day", "2027-01-09");
+    const row = () => [...document.querySelectorAll("#m-plan li")].find((x) => x.querySelector("b").textContent === "Cena con Ana");
+    expect(row().querySelector(".mnum.free")).toBeNull();               // con pin: número de color
+    expect(row().querySelector(".mnum").textContent).toMatch(/^\d+$/);
+    expect(row().textContent).not.toContain("Sin ubicar");
+    click(row());
+    const st = $("#sheet-body select.statsel");
+    st.value = "2"; st.dispatchEvent(new Event("change", { bubbles: true })); await tick();
+    click($('#sheet [data-act="close"]'));
+    click($("#v-map [data-act=mfilt]"));
+    expect($('#sheet-body [data-act=mcat][data-c="ev"]')).toBeTruthy();  // filtro «Eventos»
+    click($('#sheet [data-act="close"]'));
+    // otro a la misma hora, sin fin: los dos con aviso
+    add("2027-01-09"); $("#i-n").value = "Llamada"; $("#i-t1").value = "21:00";
+    click($('[data-act="item-save"]')); await tick();
+    location.hash = "#calendario"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    const ags = [...document.querySelectorAll("#c-2027-01-09 .ag")].filter((x) => /Cena con Ana|Llamada/.test(x.textContent));
+    expect(ags.length).toBe(2);
+    expect(ags.every((x) => x.classList.contains("clash"))).toBe(true);
+    click(ags[0]);
+    expect($("#sheet-body select.statsel").value).toBeTruthy();
   });
 });
