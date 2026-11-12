@@ -5,35 +5,44 @@ El viaje empieza el **27 de diciembre de 2026**.
 
 ## Ahora · Detalles de funcionamiento y estética
 
-Antes de seguir con las fases 2 y 3, Nicolas quiere pulir la app.
+Antes de seguir con las fases 3 y 4, Nicolas quiere pulir la app.
 
-En este orden:
-
-1. [x] Diseño del mapa acordado (10 nov), ver abajo "Diseño del mapa".
-2. [ ] Mapa: lo que queda (probado por Nicolas el 12 nov: claves de Google
-       Cloud con `*`, sin scroll de sobra en el mapa, arrastrar en el Plan
-       del día y ubicaciones corregidas).
-   - Google Cloud está en **prueba gratuita** (300 USD ≈ 269 € de crédito):
-     no cobra y no deja poner límites diarios. Termina hacia el **8 feb
-     2027** (90 días desde el 10 nov), después del viaje. Desde entonces el
-     mapa deja de funcionar hasta activar la cuenta completa; si se quiere
-     seguir usando, activarla y poner límites diarios de ~500 por servicio.
-   - Quizás: agrupar los puntos cercanos cuando el mapa está alejado (un
-     círculo con el número de sitios que se abre al acercarse). Hoy, en
-     "Todo el viaje", los sitios de una ciudad quedan uno encima del otro.
-   - Idea para más adelante: botón "Guardar dónde estoy" en el mapa. Guarda
-     la ubicación del GPS (exacta, sin Google Maps) y pregunta qué es: un
-     sitio para ver, un restaurante, una tienda, un parking, el hotel…
-     Hoy los sitios solo son Qué ver y Comer; tienda o parking pedirían un
-     tipo nuevo (decidir si va como "Otros" o tipos propios).
-
-3. [ ] Lo que quedó de la revisión completa (11 nov). Las mejoras de uso
-       se hicieron el 12 nov (ver bitácora).
-   Para más adelante (técnico):
+1. [ ] Bug: al pegar un enlace corto de Google Maps (maps.app.goo.gl) en un
+       evento o en Qué ver / Comer no sale el aviso de "enlace corto" que sí
+       sale en los documentos.
+2. [ ] Revisar las fichas de detalle de evento y de Qué ver: a Nicolas no
+       le convencen del todo. Capturas del 12 nov, guardadas en Descargas
+       como "Imagen X" (evento "Test") e "Imagen Y" (Museo del Prado).
+       Ideas en las capturas:
+       - Evento: el aviso "Sin ubicar: el enlace es corto…" es un párrafo
+         largo arriba. El bloque del día ("Mar 29 dic · Madrid / Sin hora")
+         queda flojo al final.
+       - Qué ver: el 27 dice "8020 km de Aeropuerto José María Córdova
+         (MDE)". Las distancias no deberían usar puntos de otra ciudad o
+         país.
+3. [ ] Ideas del mapa, sin decidir:
+   - Agrupar los puntos cercanos cuando el mapa está alejado (un círculo
+     con el número de sitios que se abre al acercarse). Hoy, en "Todo el
+     viaje", los sitios de una ciudad quedan uno encima del otro.
+   - Botón "Guardar dónde estoy": guarda la ubicación del GPS (exacta, sin
+     Google Maps) y pregunta qué es: un sitio para ver, un restaurante, una
+     tienda, un parking, el hotel… Hoy los sitios solo son Qué ver y Comer;
+     tienda o parking pedirían un tipo nuevo (decidir si va como "Otros" o
+     con tipos propios).
+4. [ ] Técnico, para más adelante (de la revisión completa del 11 nov):
    - Patrón `oldVersion` en `onupgradeneeded` para futuras migraciones.
    - Cifrado: normalizar la contraseña (NFC) para que la misma escrita en
      otro teléfono siempre abra la copia.
    - Dos pestañas abiertas a la vez se pisan los cambios.
+
+### Para acordarse
+
+- Google Cloud (el mapa) está en **prueba gratuita** (300 USD ≈ 269 € de
+  crédito): no cobra y no deja poner límites diarios. Termina hacia el
+  **8 feb 2027** (90 días desde el 10 nov), después del viaje. Desde
+  entonces el mapa deja de funcionar hasta activar la cuenta completa; si
+  se quiere seguir usando, activarla y poner límites diarios de ~500 por
+  servicio.
 
 ### Diseño del mapa (acordado con Nicolas, 10 nov)
 
