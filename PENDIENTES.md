@@ -13,9 +13,6 @@ En este orden:
 2. [ ] Mapa: lo que queda (probado por Nicolas el 12 nov: claves de Google
        Cloud con `*`, sin scroll de sobra en el mapa, arrastrar en el Plan
        del día y ubicaciones corregidas).
-   - Bug: el día 1 se abre con un poco de scroll, también si se entra
-     desde la Ruta después de haber bajado un poco. El ‹ vuelve, pero a
-     veces se traba.
    - Google Cloud está en **prueba gratuita** (300 USD ≈ 269 € de crédito):
      no cobra y no deja poner límites diarios. Termina hacia el **8 feb
      2027** (90 días desde el 10 nov), después del viaje. Desde entonces el

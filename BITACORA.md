@@ -14,6 +14,11 @@ Reglas:
 
 ## 2026-11-12
 
+- Probado por Nicolas en el iPhone: el día 1 ya se abre arriba (bug
+  corregido, sale de PENDIENTES) y el aviso del calendario funciona en los
+  cuatro casos (una cosa dentro de otra, rangos que se pisan, sin pisarse y
+  misma hora sin fin).
+
 - Día 1 desplazado (capturas de Nicolas): al entrar desde la Ruta después
   de bajar un poco, el día se abría con el título cortado. El día guardaba
   abajo el hueco de la barra de navegación (112 px) aunque no la tiene, así
