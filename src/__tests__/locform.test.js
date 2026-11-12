@@ -1572,4 +1572,21 @@ describe("formulario: ubicaciones", () => {
     click(ags[0]);
     expect($("#sheet-body select.statsel").value).toBeTruthy();
   });
+  it("59) con una hoja abierta la página de atrás queda fija; al cerrarla vuelve a la normalidad", () => {
+    location.hash = "#calendario"; window.dispatchEvent(new HashChangeEvent("hashchange"));
+    click($('[data-act="ev-add"]'));
+    expect($("#sheet").hidden).toBe(false);
+    expect(document.body.style.position).toBe("fixed");
+    expect(document.documentElement.classList.contains("locked")).toBe(true);
+    // arrastrar sobre el título (no se desplaza): el gesto se frena
+    const t = (y) => [{ clientX: 10, clientY: y, identifier: 0, target: $("#sh-title") }];
+    $("#sh-title").dispatchEvent(Object.assign(new Event("touchstart", { bubbles: true }), { touches: t(100) }));
+    const mv = Object.assign(new Event("touchmove", { bubbles: true, cancelable: true }), { touches: t(160) });
+    $("#sh-title").dispatchEvent(mv);
+    expect(mv.defaultPrevented).toBe(true);
+    click($('#sheet [data-act="item-back"]'));
+    expect($("#sheet").hidden).toBe(true);
+    expect(document.body.style.position).toBe("");
+    expect(document.documentElement.classList.contains("locked")).toBe(false);
+  });
 });

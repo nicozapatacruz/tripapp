@@ -996,8 +996,40 @@ function sheetHasSave(){return !!sheetFoot.querySelector('[data-act="save"],[dat
 function sheetCanDismiss(){if(sheetDirty&&sheetHasSave()){toast("Tienes cambios sin guardar. Toca Guardar o Cancelar.");return false}return true}
 function openSheet(html,foot){flushPaid();sheetDirty=false;sheetBody.innerHTML=html;sheetFoot.innerHTML=foot||"";sheetFoot.hidden=!foot;sheetBody.scrollTop=0;
  // cabecera (título y Cerrar/Cancelar) fuera del área que se desplaza: así nada se ve pasar por encima o por detrás
- var hd=sheetBody.querySelector(".sh-head");sheetHead.innerHTML="";if(hd&&hd.parentNode===sheetBody)sheetHead.appendChild(hd);sheetHead.hidden=!sheetHead.firstChild;sheetHead.classList.remove("scrolled");sheet.hidden=false;document.documentElement.style.overflow="hidden";var dlg=sheet.querySelector(".sheet");if(dlg)try{dlg.focus({preventScroll:true})}catch(e){}}
-function closeSheet(){flushPaid();revBack=false;if(swReload)setTimeout(swMaybeReload,0);if(docTitle0!==null){document.title=docTitle0;docTitle0=null}evEditing=null;expFile=null;impWrapper=null;impBackup=null;sheet.hidden=true;sheetBody.innerHTML="";sheetHead.innerHTML="";sheetFoot.innerHTML="";sheetFoot.hidden=true;document.documentElement.style.overflow="";editing=null}
+ var hd=sheetBody.querySelector(".sh-head");sheetHead.innerHTML="";if(hd&&hd.parentNode===sheetBody)sheetHead.appendChild(hd);sheetHead.hidden=!sheetHead.firstChild;sheetHead.classList.remove("scrolled");sheet.hidden=false;lockPage();var dlg=sheet.querySelector(".sheet");if(dlg)try{dlg.focus({preventScroll:true})}catch(e){}}
+/* Con una hoja abierta, la página de atrás queda fija donde estaba (en el iPhone overflow:hidden no
+   frena el dedo: con el teclado abierto la página se desplazaba por detrás y asomaba entre la hoja y el
+   teclado). Al cerrar, vuelve al mismo punto. */
+var pageLock=null;
+function lockPage(){
+ if(pageLock)return;var y=window.scrollY||0,b=document.body.style;pageLock={y:y};
+ b.position="fixed";b.top=-y+"px";b.left="0";b.right="0";b.bottom="0";b.overflow="hidden";
+ document.documentElement.style.overflow="hidden";document.documentElement.classList.add("locked");
+}
+function unlockPage(){
+ if(!pageLock)return;var y=pageLock.y,b=document.body.style;pageLock=null;
+ b.position="";b.top="";b.left="";b.right="";b.bottom="";b.overflow="";
+ document.documentElement.style.overflow="";document.documentElement.classList.remove("locked");window.scrollTo(0,y);
+}
+/* Arrastrar dentro de la hoja solo desplaza lo que se puede desplazar (el contenido o un texto largo).
+   En el título, en los botones o cuando el contenido ya llegó arriba o abajo del todo, el gesto se frena:
+   si no, iOS (con el teclado abierto) movía toda la vista y la hoja se metía debajo del teclado. */
+function canScrollY(el,dy){
+ for(;el&&el!==sheet;el=el.parentElement){
+  var oy=getComputedStyle(el).overflowY;if(!/(auto|scroll)/.test(oy)||el.scrollHeight<=el.clientHeight+1)continue;
+  if(dy>0&&el.scrollTop>0)return true;if(dy<0&&el.scrollTop+el.clientHeight<el.scrollHeight-1)return true;
+ }
+ return false;
+}
+(function(){var tx=0,ty=0;
+ sheet.addEventListener("touchstart",function(e){if(e.touches.length===1){tx=e.touches[0].clientX;ty=e.touches[0].clientY}},{passive:true});
+ sheet.addEventListener("touchmove",function(e){
+  if(e.touches.length!==1)return;var t=e.touches[0],dx=t.clientX-tx,dy=t.clientY-ty;tx=t.clientX;ty=t.clientY;
+  if(Math.abs(dx)>Math.abs(dy))return;   // horizontal: lo decide el navegador
+  if(!canScrollY(e.target,dy)&&e.cancelable)e.preventDefault();
+ },{passive:false});
+})();
+function closeSheet(){flushPaid();revBack=false;if(swReload)setTimeout(swMaybeReload,0);if(docTitle0!==null){document.title=docTitle0;docTitle0=null}evEditing=null;expFile=null;impWrapper=null;impBackup=null;sheet.hidden=true;sheetBody.innerHTML="";sheetHead.innerHTML="";sheetFoot.innerHTML="";sheetFoot.hidden=true;unlockPage();editing=null}
 function dayOptions(sel){return DAYS.map(function(d){return '<option value="'+d.d+'"'+(d.d===sel?" selected":"")+'>'+esc(cap(shortDay(d)))+' · '+esc(routeText(d))+'</option>'}).join("")+'<option value="trip"'+(sel==="trip"?" selected":"")+'>Todo el viaje (sin día)</option>'}
 /* Campo de hora con una × para borrarla (el selector de hora del iPhone no tiene cómo dejarla vacía) */
 function timeBox(id,v,l){return '<span class="tbox"><input id="'+id+'" type="time" value="'+esc(v||"")+'" aria-label="'+l+'"><button type="button" class="tclr" data-act="t-clr" data-for="'+id+'" aria-label="Quitar '+l.toLowerCase()+'"'+(v?"":" hidden")+'>'+svg("xmark",16)+'</button></span>'}
@@ -2366,7 +2398,7 @@ function route(){
  applyTransit();
  var h=location.hash.replace(/^#/,""),day=null,v="home";
  if(h.indexOf("dia-")===0){day=dayById(h.slice(4));if(day)v="day"}else if(h==="documentos")v="docs";else if(h==="calendario")v="cal";else if(h==="mapa")v="map";
- scrollPos[view]=window.scrollY;
+ scrollPos[view]=pageLock?pageLock.y:window.scrollY;
  var changed=v!==view||(v==="day"&&V.day.dataset.id!==(day&&day.d));
  if(v==="day"&&view!=="day"&&!(view==="map"&&mapFrom))dayFrom={home:"#inicio",docs:"#documentos",cal:"#calendario",map:"#mapa"}[view]||"#inicio";   // al volver del mapa abierto desde el día, se conserva
  if(v==="map"&&view!=="day")mapFrom=null;   // entrar desde la barra de abajo: sin ‹
@@ -2380,7 +2412,8 @@ function route(){
  else if(v==="map"){renderMap();setBand("var(--bg)")}
  else{if(V.day.dataset.id!==day.d){tab="general"}V.day.dataset.id=day.d;renderDay(day);setBand("var(--bg)")}
  mapFull();
- if(changed){var y0=v==="day"?0:(scrollPos[v]||0);window.scrollTo(0,y0);if(v==="day")requestAnimationFrame(function(){if(view==="day"&&window.scrollY!==0)window.scrollTo(0,0)})}
+ if(changed&&pageLock){var y1=v==="day"?0:(scrollPos[v]||0);pageLock.y=y1;document.body.style.top=-y1+"px"}   // con una hoja abierta: se aplica al cerrarla
+ else if(changed){var y0=v==="day"?0:(scrollPos[v]||0);window.scrollTo(0,y0);if(v==="day")requestAnimationFrame(function(){if(view==="day"&&window.scrollY!==0)window.scrollTo(0,0)})}
  if(v==="cal"&&calTab==="dias"&&!calScrolled){calScrolled=true;var ce=document.getElementById("c-"+todayStr());if(ce)requestAnimationFrame(function(){ce.scrollIntoView({block:"start"});window.scrollBy(0,-12)})}
  if(v==="home"&&!homeScrolled){homeScrolled=true;var te=document.getElementById("d-"+todayStr());if(te)requestAnimationFrame(function(){te.scrollIntoView({block:"center"})})}
  updateFab();updateDayMini();

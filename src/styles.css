@@ -629,3 +629,4 @@ body.mapfull .app{padding-bottom:0}
 #i-when{display:flex;flex-direction:column;gap:16px}   /* mismo espacio que entre los otros campos */
 #i-when.fxoff{opacity:.45}   /* «Sin planear»: hora y nota no aplican */
 .ptap{cursor:pointer}
+html.locked{background:var(--surface)}   /* hoja abierta: por debajo de la página fija, el fondo de la hoja */

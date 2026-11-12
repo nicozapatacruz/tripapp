@@ -14,6 +14,15 @@ Reglas:
 
 ## 2026-11-12
 
+- Hojas en el iPhone (todas): mientras hay una hoja abierta, la página de
+  atrás queda fija donde estaba y vuelve al mismo punto al cerrarla. Antes,
+  con el teclado abierto, se desplazaba por detrás y asomaba entre la hoja
+  y el teclado. Arrastrar dentro de la hoja solo desplaza el contenido; en
+  el título, en los botones o cuando el contenido ya llegó a su tope, el
+  gesto se frena, para que iOS no mueva toda la vista y meta la hoja debajo
+  del teclado. Sigue pasando que, al abrirse el teclado, iOS sube la vista
+  una vez para mostrar el campo (eso no se toca).
+
 - Teclado del iPhone: se quitaron los tres intentos de arreglo (pedido por
   Nicolas, para no dejar código que no sirve). Queda como al principio: con
   el teclado abierto, entre la hoja y el teclado se ve un poco la página de
