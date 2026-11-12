@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { coordsOf, distKm, walkMin, distText, minText, placeDays, planOrder, planNumbers, planNumberList } from "../mapdata.js";
+import { coordsOf, distKm, walkMin, distText, minText, placeDays, planOrder, planNumbers, pinGroups } from "../mapdata.js";
 
 const ATOCHA = "https://www.google.com/maps/place/Estaci%C3%B3n+de+Madrid+Puerta+de+Atocha/@40.4069141,-3.6923449,17z/data=!3m1!4m6!3m5!1s0x0:0x1!8m2!3d40.4064905!4d-3.6909091!16zL20vMDFyYmxx";
 
@@ -65,10 +65,15 @@ describe("qué días sale un sitio y numeración", () => {
     expect(planOrder([{ k: "b", t: "09:00" }, { k: "x", t: "" }], ["b", "borrado", "x"]).map((i) => i.k)).toEqual(["b", "x"]);
   });
   it("numeración: un mismo punto toma el número de su primera aparición", () => {
-    // volver a un sitio: cada paso tiene su número y el sitio se queda con el primero; la lista los tiene todos
+    // volver a un sitio: cada paso tiene su número y el sitio se queda con el primero
     expect(planNumbers([{ pid: "tren" }, { pid: "sol" }, { pid: "tren" }, { pid: "cena" }])).toEqual({ tren: 1, sol: 2, cena: 4 });
-    expect(planNumberList([{ pid: "tren" }, { pid: "sol" }, { pid: "tren" }, { pid: "cena" }])).toEqual({ tren: [1, 3], sol: [2], cena: [4] });
     // sin lugar en el mapa (pid vacío): también numerado, por su clave
     expect(planNumbers([{ pid: "sol", k: "e:1" }, { pid: "", k: "e:2" }, { pid: "cena", k: "e:3" }])).toEqual({ sol: 1, "e:2": 2, cena: 3 });
+  });
+  it("pinGroups: dos pines distintos en el mismo lugar (Atocha en dos eventos) van en uno, con los dos números", () => {
+    const a1 = { id: "e1", ll: [40.4066, -3.6892] }, ret = { id: "r", ll: [40.4153, -3.6845] }, a2 = { id: "e2", ll: [40.40661, -3.68921] };
+    const plan = [{ p: a1 }, { p: ret }, { p: a2 }, { p: null }];
+    expect(pinGroups(plan, () => true)).toEqual({ e1: [1, 3], r: [2], e2: "skip" });
+    expect(pinGroups(plan, (p) => p.id !== "e1")).toEqual({ r: [2], e2: [3] });   // si el primero está oculto, el otro lleva su número
   });
 });

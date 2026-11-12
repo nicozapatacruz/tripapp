@@ -90,9 +90,18 @@ export function planNumbers(order) {
   order.forEach((x) => { const id = x.pid || x.k; n++; if (out[id] == null) out[id] = n; });
   return out;
 }
-/* Todos los números de cada sitio del plan, en orden: { atocha: [1, 5] } (el pin muestra el primero y un circulito con el resto) */
-export function planNumberList(order) {
-  const out = {};
-  order.forEach((x, i) => { const id = x.pid || x.k; (out[id] = out[id] || []).push(i + 1); });
+/* Pasos del plan en el mismo lugar (a menos de sameKm: Atocha de un billete y de un evento, o dos eventos con el
+   mismo enlace) van en un solo pin: el del primer paso, con los demás números en el circulito. Los otros pines de
+   ese lugar no se dibujan (quedarían debajo). Devuelve { id del pin: [números] } y "skip" para los que sobran. */
+export function pinGroups(plan, shown, sameKm = 0.03) {
+  const gs = [], out = {};
+  plan.forEach((x, i) => {
+    if (!x.p || !x.p.ll || !shown(x.p)) return;
+    let g = gs.find((g) => distKm(g.ll, x.p.ll) < sameKm);
+    if (!g) { g = { ll: x.p.ll, nums: [], ids: [] }; gs.push(g); }
+    g.nums.push(i + 1);
+    if (g.ids.indexOf(x.p.id) < 0) g.ids.push(x.p.id);
+  });
+  gs.forEach((g) => { out[g.ids[0]] = g.nums; g.ids.slice(1).forEach((id) => { out[id] = "skip"; }); });
   return out;
 }

@@ -4,7 +4,7 @@ import {
   buildBackup, encryptBackup, decryptBackup, parseBackupText, importPlan, itineraryKV,
   cryptoAvailable, WrongPasswordError,
 } from "./backup.js";
-import { coordsOf, distKm, walkMin, distText, minText as walkText, placeDays, planOrder, planNumbers, planNumberList } from "./mapdata.js";
+import { coordsOf, distKm, walkMin, distText, minText as walkText, placeDays, planOrder, planNumbers, pinGroups } from "./mapdata.js";
 import {
   extractMapsUrl, normName, slotCities, needsCityChoice, cityChoices, cityMismatch,
   resolvePlace, freeName, placeSuggestions,
@@ -1788,7 +1788,7 @@ function renderMap(){
    var shown=x.p.ll&&vis.indexOf(x.p)>=0;
    if(!shown){gap=true;(x.p.ll?gaps.fil:gaps.un).push(i+1);return}
    // si se vuelve a un sitio (Atocha al llegar y al salir), la línea vuelve a él
-   if(last&&!(last[0]===x.p.ll[0]&&last[1]===x.p.ll[1]))segs.push({a:last,b:x.p.ll,gap:gap});
+   if(last&&distKm(last,x.p.ll)>=SAME_KM)segs.push({a:last,b:x.p.ll,gap:gap});
    last=x.p.ll;gap=false;
   });
  }
@@ -1831,7 +1831,7 @@ function renderMap(){
   (dy?'<button type="button" class="mtog" role="switch" data-act="monly" aria-checked="'+!!mapState.only+'"><span>Solo el plan</span><i></i></button>':"")+'</div>'+gapNote+
   '<div class="dgroups">'+body+'</div>'+(isMap?"":'<div class="fabspace"></div>')+'</div>';
  mapFull();
- if(isMap&&V.map.querySelector(".mapbox"))mountMap(vis,nums,segs,dd?planNumberList(plan):{});
+ if(isMap&&V.map.querySelector(".mapbox"))mountMap(vis,nums,segs,dd?pinGroups(plan,function(p){return vis.indexOf(p)>=0},SAME_KM):{});
  if(!isMap&&$("#m-plan"))bindReorder($("#m-plan"),savePlan,true);
  geoRun(all);   // ubica por nombre lo que falte (con internet y con Google conectado)
 }
@@ -1973,6 +1973,7 @@ async function geoRun(list){
  }catch(e){}
  geoBusy=false;
 }
+var SAME_KM=0.03;   // a menos de 30 m es el mismo lugar (ver pinGroups en mapdata.js)
 /* Pin: su número del plan; si se vuelve a ese sitio el mismo día, un circulito con el otro número (o «+2» si son más) */
 function gmPin(p,num,all){
  var el=document.createElement("div");el.className="gpin"+(num?" num":"")+(p.geo?" byname":"");el.style.setProperty("--t",mapColor(p));
@@ -1992,7 +1993,7 @@ async function mountMap(vis,nums,segs,numl){
   var maps=await google.maps.importLibrary("maps"),mk=await google.maps.importLibrary("marker");
   if(!gm)gm=new maps.Map(gmEl,{mapId:GM_MAPID,center:{lat:40.2,lng:-3.7},zoom:6,disableDefaultUI:true,zoomControl:false,clickableIcons:false,gestureHandling:"greedy"});
   gmMarkers.forEach(function(m){m.map=null});gmMarkers=[];
-  vis.filter(function(p){return p.ll}).forEach(function(p){
+  vis.filter(function(p){return p.ll&&(numl||{})[p.id]!=="skip"}).forEach(function(p){
    var m=new mk.AdvancedMarkerElement({map:gm,position:{lat:p.ll[0],lng:p.ll[1]},content:gmPin(p,nums[p.id],(numl||{})[p.id]),title:p.name,zIndex:nums[p.id]?100-nums[p.id]:1,gmpClickable:true});
    m.addListener("click",function(){openMapCard(p.id)});gmMarkers.push(m);
   });

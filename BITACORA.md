@@ -14,6 +14,15 @@ Reglas:
 
 ## 2026-11-12
 
+- Probado por Nicolas: volver al mismo sitio sale bien en el mapa (pin con
+  el "1" y el circulito con el "4", y la línea vuelve).
+
+- Volver al mismo sitio: en la prueba de Nicolas no salía el circulito,
+  porque eran dos eventos con el mismo enlace de Atocha y cada evento tiene
+  su propio pin (quedaban uno encima del otro). Ahora el plan agrupa por
+  lugar (a menos de 30 m): un solo pin con el primer número y el circulito
+  con los demás, sean documentos, eventos o sitios.
+
 - Mejoras de la revisión completa (decididas con Nicolas):
   - Volver dos veces al mismo sitio el mismo día (Atocha al llegar y al
     salir): sale en el plan una vez por paso, cada una con su número, y la
